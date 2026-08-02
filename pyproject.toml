@@ -1,14 +1,20 @@
 [project]
-name = "python-workspace-template"
+name = "stock-research-llm-orchestrator"
 version = "0.1.0"
-description = "Add your description here"
+description = "A human-in-the-loop stock research and screening system orchestrated across multiple model families."
 readme = "README.md"
 requires-python = ">=3.14"
+authors = [{ name = "toike08D17012" }]
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = []
+
+[project.urls]
+Repository = "https://github.com/toike08D17012/system-trade-with-llm-orchestrator"
 
 [dependency-groups]
 dev = [
-    "jupyter>=1.1.1",
+    "ipykernel>=7.3.0",
     "mypy>=1.19.1",
     "pre-commit>=4.5.1",
     "pytest>=9.0.2",
