@@ -3,6 +3,7 @@
 set -euo pipefail
 
 main() {
+    local -a command_args
     local hook_dir
     local return_code
 
@@ -11,12 +12,14 @@ main() {
     # Move to the project root directory.
     cd "${hook_dir}/../.."
 
-    if ! command -v docker >/dev/null 2>&1; then
-        exec pytest "$@"
+    if command -v docker >/dev/null 2>&1; then
+        command_args=(./docker/run-docker.sh pytest)
+    else
+        command_args=(pytest)
     fi
 
     set +e
-    ./docker/run-docker.sh pytest "$@"
+    "${command_args[@]}" "$@"
     return_code=$?
     set -e
 
