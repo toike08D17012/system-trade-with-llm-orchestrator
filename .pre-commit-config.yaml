@@ -1,0 +1,46 @@
+repos:
+  - repo: local
+    hooks:
+      # Python
+      - id: ruff check
+        name: ruff check
+        entry: ./scripts/pre-commit/ruff-check.sh
+        args: [--fix]
+        require_serial: true
+        language: system
+        types_or: [python, pyi, jupyter]
+      - id: ruff format
+        name: ruff format
+        entry: ./scripts/pre-commit/ruff-format.sh
+        require_serial: true
+        language: system
+        types_or: [python, pyi, jupyter]
+      - id: pytest
+        name: pytest
+        entry: ./scripts/pre-commit/pytest.sh
+        require_serial: true
+        language: system
+        pass_filenames: false
+        types_or: [python, pyi, jupyter]
+      - id: mypy
+        name: mypy
+        entry: ./scripts/pre-commit/mypy.sh
+        require_serial: true
+        language: system
+        types_or: [python, pyi, jupyter]
+
+      # ----------------------------------------------
+      # Shell
+      - id: shell-format
+        name: shell format
+        entry: ./scripts/pre-commit/shell-format.sh
+        require_serial: true
+        language: system
+        types: [shell]
+
+      - id: shell-check
+        name: shell check
+        entry: ./scripts/pre-commit/shell-check.sh
+        require_serial: true
+        language: system
+        types: [shell]
