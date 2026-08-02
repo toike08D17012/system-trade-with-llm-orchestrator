@@ -89,8 +89,12 @@ cd "${script_dir}/../.."
 
 When scripts support both Docker and local execution:
 
-- Prefer the repository-defined Docker workflow when Docker is available.
-- Fall back to local commands when Docker is unavailable only if the local command is expected to work.
+- Treat the repository-defined Docker workflow as the standard development
+  environment.
+- Do not describe Docker-backed commands as available until the referenced
+  Docker files and wrappers exist.
+- Use local commands only for explicit bootstrap or fallback operations that
+  are expected to work on the host.
 - Preserve arguments when forwarding commands.
 - Avoid recursive Docker invocation if the script may run inside a container.
 

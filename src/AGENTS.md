@@ -72,7 +72,12 @@ Markdown-only changes do not require a separate implementation plan. If a task i
 - Run the narrowest relevant checks first, followed by the repository-wide validation command when available.
 - Do not delete, skip, weaken, or over-mock tests merely to obtain a passing result.
 
-The intended default validation command is:
+The standard development environment is Docker. The Docker definition and
+`docker/run-docker.sh` are planned but not yet implemented. Until they exist, do
+not describe Docker-backed validation as runnable; use safe direct checks and
+report the missing validation.
+
+After the Docker workflow is implemented, the default validation command is:
 
 ```bash
 ./scripts/pre-commit/checks.sh

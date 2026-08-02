@@ -22,7 +22,7 @@ Codex、Claude Code、Antigravity CLI を組み合わせ、個別株の調査・
 
 - 調査対象銘柄の受け付けと一次スクリーニング
 - 財務・事業・バリュエーション・テクニカル・リスクの調査
-- Codex系とClaude系による独立分析と相互レビュー
+- Codex系とClaude系による独立分析と、オーケストレーターとは異なるモデル系統による一次レビュー
 - 重要な未解決争点に限定したAntigravity系の第三者監査
 - 根拠、異論、監査結果、未確認事項を含むレポート生成
 
@@ -44,7 +44,7 @@ flowchart TD
     C --> D["データ取得・正規化・一次選別"]
     D --> W["Codex・Claudeによる独立分析"]
     W --> S["分析結果の統合"]
-    S --> R["別系統モデルによる一次レビュー"]
+    S --> R["オーケストレーターと異なる<br/>モデル系統による一次レビュー"]
     R --> J{"重要な争点が未解決か"}
     J -->|いいえ| F["最終レポート"]
     J -->|はい| A["Antigravityによる追加監査"]
@@ -61,7 +61,7 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 
 - 人間が指定した少数銘柄を対象とする
 - Codex系とClaude系の作業者を1つずつ利用する
-- オーケストレーター1つ、別系統の一次レビューワー1つを利用する
+- 各実行で、オーケストレーターと異なるモデル系統の一次レビューワーを1つ利用する
 - 限定再調査とAntigravity追加監査は、それぞれ最大1回とする
 - 最終候補は最大5銘柄程度とする
 - MarkdownとJSONで結果を保存する
@@ -75,13 +75,18 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | Pythonパッケージ・アプリケーション | 未実装 |
 | 実行用CLI | 未実装 |
 | データソース・評価指標・閾値 | 未決定 |
-| Pythonバージョン・依存関係 | 未定義（`pyproject.toml` は空） |
-| テスト・lint・型チェック | 未構成 |
-| CI・Docker・devcontainer | 未構成 |
+| Pythonバージョン・依存関係 | Python 3.14、開発依存関係、品質ツールを定義済み。ロックファイルは未作成 |
+| テスト・lint・型チェック | Ruff、Mypy、Pytest、pre-commitを設定済み。テストは未作成 |
+| CI・Docker・devcontainer | Dockerを標準開発環境として採用。Docker構成、devcontainer、CIは未作成 |
+| ライセンス | MIT License |
 
 ## セットアップ
 
-現時点では実行可能なアプリケーションがないため、Python環境の構築手順や依存関係のインストール手順はまだありません。対応Pythonバージョン、パッケージ管理方法、アプリケーションの起動方法は、実装開始時に `pyproject.toml` と本READMEへ追加します。
+標準開発環境にはDockerを使用する方針です。ただし、Dockerfile、Compose、`docker/run-docker.sh`、ロックファイルはまだ作成されていないため、再現可能なセットアップ手順は未提供です。これらはDocker環境の実装時に追加します。
+
+Pythonは3.14を使用します。`pyproject.toml` には開発用のRuff、Mypy、
+Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykernel` を
+定義しています。実行可能なアプリケーションとランタイム依存関係はまだありません。
 
 ### Coding Agent CLIのインストール補助
 
@@ -111,15 +116,20 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | `.codex/agents/` | リポジトリ調査・設計・品質確認を担当するCodexサブエージェント定義 | 定義済み |
 | `agent-sources/` | スクリーニング実行時に各Agentへ渡す役割別指示と入出力契約の原本。将来、配布スクリプトから実行用の場所へ配置する | 配置方針のREADMEのみ |
 | `docs/design/` | システムの構想、アーキテクチャ、設計判断 | 2文書あり |
-| `docs/agent-reports/` | 開発のためのリポジトリ調査、実装計画、構成確認レポート | 概要レポートあり |
+| `docs/agent-reports/` | Coding Agentが生成する開発用の調査、計画、構成確認レポート | 追跡対象外のローカル生成物 |
 | `reports/agent-reports/` | スクリーニング実行時にAgentごとに生成する調査・レビュー・監査の中間レポート | 空。形式は今後確定 |
 | `reports/finalized-reports/` | 人間向けに確定した個別株調査・スクリーニングレポート | 空。形式は今後確定 |
-| `scripts/` | 開発環境やCoding Agent CLIのセットアップ、将来の検証・運用用スクリプト | CLIインストール補助のみ |
+| `scripts/` | Coding Agent CLIの導入補助とpre-commit検証ラッパー | Docker実行ラッパーは未作成 |
 | `src/` | PythonによるCLI、オーケストレーション、データ処理、Agentアダプター、保存処理、およびPython開発指示 | 実装は未着手。開発用の `AGENTS.md` のみ |
 | `AGENTS.md` | スクリーニング実行時の共通原則、安全境界、成果物配置、最小限のリポジトリ構成 | 定義済み |
-| `pyproject.toml` | Pythonバージョン、依存関係、パッケージ、Ruff、Mypy、Pytestの設定 | 空。今後定義 |
+| `pyproject.toml` | Python、依存関係、パッケージ、品質ツールの設定 | 基本設定あり。実装とロックファイルは未作成 |
+| `LICENSE` | リポジトリと将来の配布物に適用するライセンス | MIT License |
 
-開発支援用の `docs/agent-reports/` と、スクリーニング結果用の `reports/agent-reports/` は用途が異なります。前者にはリポジトリ調査・計画を、後者には銘柄調査の実行結果を保存します。
+開発支援用の `docs/agent-reports/` と、スクリーニング結果用の
+`reports/agent-reports/` は用途が異なります。前者はCoding Agentが必要に応じて
+生成する追跡対象外のローカル成果物であり、後者には銘柄調査の実行結果を
+保存します。継続的に管理する人間向け文書は、`docs/agent-reports/` 以外の
+`docs/` 配下へ保存します。
 
 設計上は、1回の実行に関する入力、元データ、分析、レビュー、争点、最終成果物を `runs/<task-id>/` 配下へまとめる構成も想定しています。`reports/` との連携方法と、どちらを実行成果物の正本にするかは実装前に確定します。詳細は[構成資料の「成果物の構成」](docs/design/02-stock-research-system-architecture.md#21-成果物の構成)を参照してください。
 
@@ -137,13 +147,26 @@ Pythonの開発前に `src/AGENTS.md` と `.agents/instructions/python.md` を�
 
 ## テストと品質確認
 
-自動テスト、Ruff、Mypy、Pytest、CIはまだ構成されていません。リポジトリ規約で既定の検証コマンドとされる `./scripts/pre-commit/checks.sh` も未実装です。検証環境を追加する際は、設定と実行スクリプトを同時に整備し、本節へ実行方法を追記します。
+Ruff、Mypy、Pytest、pre-commitと各検証ラッパーは設定済みですが、Python実装、
+テスト、CIはまだありません。標準開発環境となるDocker構成も未作成のため、
+Dockerが導入済みの環境では `./scripts/pre-commit/checks.sh` が未作成の
+`docker/run-docker.sh` を呼び出して失敗します。
 
-現在のShellスクリプトは、次のコマンドで構文を確認できます。
+現段階で実行できる構成・構文確認は次のとおりです。
 
 ```bash
-bash -n scripts/install-antigravity-cli.sh scripts/install-claude-code.sh scripts/install-codex.sh
+pre-commit validate-config .pre-commit-config.yaml
+bash -n scripts/*.sh scripts/pre-commit/*.sh
 ```
+
+Git hookの登録処理はホスト側で実行されます。ホストへpre-commitを導入したうえで、次を実行します。
+
+```bash
+uv tool install pre-commit
+./scripts/pre-commit/install-githooks.sh
+```
+
+Docker環境の完成後は、`./scripts/pre-commit/checks.sh` を全体検証の標準コマンドとします。テスト未作成の現在は、Pytestの終了コード5を成功として扱います。最初のテストスイート追加時に、この暫定扱いを削除します。
 
 ## セキュリティとデータ取り扱い
 
@@ -159,4 +182,4 @@ bash -n scripts/install-antigravity-cli.sh scripts/install-claude-code.sh script
 
 ## ライセンス
 
-現時点ではライセンスファイルがありません。利用・改変・再配布条件は未定です。
+[MIT License](LICENSE) を適用します。
