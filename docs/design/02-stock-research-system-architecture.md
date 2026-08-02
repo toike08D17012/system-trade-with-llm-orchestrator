@@ -189,32 +189,108 @@ Antigrabity は通常フローへ直接接続せず、未解決争点が発生�
 
 ```mermaid
 flowchart TB
-    CONFIG["実行設定"]
-    O{"オーケストレーター選択"}
-    OC["Codex"]
-    OA["Claude"]
-    WC["Codex ワーカー"]
-    WA["Claude ワーカー"]
-    RC["Codex 一次レビュー"]
-    RA["Claude 一次レビュー"]
-    D{"重要争点が未解決か"}
-    G["Antigrabity 第三者監査"]
+    CONFIG["実行設定<br/>モデル配置ポリシー"]
 
-    CONFIG --> O
-    O -->|Codex| OC
-    O -->|Claude| OA
-    OC --> WC
-    OC --> WA
-    OC --> RA
-    OA --> WC
-    OA --> WA
-    OA --> RC
-    RA --> D
-    RC --> D
-    D -->|いいえ| END["最終状態判定"]
+    subgraph ORCHESTRATOR["オーケストレーター"]
+        direction TB
+
+        OSEL{"オーケストレーターとして<br/>使用する系統を選択"}
+        OC["Codex 系"]
+        OA["Claude 系"]
+        O["オーケストレーター役割<br/>タスク分割・役割割当<br/>結果統合・暫定判定"]
+
+        OSEL -->|Codex を割り当て| OC
+        OSEL -->|Claude を割り当て| OA
+        OC -->|実行ごとに一方のみ有効| O
+        OA -->|実行ごとに一方のみ有効| O
+    end
+
+    subgraph WORKERS["独立分析ワーカー"]
+        direction LR
+
+        WC["Codex ワーカー<br/>独立した総合分析"]
+        WA["Claude ワーカー<br/>独立した総合分析"]
+    end
+
+    S["分析結果の統合<br/>主張・根拠・相違点を保持"]
+
+    subgraph PRIMARY_REVIEW["一次レビュー"]
+        direction TB
+
+        RSEL{"オーケストレーターと<br/>異なる系統を割り当て"}
+        RC["Codex 一次レビューワー"]
+        RA["Claude 一次レビューワー"]
+        RJ["レビュー結果<br/>承認・修正要求・異議"]
+
+        RSEL -->|Orchestrator = Claude| RC
+        RSEL -->|Orchestrator = Codex| RA
+        RC --> RJ
+        RA --> RJ
+    end
+
+    RES["レビュー指摘への応答<br/>修正・限定再調査・争点化"]
+    D{"重要争点が<br/>未解決か"}
+
+    subgraph ESCALATION["条件付き追加監査"]
+        direction TB
+        G["Antigrabity 第三者監査<br/>未解決の重要争点だけを監査"]
+    end
+
+    END["最終状態判定<br/>合格・条件付き合格<br/>再調査・不合格・人間判断待ち"]
+
+    CONFIG --> OSEL
+
+    O -->|同じ共通データ・評価基準| WC
+    O -->|同じ共通データ・評価基準| WA
+
+    WC -->|Codex 系の独立分析| S
+    WA -->|Claude 系の独立分析| S
+
+    S --> RSEL
+    RJ -->|独立レビュー結果| RES
+
+    RES -->|限定再調査| O
+    RES -->|レビュー対応完了| D
+
+    D -->|いいえ| END
     D -->|はい| G
-    G --> END
+    G -->|監査結果| END
+
+    classDef codex fill:#1D4ED8,stroke:#93C5FD,color:#FFFFFF,stroke-width:2px
+    classDef claude fill:#B45309,stroke:#FCD34D,color:#FFFFFF,stroke-width:2px
+    classDef antigrabity fill:#BE185D,stroke:#F9A8D4,color:#FFFFFF,stroke-width:2px
+    classDef role fill:#334155,stroke:#E2E8F0,color:#FFFFFF,stroke-width:2px
+    classDef process fill:#475569,stroke:#CBD5E1,color:#FFFFFF,stroke-width:2px
+    classDef decision fill:#312E81,stroke:#C4B5FD,color:#FFFFFF,stroke-width:2px
+
+    class OC,WC,RC codex
+    class OA,WA,RA claude
+    class G antigrabity
+    class O role
+    class CONFIG,S,RJ,RES,END process
+    class OSEL,RSEL,D decision
+
+    style ORCHESTRATOR fill:#111827,stroke:#C4B5FD,color:#FFFFFF,stroke-width:2px
+    style WORKERS fill:#111827,stroke:#A7F3D0,color:#FFFFFF,stroke-width:2px
+    style PRIMARY_REVIEW fill:#111827,stroke:#FCD34D,color:#FFFFFF,stroke-width:2px
+    style ESCALATION fill:#111827,stroke:#F9A8D4,color:#FFFFFF,stroke-width:2px
+
+    linkStyle default stroke:#94A3B8,stroke-width:1.5px
 ```
+
+**凡例**
+
+図中の色は、各処理を担当するモデル系統を表す。
+
+* **青**：Codex 系
+* **橙**：Claude 系
+* **赤紫**：通常系で解消できない重要争点を監査する Antigrabity 系
+* **灰**：特定のモデル系統に依存しない役割、処理、または成果物
+* **紫**：実行設定や条件に基づくモデル選択・分岐
+
+オーケストレーターには、実行設定に応じて Codex 系または Claude 系のいずれか一方を割り当てる。一次レビューワーには、独立性を確保するため、オーケストレーターとは異なるモデル系統を割り当てる。
+
+したがって、Codex 系をオーケストレーターとする場合は Claude 系が一次レビューを担当し、Claude 系をオーケストレーターとする場合は Codex 系が一次レビューを担当する。通常作業者には、オーケストレーターのモデル系統にかかわらず、Codex 系と Claude 系の両方を配置する。
 
 モデル系統の独立性を高めるため、次を原則とする。
 
