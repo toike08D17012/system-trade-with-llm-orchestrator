@@ -6,9 +6,9 @@
 
 財務数値、株価、テクニカル指標、一次スクリーニングなどは、可能な限り決定論的なプログラムで取得・計算する。LLM は、検証可能なデータと参照元を入力として、複数観点からの分析、候補比較、反証、レビュー、レポート作成を担当する。
 
-Codex、Claude Code、Antigrabity CLI は、共通のタスク定義、入力データ、出力スキーマを利用する。製品固有の CLI、認証、実行オプション、出力形式はアダプターへ閉じ込め、ワークフロー本体から分離する。
+Codex、Claude Code、Antigravity CLI は、共通のタスク定義、入力データ、出力スキーマを利用する。製品固有の CLI、認証、実行オプション、出力形式はアダプターへ閉じ込め、ワークフロー本体から分離する。
 
-通常系は Codex 系と Claude 系で構成する。Antigrabity 系は、通常系で重要な争点を解消できない場合だけ起動する第三者監査役とし、常時参加する作業者や単純多数決の第三票にはしない。
+通常系は Codex 系と Claude 系で構成する。Antigravity 系は、通常系で重要な争点を解消できない場合だけ起動する第三者監査役とし、常時参加する作業者や単純多数決の第三票にはしない。
 
 ## 2. 役割と責務
 
@@ -19,7 +19,7 @@ Codex、Claude Code、Antigrabity CLI は、共通のタスク定義、入力デ
 | オーケストレーター | タスク分割、役割割当、結果統合、暫定判定、レビュー対応、最終レポート生成 | 必須 |
 | Codex・Claude 作業者 | 共通データを使った独立分析 | 必須 |
 | 一次レビューワー | 統合結果、根拠、論理、反証の独立レビュー | 必須 |
-| Antigrabity 第三者監査 | 通常系で解消できない重要争点の追加監査 | 条件付き |
+| Antigravity 第三者監査 | 通常系で解消できない重要争点の追加監査 | 条件付き |
 
 ## 3. 全体構成
 
@@ -62,7 +62,7 @@ flowchart TB
         RJ["承認・指摘・再調査要求"]
     end
 
-    subgraph ANTIGRABITY_AUDIT["Antigrabity 第三者監査"]
+    subgraph ANTIGRAVITY_AUDIT["Antigravity 第三者監査"]
         direction TB
         G["未解決争点の独立監査"]
         GJ["支持・棄却・判断不能<br/>追加証拠要求"]
@@ -105,21 +105,21 @@ flowchart TB
     classDef orchestratorRole fill:#1D4ED8,stroke:#93C5FD,color:#FFFFFF,stroke-width:2px
     classDef workerRole fill:#047857,stroke:#6EE7B7,color:#FFFFFF,stroke-width:2px
     classDef reviewerRole fill:#B45309,stroke:#FCD34D,color:#FFFFFF,stroke-width:2px
-    classDef antigrabityRole fill:#BE185D,stroke:#F9A8D4,color:#FFFFFF,stroke-width:2px
+    classDef antigravityRole fill:#BE185D,stroke:#F9A8D4,color:#FFFFFF,stroke-width:2px
     classDef machineRole fill:#475569,stroke:#CBD5E1,color:#FFFFFF,stroke-width:2px
 
     class H,HE,HD humanRole
     class O,A,J,Z,F orchestratorRole
     class W,WS workerRole
     class R,RJ reviewerRole
-    class G,GJ antigrabityRole
+    class G,GJ antigravityRole
     class CLI,D,SR,DP,S machineRole
 
     style HUMAN fill:#111827,stroke:#C4B5FD,color:#FFFFFF,stroke-width:2px
     style ORCHESTRATOR fill:#111827,stroke:#93C5FD,color:#FFFFFF,stroke-width:2px
     style WORKERS fill:#111827,stroke:#6EE7B7,color:#FFFFFF,stroke-width:2px
     style PRIMARY_REVIEW fill:#111827,stroke:#FCD34D,color:#FFFFFF,stroke-width:2px
-    style ANTIGRABITY_AUDIT fill:#111827,stroke:#F9A8D4,color:#FFFFFF,stroke-width:2px
+    style ANTIGRAVITY_AUDIT fill:#111827,stroke:#F9A8D4,color:#FFFFFF,stroke-width:2px
     style MACHINE fill:#111827,stroke:#CBD5E1,color:#FFFFFF,stroke-width:2px
     linkStyle default stroke:#94A3B8,stroke-width:1.5px
 ```
@@ -130,7 +130,7 @@ flowchart TB
 | 青 | オーケストレーター | タスク分割、統合、暫定判定、レビュー対応、最終状態整理、レポート生成 |
 | 緑 | 作業者 | 銘柄の調査・分析、必要に応じたサブエージェントへの調査分担 |
 | 橙 | 一次レビューワー | 通常系の独立レビュー、承認、指摘、再調査要求 |
-| 赤紫 | Antigrabity 第三者監査 | 通常系で残った重要争点の追加監査 |
+| 赤紫 | Antigravity 第三者監査 | 通常系で残った重要争点の追加監査 |
 | 灰 | CLI・スクリプト等 | データ処理、検証、セッション管理、争点パケット生成、成果物保存 |
 
 ## 4. 処理主体の整理
@@ -151,8 +151,8 @@ flowchart TB
 | 争点の重要度判定 | ルールエンジン + オーケストレーター | 機械条件を満たしたものだけ追加監査候補とする |
 | 争点パケットの生成 | 争点パケット生成スクリプト | 両者の主張、共通証拠、評価ポリシーを収集する |
 | 争点パケットの内容確認 | オーケストレーター | 片方に有利な欠落がないか確認する |
-| Antigrabity の起動 | セッションランナー | 読み取り専用ワークスペースで非対話実行する |
-| 未解決争点の追加監査 | Antigrabity 第三者監査 | 主張 A/B を監査し、根拠付き意見を返す |
+| Antigravity の起動 | セッションランナー | 読み取り専用ワークスペースで非対話実行する |
+| 未解決争点の追加監査 | Antigravity 第三者監査 | 主張 A/B を監査し、根拠付き意見を返す |
 | 監査結果の適用 | オーケストレーター | 多数決ではなく、決定表と証拠に基づいて処理する |
 | 追加監査後も残る争点の判断 | 人間 | 両論、証拠、監査結果を確認する |
 | 人間向けレポートの生成 | オーケストレーター | 合格・条件付き合格となった候補をまとめる |
@@ -175,17 +175,17 @@ flowchart TB
 | 指摘管理 | レビュー指摘と応答の対応付け | 指摘ごとに状態、重要度、根拠を保存する |
 | 争点判定 | 追加監査の要否判定 | 重要度と解消可能性をルール化する |
 | 争点パケット生成 | 追加監査用の最小コンテキスト作成 | 主張を匿名化し、証拠の参照漏れを検証する |
-| Antigrabity CLI アダプター | Antigrabity の起動、監視、出力回収 | 非対話・構造化出力を利用し、書き込み権限を制限する |
-| Antigrabity 第三者監査 | 未解決争点の独立監査 | 第三票ではなく、証拠とポリシーの適用を監査する |
+| Antigravity CLI アダプター | Antigravity の起動、監視、出力回収 | 非対話・構造化出力を利用し、書き込み権限を制限する |
+| Antigravity 第三者監査 | 未解決争点の独立監査 | 第三票ではなく、証拠とポリシーの適用を監査する |
 | 最終状態判定 | 合格、条件付き合格、再調査、不合格、人間判断待ちの整理 | 監査結果を決定表へ適用する |
 | レポート生成 | 人間が確認できる量へ要約 | 元データ、詳細分析、争点への参照を残す |
 | 成果物・実行履歴 | 入力、データ版、分析、レビュー、争点、監査、判定を保存 | 再現性と監査可能性を担保する |
 
 ## 6. モデル配置
 
-オーケストレーターは実行単位で1つ選択する。通常作業者には Codex 系と Claude 系の両方を含め、一次レビューワーにはオーケストレーターと異なる系統を割り当てる。
+オーケストレーターは実行単位で1つ選択する。通常作業者には Codex 系と Claude 系の両方を含める。各実行で一次レビューワーを1つ選択し、必ずオーケストレーターと異なるモデル系統を割り当てる。
 
-Antigrabity は通常フローへ直接接続せず、未解決争点が発生した場合だけ追加監査へ接続する。
+Antigravity は通常フローへ直接接続せず、未解決争点が発生した場合だけ追加監査へ接続する。
 
 ```mermaid
 flowchart TB
@@ -233,7 +233,7 @@ flowchart TB
 
     subgraph ESCALATION["条件付き追加監査"]
         direction TB
-        G["Antigrabity 第三者監査<br/>未解決の重要争点だけを監査"]
+        G["Antigravity 第三者監査<br/>未解決の重要争点だけを監査"]
     end
 
     END["最終状態判定<br/>合格・条件付き合格<br/>再調査・不合格・人間判断待ち"]
@@ -258,14 +258,14 @@ flowchart TB
 
     classDef codex fill:#1D4ED8,stroke:#93C5FD,color:#FFFFFF,stroke-width:2px
     classDef claude fill:#B45309,stroke:#FCD34D,color:#FFFFFF,stroke-width:2px
-    classDef antigrabity fill:#BE185D,stroke:#F9A8D4,color:#FFFFFF,stroke-width:2px
+    classDef antigravity fill:#BE185D,stroke:#F9A8D4,color:#FFFFFF,stroke-width:2px
     classDef role fill:#334155,stroke:#E2E8F0,color:#FFFFFF,stroke-width:2px
     classDef process fill:#475569,stroke:#CBD5E1,color:#FFFFFF,stroke-width:2px
     classDef decision fill:#312E81,stroke:#C4B5FD,color:#FFFFFF,stroke-width:2px
 
     class OC,WC,RC codex
     class OA,WA,RA claude
-    class G antigrabity
+    class G antigravity
     class O role
     class CONFIG,S,RJ,RES,END process
     class OSEL,RSEL,D decision
@@ -284,7 +284,7 @@ flowchart TB
 
 * **青**：Codex 系
 * **橙**：Claude 系
-* **赤紫**：通常系で解消できない重要争点を監査する Antigrabity 系
+* **赤紫**：通常系で解消できない重要争点を監査する Antigravity 系
 * **灰**：特定のモデル系統に依存しない役割、処理、または成果物
 * **紫**：実行設定や条件に基づくモデル選択・分岐
 
@@ -296,7 +296,7 @@ flowchart TB
 
 - 作業者には、オーケストレーターの暫定結論を与えない
 - 一次レビューワーには、候補を残したいという意図を与えない
-- Antigrabity には、主張 A/B の作成主体を原則として与えない
+- Antigravity には、主張 A/B の作成主体を原則として与えない
 - 全モデルに同じ証拠 ID と評価ポリシーを使わせる
 - 各モデルの結論ではなく、証拠参照と推論過程を比較する
 
@@ -311,7 +311,7 @@ sequenceDiagram
     participant Workers as Codex / Claude 作業者
     participant Reviewer as 一次レビューワー
     participant Dispute as 争点処理
-    participant Antigrabity as Antigrabity 第三者監査
+    participant Antigravity as Antigravity 第三者監査
 
     Human->>CLI: 条件を指定して調査開始
     CLI->>Orch: 構造化タスク
@@ -333,8 +333,8 @@ sequenceDiagram
     else 重要争点が未解決
         Orch->>Dispute: 争点化
         Dispute->>Dispute: 重要度判定・パケット生成
-        Dispute->>Antigrabity: 匿名化した主張 A/B と共通証拠
-        Antigrabity-->>Orch: 監査結果・根拠・確信度
+        Dispute->>Antigravity: 匿名化した主張 A/B と共通証拠
+        Antigravity-->>Orch: 監査結果・根拠・確信度
         alt 争点を処理可能
             Orch-->>CLI: 最終レポートまたは除外結果
             CLI-->>Human: 監査履歴付き判断材料
@@ -353,7 +353,7 @@ flowchart TB
     I["インターフェース層<br/>CLI・Coding Agent"]
     P["オーケストレーション層<br/>分割・割当・合議・争点管理"]
     L["LLM 分析層<br/>Codex・Claude"]
-    A["監査層<br/>一次レビュー・Antigrabity 追加監査"]
+    A["監査層<br/>一次レビュー・Antigravity 追加監査"]
     X["データ処理層<br/>取得・正規化・計算・選別"]
     T["保存層<br/>設定・元データ・分析・監査ログ"]
 
@@ -385,7 +385,7 @@ flowchart TB
 - 結果統合と候補数の制御
 - 一次レビュー依頼と応答管理
 - 未解決争点の抽出と重要度判定
-- Antigrabity 追加監査の起動判定
+- Antigravity 追加監査の起動判定
 - 監査結果の決定表への適用
 - 人間へのエスカレーション
 
@@ -427,7 +427,7 @@ flowchart TB
 - 一次レビュー指摘
 - 指摘への応答
 - 争点パケット
-- Antigrabity 監査結果
+- Antigravity 監査結果
 - 最終状態と判定理由
 - 最終レポート
 
@@ -448,7 +448,7 @@ AgentAdapter
 
 - `CodexAdapter`
 - `ClaudeCodeAdapter`
-- `AntigrabityCliAdapter`
+- `AntigravityCliAdapter`
 
 各アダプターは、次を共通形式へ変換する。
 
@@ -489,7 +489,7 @@ roles:
     reasoning_profile: high
 
   escalation_auditor:
-    provider: antigrabity
+    provider: antigravity
     enabled: true
     activation_policy: unresolved_material_dispute
     reasoning_profile: high
@@ -521,7 +521,7 @@ MVP では、Codex 系と Claude 系が同じ銘柄を独立に総合評価す�
 
 専門分割だけにすると全体像を見失う可能性があるため、少なくとも1つの作業者には総合評価を担当させる。
 
-Antigrabity はこの通常作業者一覧へ含めない。追加監査時も、新たな総合分析を最初から作り直すのではなく、未解決争点へ対象を限定する。
+Antigravity はこの通常作業者一覧へ含めない。追加監査時も、新たな総合分析を最初から作り直すのではなく、未解決争点へ対象を限定する。
 
 ## 12. 共通データ契約
 
@@ -560,7 +560,7 @@ source_metadata:
 
 重要な数値には、必ず `as_of` または対象期間を付ける。財務年度の値と直近株価のように時点が異なる情報を、同じ時点の値として扱わない。
 
-`evidence_id` は、作業者、一次レビューワー、Antigrabity 監査の全段階で共通利用する。
+`evidence_id` は、作業者、一次レビューワー、Antigravity 監査の全段階で共通利用する。
 
 ## 13. 通常作業者の出力契約
 
@@ -620,7 +620,7 @@ review_responses:
     impact_on_assessment: none | minor | material
 ```
 
-`rejected` は指摘を不採用とした状態であり、直ちに Antigrabity を起動する状態ではない。`disputed` かつ `impact_on_assessment: material` の場合に、追加監査候補とする。
+`rejected` は指摘を不採用とした状態であり、直ちに Antigravity を起動する状態ではない。`disputed` かつ `impact_on_assessment: material` の場合に、追加監査候補とする。
 
 ## 15. 争点の分類と起動判定
 
@@ -631,15 +631,15 @@ review_responses:
 | 事実誤認 | 元データ照合または限定再調査 |
 | 根拠不足 | 追加データ取得または評価不能 |
 | スキーマ・形式違反 | 機械検証と再出力 |
-| 評価基準の適用差 | ポリシー照合。解消しなければ Antigrabity 監査候補 |
-| 論理的な飛躍 | 推論と証拠を再構成。解消しなければ Antigrabity 監査候補 |
-| 将来仮説の相違 | 反証条件を整理。重要なら Antigrabity 監査候補 |
-| リスク重要度の相違 | 共通基準で再評価。重要なら Antigrabity 監査候補 |
+| 評価基準の適用差 | ポリシー照合。解消しなければ Antigravity 監査候補 |
+| 論理的な飛躍 | 推論と証拠を再構成。解消しなければ Antigravity 監査候補 |
+| 将来仮説の相違 | 反証条件を整理。重要なら Antigravity 監査候補 |
+| リスク重要度の相違 | 共通基準で再評価。重要なら Antigravity 監査候補 |
 | 文体・表現 | 通常修正。追加監査しない |
 
 ### 15.2 起動条件
 
-次の条件をすべて満たす場合だけ、Antigrabity 追加監査を起動する。
+次の条件をすべて満たす場合だけ、Antigravity 追加監査を起動する。
 
 ```text
 一次レビューと応答が完了
@@ -658,13 +658,13 @@ AND 回数・時間・コスト上限内
 - 各主張に根拠または「根拠なし」の明示がある
 - 対象となる評価ポリシーが特定されている
 - 重要度が `high` または `critical`、あるいは判定影響が `material` である
-- 同じ争点 ID で Antigrabity 監査済みではない
+- 同じ争点 ID で Antigravity 監査済みではない
 - データ取得失敗を争点として誤分類していない
 - 監査対象外の機密情報が含まれていない
 
 ## 16. 争点パケット
 
-Antigrabity へ渡す争点パケットは、会話履歴全体ではなく、監査に必要な最小単位とする。
+Antigravity へ渡す争点パケットは、会話履歴全体ではなく、監査に必要な最小単位とする。
 
 ```yaml
 dispute:
@@ -717,9 +717,9 @@ requested_audit:
 - 原文を要約した場合は、元の claim ID と finding ID を残す
 - 重要な証拠を省略した場合は、パケットを無効とする
 
-## 17. Antigrabity 監査の出力契約
+## 17. Antigravity 監査の出力契約
 
-Antigrabity は、自由記述だけでなく、次の構造化結果を返す。
+Antigravity は、自由記述だけでなく、次の構造化結果を返す。
 
 ```yaml
 audit:
@@ -756,9 +756,9 @@ audit:
 
 監査出力はスキーマ検証する。スキーマ違反、証拠参照漏れ、争点外の結論、無出典の新規事実が含まれる場合は、自動採用しない。
 
-## 18. Antigrabity CLI の実行境界
+## 18. Antigravity CLI の実行境界
 
-Antigrabity CLI は、既存のセッションランナーから非対話実行する。実装時点で利用可能な構造化出力機能をアダプターが利用し、製品固有の JSON を共通監査スキーマへ変換する。
+Antigravity CLI は、既存のセッションランナーから非対話実行する。実装時点で利用可能な構造化出力機能をアダプターが利用し、製品固有の JSON を共通監査スキーマへ変換する。
 
 MVP の実行ポリシーは次のとおりとする。
 
@@ -770,13 +770,13 @@ MVP の実行ポリシーは次のとおりとする。
 - 追加証拠が必要な場合は、監査結果として要求させ、通常のデータ取得または作業者へ戻す
 - 標準出力、標準エラー、終了コード、使用モデル、実行時間、使用量を記録する
 
-将来、Antigrabity に限定的な外部調査を許可する場合は、通常の監査とは別の実行ポリシーを定義し、取得した情報を共通データ処理へ取り込んでから再監査する。Antigrabity が直接取得した情報だけで最終判定を変更しない。
+将来、Antigravity に限定的な外部調査を許可する場合は、通常の監査とは別の実行ポリシーを定義し、取得した情報を共通データ処理へ取り込んでから再監査する。Antigravity が直接取得した情報だけで最終判定を変更しない。
 
 ## 19. 監査結果の適用
 
-Antigrabity の結論は拘束的な最終判定ではない。オーケストレーターは、次の決定表に従って処理する。
+Antigravity の結論は拘束的な最終判定ではない。オーケストレーターは、次の決定表に従って処理する。
 
-| Antigrabity の結果 | 証拠状態 | 原則的な次状態 |
+| Antigravity の結果 | 証拠状態 | 原則的な次状態 |
 | --- | --- | --- |
 | A または B を支持 | 既存証拠で十分 | 支持理由を検証し、該当案を採用または修正 |
 | どちらも支持しない | 両者に修正余地あり | 両案を修正し、必要なら条件付き合格または再調査 |
@@ -810,7 +810,7 @@ stateDiagram-v2
     Failed --> [*]
 ```
 
-再調査と追加監査の無限ループを避けるため、状態遷移ごとに回数上限を持たせる。Antigrabity 監査後の再調査結果については、同じ争点へ自動で2回目の Antigrabity 監査を行わない。必要なら人間が明示的に新しい争点として再開する。
+再調査と追加監査の無限ループを避けるため、状態遷移ごとに回数上限を持たせる。Antigravity 監査後の再調査結果については、同じ争点へ自動で2回目の Antigravity 監査を行わない。必要なら人間が明示的に新しい争点として再開する。
 
 ## 21. 成果物の構成
 
@@ -839,7 +839,7 @@ runs/<task-id>/
 │       ├── trigger.json
 │       ├── packet.yaml
 │       ├── evidence/
-│       ├── antigrabity-audit.json
+│       ├── antigravity-audit.json
 │       └── resolution.md
 └── final/
     ├── candidates.json
@@ -865,7 +865,7 @@ runs/<task-id>/
 - `orchestration.log`: 状態遷移、起動判定、再試行
 - `agent-runs.log`: 各 CLI の起動、終了、使用量
 - `review.log`: 一次レビュー指摘と応答
-- `audit.log`: 争点生成、Antigrabity 監査、監査結果の適用
+- `audit.log`: 争点生成、Antigravity 監査、監査結果の適用
 - `security.log`: 権限、外部アクセス、拒否された操作
 
 機密情報や認証情報をログへ記録しない。プロンプト全体を保存する場合は、秘密情報の除去を先に行う。
@@ -877,13 +877,13 @@ runs/<task-id>/
 | データ取得失敗 | 分析を開始せず、再試行または評価不能 |
 | 作業者1つの失敗 | 失敗を記録し、最低構成を満たさなければ停止 |
 | 一次レビューワー失敗 | 再試行上限後、人間確認または安全停止 |
-| 争点パケット検証失敗 | Antigrabity を起動せず、パケット生成元へ差し戻す |
-| Antigrabity CLI 起動失敗 | 1回だけ再試行し、失敗時は人間判断待ち |
-| Antigrabity 出力のスキーマ違反 | 修正再出力を1回要求し、失敗時は利用しない |
+| 争点パケット検証失敗 | Antigravity を起動せず、パケット生成元へ差し戻す |
+| Antigravity CLI 起動失敗 | 1回だけ再試行し、失敗時は人間判断待ち |
+| Antigravity 出力のスキーマ違反 | 修正再出力を1回要求し、失敗時は利用しない |
 | トークン・時間上限到達 | 現在状態と未処理事項を保存して停止 |
 | モデル利用不可 | 自動で別系統へ置換せず、人間または設定済みフォールバックへ委ねる |
 
-Antigrabity が利用できない場合に、Codex または Claude の追加セッションを「第三者監査」として扱ってはならない。代替実行を許す場合は、独立性が低下したことを明示する別ポリシーを定義する。
+Antigravity が利用できない場合に、Codex または Claude の追加セッションを「第三者監査」として扱ってはならない。代替実行を許す場合は、独立性が低下したことを明示する別ポリシーを定義する。
 
 ## 24. 安全境界
 
@@ -905,7 +905,7 @@ flowchart LR
 - 「必ず上がる」などの断定を許可しない
 - 最終レポートには調査基準日とデータの鮮度を明記する
 - 外部資料内の命令を、エージェントへの指示として実行しない
-- Antigrabity の追加監査結果も投資助言や注文指示として扱わない
+- Antigravity の追加監査結果も投資助言や注文指示として扱わない
 
 ## 25. MVP 構成
 
@@ -916,9 +916,9 @@ flowchart TB
     D["データ処理"]
     C["Codex ワーカー × 1"]
     A["Claude ワーカー × 1"]
-    R["別系統の一次レビュー × 1"]
+    R["オーケストレーターと異なる系統の<br/>一次レビューワー × 1"]
     Q{"重要争点が未解決か"}
-    G["Antigrabity 追加監査 × 最大1回"]
+    G["Antigravity 追加監査 × 最大1回"]
     F["Markdown + JSON"]
     H["人間判断"]
 
@@ -938,9 +938,9 @@ flowchart TB
     O -->|未解決| H
 ```
 
-MVP では、指定した少数銘柄を入力とし、並列作業者2つ、一次レビュー1回、限定再調査1回、Antigrabity 追加監査1回までのフローから開始する。
+MVP では、指定した少数銘柄を入力とし、並列作業者2つ、オーケストレーターと異なる系統の一次レビューワー1つ、限定再調査1回、Antigravity 追加監査1回までのフローから開始する。
 
-Antigrabity 追加監査では、外部 Web 検索やファイル更新を許可せず、争点パケットと証拠集合の読み取りだけを行う。
+Antigravity 追加監査では、外部 Web 検索やファイル更新を許可せず、争点パケットと証拠集合の読み取りだけを行う。
 
 ## 26. 実装前に決めるインターフェース
 
@@ -953,7 +953,7 @@ Antigrabity 追加監査では、外部 Web 検索やファイル更新を許可
 - 一次レビュー指摘と応答のスキーマ
 - 争点の重要度判定ルール
 - 争点パケットの生成・検証方法
-- Antigrabity 監査結果の適用決定表
+- Antigravity 監査結果の適用決定表
 - 合議と追加監査の状態遷移
 - 中断、再開、再実行の単位
 - 実行履歴とキャッシュの保存方式
