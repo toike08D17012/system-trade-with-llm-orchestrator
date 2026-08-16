@@ -1,3 +1,9 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
 
-curl -fsSL https://claude.ai/install.sh | bash
+set -euo pipefail
+
+main() {
+    curl -fsSL https://claude.ai/install.sh | bash
+}
+
+main "$@"

@@ -1,3 +1,9 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
 
-curl -fsSL https://antigravity.google/cli/install.sh | bash
+set -euo pipefail
+
+main() {
+    curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- "$@"
+}
+
+main "$@"
