@@ -3,7 +3,7 @@
 Codex、Claude Code、Antigravity CLI を組み合わせ、個別株の調査・比較・反証・レビューを支援するシステムの設計・実装リポジトリです。多数の銘柄から、中長期的な値上がり候補を人間が確認できる件数まで絞り込み、根拠と不確実性を追跡できるレポートとして出力することを目指します。
 
 > [!IMPORTANT]
-> 現在は構想・設計段階です。個別株を調査するPythonアプリケーション、実行用CLI、データ取得処理、テストはまだ実装されていません。
+> 現在は構想・設計段階です。個別株を調査するPythonアプリケーション、実行用CLI、データ取得処理、それらのテストはまだ実装されていません。
 
 ## 目的
 
@@ -75,14 +75,22 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | Pythonパッケージ・アプリケーション | 未実装 |
 | 実行用CLI | 未実装 |
 | データソース・評価指標・閾値 | 未決定 |
-| Pythonバージョン・依存関係 | Python 3.14、開発依存関係、品質ツールを定義済み。ロックファイルは未作成 |
-| テスト・lint・型チェック | Ruff、Mypy、Pytest、pre-commitを設定済み。テストは未作成 |
-| CI・Docker・devcontainer | Dockerを標準開発環境として採用。Docker構成、devcontainer、CIは未作成 |
+| Pythonバージョン・依存関係 | Python 3.14、開発依存関係、品質ツール、ロックファイルを定義済み |
+| テスト・lint・型チェック | 設定済み。Shellテストあり。Pythonアプリケーションのテストは未作成 |
+| CI・Docker・devcontainer | Docker標準開発環境の構成あり。devcontainerとCIは未作成 |
 | ライセンス | MIT License |
 
 ## セットアップ
 
-標準開発環境にはDockerを使用する方針です。ただし、Dockerfile、Compose、`docker/run-docker.sh`、ロックファイルはまだ作成されていないため、再現可能なセットアップ手順は未提供です。これらはDocker環境の実装時に追加します。
+標準開発環境にはDockerを使用します。Dockerfile、Compose、`docker/run-docker.sh`、
+ロックファイルを用意しており、次のコマンドで開発コンテナを起動できます。
+
+```bash
+./docker/run-docker.sh
+```
+
+コンテナ起動時に開発依存関係を同期します。個別株調査アプリケーションの
+ランタイムと実行コマンドはまだ実装されていません。
 
 Pythonは3.14を使用します。`pyproject.toml` には開発用のRuff、Mypy、
 Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykernel` を
@@ -119,10 +127,11 @@ Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykerne
 | `docs/agent-reports/` | Coding Agentが生成する開発用の調査、計画、構成確認レポート | 追跡対象外のローカル生成物 |
 | `reports/agent-reports/` | スクリーニング実行時にAgentごとに生成する調査・レビュー・監査の中間レポート | 空。形式は今後確定 |
 | `reports/finalized-reports/` | 人間向けに確定した個別株調査・スクリーニングレポート | 空。形式は今後確定 |
-| `scripts/` | Coding Agent CLIの導入補助とpre-commit検証ラッパー | Docker実行ラッパーは未作成 |
-| `src/` | PythonによるCLI、オーケストレーション、データ処理、Agentアダプター、保存処理、およびPython開発指示 | 実装は未着手。開発用の `AGENTS.md` のみ |
+| `docker/` | 標準開発環境のDockerfile、Compose設定、実行ラッパー | 構成あり |
+| `scripts/` | Coding Agent CLIの導入補助とpre-commit検証ラッパー | 構成あり |
+| `src/` | PythonアプリケーションとPython開発指示 | 開発指示とパッケージ骨格のみ |
 | `AGENTS.md` | スクリーニング実行時の共通原則、安全境界、成果物配置、最小限のリポジトリ構成 | 定義済み |
-| `pyproject.toml` | Python、依存関係、パッケージ、品質ツールの設定 | 基本設定あり。実装とロックファイルは未作成 |
+| `pyproject.toml` / `uv.lock` | Python、依存関係、品質ツール | 設定とロックファイルあり。アプリケーションは未実装 |
 | `LICENSE` | リポジトリと将来の配布物に適用するライセンス | MIT License |
 
 開発支援用の `docs/agent-reports/` と、スクリーニング結果用の
@@ -147,26 +156,36 @@ Pythonの開発前に `src/AGENTS.md` と `.agents/instructions/python.md` を�
 
 ## テストと品質確認
 
-Ruff、Mypy、Pytest、pre-commitと各検証ラッパーは設定済みですが、Python実装、
-テスト、CIはまだありません。標準開発環境となるDocker構成も未作成のため、
-Dockerが導入済みの環境では `./scripts/pre-commit/checks.sh` が未作成の
-`docker/run-docker.sh` を呼び出して失敗します。
+Ruff、Mypy、Pytest、pre-commitと各検証ラッパーは設定済みです。
+hook installerにはShellの回帰テストがありますが、Pythonアプリケーションの
+実装、Pytestテスト、CIはまだありません。
 
-現段階で実行できる構成・構文確認は次のとおりです。
+対象を限定した構成・構文確認は次のとおりです。
 
 ```bash
 pre-commit validate-config .pre-commit-config.yaml
 bash -n scripts/*.sh scripts/pre-commit/*.sh
+bash tests/shell/test-install-githooks.sh
 ```
 
-Git hookの登録処理はホスト側で実行されます。ホストへpre-commitを導入したうえで、次を実行します。
+`docker/run-docker.sh` によるコンテナ起動時は、開発依存関係の同期後に
+Git hookが自動登録されます。リポジトリ全体をbind mountするため、登録先は
+ホストとコンテナで共有する `.git/hooks` です。コンテナ内のGitは、コンテナの
+プロジェクト環境にある `pre-commit` を使用できます。
+
+ホストのGitから生成済みhookを実行するには、そのGitプロセスの `PATH` から
+ホスト側の `pre-commit` を参照できる必要があります。ターミナルだけでなく、
+GUIやIDEからGitを実行する場合も、それぞれのプロセスの `PATH` を確認してください。
+ホストへ導入して手動でhookを登録する場合は、次を実行します。
 
 ```bash
 uv tool install pre-commit
 ./scripts/pre-commit/install-githooks.sh
 ```
 
-Docker環境の完成後は、`./scripts/pre-commit/checks.sh` を全体検証の標準コマンドとします。テスト未作成の現在は、Pytestの終了コード5を成功として扱います。最初のテストスイート追加時に、この暫定扱いを削除します。
+全体検証には `./scripts/pre-commit/checks.sh` を使用します。PythonのPytestテストが
+未作成の現在は、Pytestの終了コード5を成功として扱います。最初のPythonテスト
+スイート追加時に、この暫定扱いを削除します。
 
 ## セキュリティとデータ取り扱い
 
