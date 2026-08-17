@@ -38,4 +38,4 @@ echo "  USER_UID=${USER_UID}"
 echo "  USER_GID=${USER_GID}"
 echo "  HOME=${USER_HOME}"
 
-docker compose build
+docker compose build "$@"

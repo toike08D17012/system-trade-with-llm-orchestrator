@@ -22,6 +22,8 @@ ARG USER_GID=1000
 ARG REPO_NAME
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG SHELLCHECK_VERSION=0.9.0-1
+ARG SHFMT_VERSION=3.6.0-1+b2
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -48,8 +50,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         file \
         procps \
         sudo \
-        shellcheck \
-        shfmt \
+        "shellcheck=${SHELLCHECK_VERSION}" \
+        "shfmt=${SHFMT_VERSION}" \
         libatomic1 \
         libstdc++6
 
