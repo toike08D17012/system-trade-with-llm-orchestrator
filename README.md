@@ -130,8 +130,11 @@ Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykerne
 
 スクリーニングシステムの実行コマンドは未実装です。現段階では、次の設計資料をレビューし、実装前に残っているインターフェースやデータソースの決定に使用します。
 
-1. [個別株調査・スクリーニングシステム構想](docs/design/01-stock-research-system-concept.md)
-2. [個別株調査・スクリーニングシステム構成](docs/design/02-stock-research-system-architecture.md)
+1. [個別株調査・スクリーニングシステム全体像](docs/design/01-stock-research-system-overview.md)
+2. [個別株調査・スクリーニングシステム構想](docs/design/02-stock-research-system-concept.md)
+3. [個別株調査・スクリーニングシステム構成](docs/design/03-stock-research-system-architecture.md)
+4. [一次スクリーニングシステム構成](docs/design/04-primary-screening-architecture.md)
+5. [一次スクリーニング判定部 要求事項](docs/design/05-screening-rule-requirements.md)
 
 ## リポジトリ構成とファイル配置
 
@@ -141,7 +144,7 @@ Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykerne
 | `.agents/skills/` | 調査、計画、検証など、Codexが開発時に使用するリポジトリ固有スキル | 定義済み |
 | `.codex/agents/` | リポジトリ調査・設計・品質確認を担当するCodexサブエージェント定義 | 定義済み |
 | `agent-sources/` | スクリーニング実行時に各Agentへ渡す役割別指示と入出力契約の原本。将来、配布スクリプトから実行用の場所へ配置する | 配置方針のREADMEのみ |
-| `docs/design/` | システムの構想、アーキテクチャ、設計判断 | 2文書あり |
+| `docs/design/` | システム全体像、構想、アーキテクチャ、一次スクリーニング設計、判定ルール要求 | 5文書あり |
 | `docs/agent-reports/` | Coding Agentが生成する開発用の調査、計画、構成確認レポート | 追跡対象外のローカル生成物 |
 | `reports/agent-reports/` | スクリーニング実行時にAgentごとに生成する調査・レビュー・監査の中間レポート | 空。形式は今後確定 |
 | `reports/finalized-reports/` | 人間向けに確定した個別株調査・スクリーニングレポート | 空。形式は今後確定 |
@@ -158,7 +161,7 @@ Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykerne
 保存します。継続的に管理する人間向け文書は、`docs/agent-reports/` 以外の
 `docs/` 配下へ保存します。
 
-設計上は、1回の実行に関する入力、元データ、分析、レビュー、争点、最終成果物を `runs/<task-id>/` 配下へまとめる構成も想定しています。`reports/` との連携方法と、どちらを実行成果物の正本にするかは実装前に確定します。詳細は[構成資料の「成果物の構成」](docs/design/02-stock-research-system-architecture.md#21-成果物の構成)を参照してください。
+設計上は、1回の実行に関する入力、元データ、分析、レビュー、争点、最終成果物を `runs/<task-id>/` 配下へまとめる構成も想定しています。`reports/` との連携方法と、どちらを実行成果物の正本にするかは実装前に確定します。詳細は[構成資料の「成果物の構成」](docs/design/03-stock-research-system-architecture.md#21-成果物の構成)を参照してください。
 
 ## 開発への参加
 

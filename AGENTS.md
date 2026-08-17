@@ -19,8 +19,11 @@ Use current repository artifacts and task inputs as the source of truth. Do not 
 
 Use the following sources according to their purpose:
 
-- `docs/design/01-stock-research-system-concept.md` for the system purpose, scope, quality principles, and MVP boundaries
-- `docs/design/02-stock-research-system-architecture.md` for roles, workflow, data contracts, state transitions, artifacts, and safety boundaries
+- `docs/design/01-stock-research-system-overview.md` for the whole-system map and the responsibility boundaries among design documents
+- `docs/design/02-stock-research-system-concept.md` for the system purpose, scope, quality principles, and system-level MVP boundaries
+- `docs/design/03-stock-research-system-architecture.md` for system-wide roles, workflow, data contracts, state transitions, artifacts, and safety boundaries
+- `docs/design/04-primary-screening-architecture.md` for the primary-screening pipeline, interfaces, artifacts, and downstream LLM boundary
+- `docs/design/05-screening-rule-requirements.md` for common and strategy-specific Screen decision requirements
 - `docs/system-requirements/` for approved detailed requirements when they are added
 - `agent-sources/` for the source instructions distributed to screening agents
 - the current task definition, evidence set, source metadata, and evaluation policy for each screening run

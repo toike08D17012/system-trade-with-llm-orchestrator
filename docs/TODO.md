@@ -173,8 +173,11 @@ flowchart LR
 
 ## 7. 参照資料
 
-- [個別株調査・スクリーニングシステム構想](design/01-stock-research-system-concept.md)
-- [個別株調査・スクリーニングシステム構成](design/02-stock-research-system-architecture.md)
+- [個別株調査・スクリーニングシステム全体像](design/01-stock-research-system-overview.md)
+- [個別株調査・スクリーニングシステム構想](design/02-stock-research-system-concept.md)
+- [個別株調査・スクリーニングシステム構成](design/03-stock-research-system-architecture.md)
+- [一次スクリーニングシステム構成](design/04-primary-screening-architecture.md)
+- [一次スクリーニング判定部 要求事項](design/05-screening-rule-requirements.md)
 - [リポジトリ概要](../README.md)
 - [リポジトリ共通指示](../AGENTS.md)
 - [Agent指示原本の配置方針](../agent-sources/README.md)
