@@ -12,10 +12,13 @@ Python、設定、スクリプト、CI、依存関係、公開インターフェ
 ## 2. 現在の基準点
 
 - 構想とアーキテクチャは `docs/design/` に定義されている。
-- `pyproject.toml`、`.pre-commit-config.yaml`、`scripts/pre-commit/` は存在するが、プロジェクト固有の完成状態ではない。
-- `src/` には開発指示だけがあり、Pythonパッケージ、実行用CLI、テストは未実装である。
+- `pyproject.toml`、`uv.lock`、`.pre-commit-config.yaml`、`scripts/pre-commit/` があり、
+  ロック済みの開発依存関係をDocker環境から検証できる。
+- `src/` にはPython開発指示とパッケージ骨格があるが、アプリケーションと実行用CLIは未実装である。
 - `agent-sources/` には配置方針だけがあり、実行時の役割別指示と入出力契約は未作成である。
-- `docs/system-requirements/`、`tests/`、`runs/`、CI、Docker実行環境は未作成である。
+- `docker/` にはDockerfile、Compose、build・runラッパーがあり、ロック済み依存関係の同期、
+  Git hook登録、既存の検証ラッパーを実行できる。
+- 追跡対象のテスト、`docs/system-requirements/`、`runs/`、CI、devcontainerは未作成である。
 - `reports/` と設計上の `runs/<task-id>/` の責務分担は未決定である。
 - 証券会社接続、注文送信、自動売買は対象外である。
 
@@ -54,13 +57,15 @@ flowchart LR
   `stock_research_llm_orchestrator` とし、MIT Licenseを適用する。
 - [x] Python 3.14を正式な初期対応バージョンとし、VS CodeのNotebook実行用に `ipykernel` を開発依存関係へ追加する。
 - [x] Dockerを標準開発環境とし、ホスト上のツールはGit hook登録などの必要最小限に限定する。
-- [ ] Docker環境の作成時に、Dockerfile、Compose、`docker/run-docker.sh` と既存の検証ラッパーを接続する。
+- [x] Dockerfile、Compose、`docker/run-docker.sh` と既存の検証ラッパーを接続する。
 - [x] `scripts/pre-commit/install-githooks.sh` のリポジトリルート移動と、依存関係の導入案内を修正する。
 - [x] テスト未作成の間は、Pytestの終了コード5をローカルとDockerの両方で成功として扱う。
 - [ ] 最初のテストスイート追加時に、テスト0件を成功扱いする暫定処理を削除する。
-- [ ] Dockerfileで `shellcheck` と `shfmt` のバージョンを固定する。
-- [ ] Docker環境の作成時に、ロックファイルと再現可能なセットアップ手順を追加する。
+- [x] Dockerfileで `shellcheck` と `shfmt` のバージョンを固定する。
+- [x] ロックファイルと、Dockerによる再現可能なセットアップ手順を追加する。
 - [x] READMEの現在状態、構成、セットアップ、品質確認を実ファイルに合わせて更新する。
+- [x] READMEから未作成のShellテスト参照を削除し、構文確認を実在するスクリプトに合わせる。
+- [x] `src/AGENTS.md` に残るDocker未実装の記述を、現在の開発環境に合わせて更新する。
 - [x] `docs/agent-reports/` はローカル生成物として追跡せず、継続管理する文書はそれ以外の `docs/` 配下へ保存する。
 
 ### P1: 承認済みシステム要件
@@ -92,14 +97,15 @@ flowchart LR
 
 ### P3: Python開発基盤
 
-- [ ] `src/stock_research_llm_orchestrator/` にPythonパッケージを作成し、最小の
-  CLIエントリーポイントを `pyproject.toml` に登録する。
+- [x] `src/stock_research_llm_orchestrator/` にPythonパッケージ骨格を作成する。
+- [ ] 最小のCLIエントリーポイントを `pyproject.toml` に登録する。
 - [ ] 設定読み込み、終了コード、エラー表示、ログ初期化の共通基盤を作成する。
 - [ ] `tests/` を作成し、パッケージ読込、CLIの `--help`、設定検証の最小テストを追加する。
-- [ ] Ruff、Ruff format、Mypy、Pytest、ShellCheck、shfmtを固定した依存関係または明示した環境から実行できるようにする。
+- [x] Ruff、Ruff format、Mypy、Pytest、ShellCheck、shfmtを固定した依存関係または
+  明示した環境から実行できるようにする。
 - [ ] CIでロック済み依存関係を導入し、format check、lint、型チェック、テスト、Shell検証を読み取り専用で実行する。
-- [ ] 標準開発環境のDockerfile、Compose、`docker/run-docker.sh`、必要に応じてdevcontainerを作成する。
-- [ ] 開発環境のセットアップ、Git hookの導入、個別検証、全体検証をREADMEまたは開発ガイドへ記載する。
+- [x] 標準開発環境のDockerfile、Compose、`docker/run-docker.sh` を作成する。
+- [x] 開発環境のセットアップ、Git hookの導入、個別検証、全体検証をREADMEへ記載する。
 
 ### P4: 決定論的データ処理MVP
 

@@ -76,7 +76,7 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | 実行用CLI | 未実装 |
 | データソース・評価指標・閾値 | 未決定 |
 | Pythonバージョン・依存関係 | Python 3.14、開発依存関係、品質ツール、ロックファイルを定義済み |
-| テスト・lint・型チェック | 設定済み。Shellテストあり。Pythonアプリケーションのテストは未作成 |
+| テスト・lint・型チェック | 品質ツールと検証ラッパーは設定済み。追跡対象のテストは未作成 |
 | CI・Docker・devcontainer | Docker標準開発環境の構成あり。devcontainerとCIは未作成 |
 | ライセンス | MIT License |
 
@@ -91,6 +91,24 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 
 コンテナ起動時に開発依存関係を同期します。個別株調査アプリケーションの
 ランタイムと実行コマンドはまだ実装されていません。
+
+`docker/run-docker.sh` は最初に `ghcr.io` の `:latest` imageをpullし、
+pullに失敗した場合だけ、ホストのUID/GIDを反映したimageをローカルでbuildします。
+Coding Agent CLIのinstallerを明示的に再実行して更新する場合は、次を実行します。
+
+```bash
+./docker/build-docker.sh --no-cache --progress=plain
+```
+
+base imageも含めて広く更新する場合は、`--pull` も指定します。
+
+```bash
+./docker/build-docker.sh --no-cache --pull --progress=plain
+```
+
+将来GHCRへのimage公開を開始した場合、起動時のpullによってローカルで更新した
+`:latest` imageが置き換わる可能性があります。公開時にはpullの優先順位と、
+image内のUID/GIDを改めて確認してください。
 
 Pythonは3.14を使用します。`pyproject.toml` には開発用のRuff、Mypy、
 Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykernel` を
@@ -157,15 +175,13 @@ Pythonの開発前に `src/AGENTS.md` と `.agents/instructions/python.md` を�
 ## テストと品質確認
 
 Ruff、Mypy、Pytest、pre-commitと各検証ラッパーは設定済みです。
-hook installerにはShellの回帰テストがありますが、Pythonアプリケーションの
-実装、Pytestテスト、CIはまだありません。
+Pythonアプリケーションの実装、追跡対象のテスト、CIはまだありません。
 
 対象を限定した構成・構文確認は次のとおりです。
 
 ```bash
-pre-commit validate-config .pre-commit-config.yaml
-bash -n scripts/*.sh scripts/pre-commit/*.sh
-bash tests/shell/test-install-githooks.sh
+bash -n docker/*.sh scripts/*.sh scripts/pre-commit/*.sh
+./docker/run-docker.sh pre-commit validate-config .pre-commit-config.yaml
 ```
 
 `docker/run-docker.sh` によるコンテナ起動時は、開発依存関係の同期後に
@@ -183,9 +199,14 @@ uv tool install pre-commit
 ./scripts/pre-commit/install-githooks.sh
 ```
 
-全体検証には `./scripts/pre-commit/checks.sh` を使用します。PythonのPytestテストが
-未作成の現在は、Pytestの終了コード5を成功として扱います。最初のPythonテスト
-スイート追加時に、この暫定扱いを削除します。
+全体検証にはDocker環境から次を実行します。
+
+```bash
+./docker/run-docker.sh ./scripts/pre-commit/checks.sh
+```
+
+PythonのPytestテストが未作成の現在は、Pytestの終了コード5を成功として扱います。
+最初のPythonテストスイート追加時に、この暫定扱いを削除します。
 
 ## セキュリティとデータ取り扱い
 

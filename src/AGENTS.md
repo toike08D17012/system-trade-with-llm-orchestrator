@@ -72,24 +72,21 @@ Markdown-only changes do not require a separate implementation plan. If a task i
 - Run the narrowest relevant checks first, followed by the repository-wide validation command when available.
 - Do not delete, skip, weaken, or over-mock tests merely to obtain a passing result.
 
-The standard development environment is Docker. The Docker definition and
-`docker/run-docker.sh` are planned but not yet implemented. Until they exist, do
-not describe Docker-backed validation as runnable; use safe direct checks and
-report the missing validation.
-
-After the Docker workflow is implemented, the default validation command is:
+The standard development environment is Docker. `docker/Dockerfile`,
+`docker/docker-compose.yml`, and `docker/run-docker.sh` provide the current
+Docker-backed validation workflow. The default validation command is:
 
 ```bash
-./scripts/pre-commit/checks.sh
+./docker/run-docker.sh ./scripts/pre-commit/checks.sh
 ```
 
 Repository-defined focused commands may include:
 
 ```bash
-./scripts/pre-commit/ruff-check.sh --fix
-./scripts/pre-commit/ruff-format.sh
-./scripts/pre-commit/mypy.sh .
-./scripts/pre-commit/pytest.sh
+./docker/run-docker.sh ./scripts/pre-commit/ruff-check.sh --fix
+./docker/run-docker.sh ./scripts/pre-commit/ruff-format.sh
+./docker/run-docker.sh ./scripts/pre-commit/mypy.sh .
+./docker/run-docker.sh ./scripts/pre-commit/pytest.sh
 ```
 
 Verify that each command exists before running it. If a check cannot be run, explain why and state which validation remains outstanding.
