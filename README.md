@@ -72,6 +72,7 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | 項目 | 状態 |
 | --- | --- |
 | 構想・アーキテクチャ | 設計資料あり |
+| 詳細解析MVP要件 | P0ドラフト6文書あり。未承認のため実装根拠には未使用 |
 | Pythonパッケージ・アプリケーション | 未実装 |
 | 実行用CLI | 未実装 |
 | データソース・評価指標・閾値 | 未決定 |
@@ -91,6 +92,10 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 
 コンテナ起動時に開発依存関係を同期します。個別株調査アプリケーションの
 ランタイムと実行コマンドはまだ実装されていません。
+
+現在のCompose構成は、複数のCoding Agent CLI、認証状態、リポジトリを共有する
+開発環境です。将来の株式調査ランタイムで求める役割別の資格情報分離、読み取り専用化、
+ネットワーク制限を満たす実行サンドボックスではありません。
 
 `docker/run-docker.sh` は最初に `ghcr.io` の `:latest` imageをpullし、
 pullに失敗した場合だけ、ホストのUID/GIDを反映したimageをローカルでbuildします。
@@ -128,7 +133,10 @@ Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykerne
 
 ## 使い方
 
-スクリーニングシステムの実行コマンドは未実装です。現段階では、次の設計資料をレビューし、実装前に残っているインターフェースやデータソースの決定に使用します。
+スクリーニングシステムの実行コマンドは未実装です。現段階では、最初に
+[システム要件文書の管理方針](docs/system-requirements/README.md)でP0ドラフトと
+承認状態を確認し、次の設計資料をレビューします。P0文書は `Approved` になるまで
+実装根拠として使用しません。
 
 1. [個別株調査・スクリーニングシステム全体像](docs/design/01-stock-research-system-overview.md)
 2. [個別株調査・スクリーニングシステム構想](docs/design/02-stock-research-system-concept.md)
@@ -143,10 +151,11 @@ Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykerne
 | `.agents/instructions/` | Python、Markdown、Shellなど、開発時に適用する言語別ルール | 定義済み |
 | `.agents/skills/` | 調査、計画、検証など、Codexが開発時に使用するリポジトリ固有スキル | 定義済み |
 | `.codex/agents/` | リポジトリ調査・設計・品質確認を担当するCodexサブエージェント定義 | 定義済み |
-| `agent-sources/` | スクリーニング実行時に各Agentへ渡す役割別指示と入出力契約の原本。将来、配布スクリプトから実行用の場所へ配置する | 配置方針のREADMEのみ |
+| `agent-sources/` | 実行Agent向けの役割別指示と入出力契約の原本 | 配置方針のREADMEのみ |
 | `docs/design/` | システム全体像、構想、アーキテクチャ、一次スクリーニング設計、判定ルール要求 | 5文書あり |
+| `docs/system-requirements/` | 詳細解析MVPの承認対象となるシステム要件 | P0ドラフト6文書あり。未承認 |
 | `docs/agent-reports/` | Coding Agentが生成する開発用の調査、計画、構成確認レポート | 追跡対象外のローカル生成物 |
-| `reports/agent-reports/` | スクリーニング実行時にAgentごとに生成する調査・レビュー・監査の中間レポート | 空。形式は今後確定 |
+| `reports/agent-reports/` | 銘柄調査・レビュー・監査の中間レポート | 空。形式は今後確定 |
 | `reports/finalized-reports/` | 人間向けに確定した個別株調査・スクリーニングレポート | 空。形式は今後確定 |
 | `docker/` | 標準開発環境のDockerfile、Compose設定、実行ラッパー | 構成あり |
 | `scripts/` | Coding Agent CLIの導入補助とpre-commit検証ラッパー | 構成あり |
@@ -161,11 +170,21 @@ Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykerne
 保存します。継続的に管理する人間向け文書は、`docs/agent-reports/` 以外の
 `docs/` 配下へ保存します。
 
-設計上は、1回の実行に関する入力、元データ、分析、レビュー、争点、最終成果物を `runs/<task-id>/` 配下へまとめる構成も想定しています。`reports/` との連携方法と、どちらを実行成果物の正本にするかは実装前に確定します。詳細は[構成資料の「成果物の構成」](docs/design/03-stock-research-system-architecture.md#21-成果物の構成)を参照してください。
+`runs/` と `reports/` の2つの成果物ディレクトリは、機密情報やライセンス対象データの
+誤コミットを防ぐため既定でGit追跡対象外です。最終化済み成果物を追跡する場合は、
+公開範囲とデータ利用条件を個別に承認してから明示的に追加します。
+
+設計上は、1回の実行に関する入力、元データ、分析、レビュー、争点、最終成果物を
+`runs/<task-id>/` 配下へまとめる構成も想定しています。正本、移送、保持のP0案は
+[成果物・保持・セキュリティの要件](docs/system-requirements/05-artifact-retention-and-security.md)
+にありますが、未承認かつ未実装です。
 
 ## 開発への参加
 
-Pythonの開発前に `src/AGENTS.md` と `.agents/instructions/python.md` を確認してください。MarkdownまたはShellを変更する場合は、対象ファイルに対応する `.agents/instructions/` も確認します。Pythonコード、設定、スクリプト、実行動作へ影響する非自明な変更は、実装計画を作成し、承認後に実装します。
+Pythonの開発前に `src/AGENTS.md` と `.agents/instructions/python.md` を
+確認してください。MarkdownまたはShellを変更する場合は、対象ファイルに対応する
+`.agents/instructions/` も確認します。Pythonコード、設定、スクリプト、実行動作へ
+影響する非自明な変更は、実装計画を作成し、承認後に実装します。
 
 実装時は、次を優先します。
 
