@@ -19,7 +19,7 @@ Examples:
 EOF
 }
 
-validate_agent_state_paths() {
+prepare_agent_state_paths() {
     local -a required_directories=(
         "${HOST_CODEX_HOME:-${HOME}/.codex}"
         "${HOST_CLAUDE_HOME:-${HOME}/.claude}"
@@ -29,15 +29,21 @@ validate_agent_state_paths() {
     local path
 
     for path in "${required_directories[@]}"; do
-        if [[ ! -d "${path}" ]]; then
-            echo "Required agent state directory does not exist: ${path}" >&2
+        if [[ -e "${path}" && ! -d "${path}" ]]; then
+            echo "Agent state path is not a directory: ${path}" >&2
             return 1
         fi
+
+        mkdir -p -- "${path}"
     done
 
-    if [[ ! -f "${claude_state_file}" ]]; then
-        echo "Required Claude state file does not exist: ${claude_state_file}" >&2
+    if [[ -e "${claude_state_file}" && ! -f "${claude_state_file}" ]]; then
+        echo "Claude state path is not a file: ${claude_state_file}" >&2
         return 1
+    fi
+
+    if [[ ! -e "${claude_state_file}" ]]; then
+        printf '{}\n' >"${claude_state_file}"
     fi
 }
 
@@ -64,7 +70,7 @@ main() {
     REPO_ROOT_BASENAME="$(get_repo_root_basename)"
     export REPO_ROOT_BASENAME
 
-    validate_agent_state_paths
+    prepare_agent_state_paths
 
     # if bash_history does not exist,
     # create an empty file to avoid creating it as directory
