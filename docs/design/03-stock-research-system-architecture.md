@@ -521,6 +521,9 @@ MVP では、Codex 系と Claude 系が同じ銘柄を独立に総合評価す�
 
 専門分割だけにすると全体像を見失う可能性があるため、少なくとも1つの作業者には総合評価を担当させる。
 
+比較・ランキングは、複数銘柄の詳細解析が完了した後に構造化結果を再入力する後続拡張の
+役割とする。MVPの通常作業者へ複数銘柄の証拠や暫定結論を同時に渡さない。
+
 Antigravity はこの通常作業者一覧へ含めない。追加監査時も、新たな総合分析を最初から作り直すのではなく、未解決争点へ対象を限定する。
 
 ## 12. 共通データ契約
@@ -532,7 +535,9 @@ research_context:
   task_id: string
   as_of: date
   market: string
-  investment_horizon: string
+  analysis_horizons:
+    - medium_term
+    - long_term
   screening_policy_version: string
   evaluation_policy_version: string
 
@@ -562,6 +567,9 @@ source_metadata:
 
 `evidence_id` は、作業者、一次レビューワー、Antigravity 監査の全段階で共通利用する。
 
+通常実行では、`analysis_horizons` に `medium_term` と `long_term` の両方を設定する。
+特定期間への絞り込みを許可する実行種別と入力契約は、詳細要件で定義する。
+
 ## 13. 通常作業者の出力契約
 
 各作業者は、自然文レポートだけでなく、機械的に統合可能な構造化結果を返す。
@@ -570,25 +578,45 @@ source_metadata:
 analysis:
   ticker: string
   role: string
-  summary: string
-  positive_factors: []
-  negative_factors: []
-  thesis: []
-  counter_thesis: []
-  valuation_view: string
-  technical_context: string
-  watch_conditions: []
-  missing_information: []
-  claims:
-    - claim_id: string
-      statement: string
-      type: fact | inference | hypothesis
-      evidence_refs: []
-  assessment:
-    status: pass | conditional | investigate | reject
-    confidence: low | medium | high
-    rationale: string
+  horizon_analyses:
+    - horizon: medium_term | long_term
+      summary: string
+      positive_factors: []
+      negative_factors: []
+      thesis: []
+      counter_thesis: []
+      valuation_view: string
+      watch_conditions: []
+      missing_information: []
+      claims:
+        - claim_id: string
+          statement: string
+          type: fact | inference | hypothesis
+          evidence_refs: []
+      evaluability: evaluable | not_evaluable
+      assessment:
+        status: pass | conditional | investigate | reject
+        confidence: low | medium | high
+        rationale: string
+  cross_horizon_summary:
+    agreements: []
+    differences: []
+  entry_exit_context:
+    price_as_of: datetime
+    current_price_context: string
+    entry_reference_conditions: []
+    technical_exit_reference_conditions: []
+    thesis_invalidation_conditions: []
+    upcoming_event_risks: []
+    volatility_context: string
+    evidence_refs: []
+    missing_information: []
 ```
+
+`entry_exit_context` は短期的な株価方向を評価するものではなく、中期・長期の投資判断を
+補助する情報とする。特定価格での売買または損切りを指示せず、価格上の撤退参考条件と
+投資仮説上の撤退条件を区別する。期間横断の要約自体には4段階評価を付与しない。
+`evaluability` が `not_evaluable` の期間では、`assessment` を未設定にする。
 
 自然文と構造化結果に矛盾がある場合は、自動的に採用せず、一次レビュー対象とする。
 
@@ -672,6 +700,7 @@ dispute:
   task_id: string
   ticker: string
   as_of: date
+  affected_horizons: []
   question: string
   materiality: high | critical
   affected_decisions: []
@@ -938,7 +967,7 @@ flowchart TB
     O -->|未解決| H
 ```
 
-MVP では、指定した少数銘柄を入力とし、並列作業者2つ、オーケストレーターと異なる系統の一次レビューワー1つ、限定再調査1回、Antigravity 追加監査1回までのフローから開始する。
+MVP では、指定した1銘柄を入力とし、並列作業者2つ、オーケストレーターと異なる系統の一次レビューワー1つ、限定再調査1回、Antigravity 追加監査1回までのフローから開始する。
 
 Antigravity 追加監査では、外部 Web 検索やファイル更新を許可せず、争点パケットと証拠集合の読み取りだけを行う。
 
