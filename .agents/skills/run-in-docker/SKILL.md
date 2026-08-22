@@ -2,7 +2,7 @@
 name: run-in-docker
 description: Use this skill when asked to run project commands, tests, linters, type checks, formatters, Python scripts, shell scripts, or development commands inside the repository Docker Compose container. Always route commands through ./docker/run-docker.sh so CPU/GPU switching and UID/GID mapping are handled consistently.
 argument-hint: "[command ...]"
-------------------------------
+---
 
 # Run project commands in Docker
 

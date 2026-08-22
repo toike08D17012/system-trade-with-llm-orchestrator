@@ -2,7 +2,7 @@
 name: run-ruff-check
 description: Use this skill when asked to run Ruff lint checks, fix Ruff lint errors, investigate Ruff errors, or keep Python linting clean. By default, run Ruff check with --fix through the repository wrapper script so fixable lint issues are corrected automatically.
 argument-hint: "[ruff check args ...]"
---------------------------------------
+---
 
 # Run Ruff check
 

@@ -2,7 +2,7 @@
 name: run-ruff-format
 description: Use this skill when asked to run Ruff format, format Python files, check Python formatting, or keep Python formatting clean. By default, run Ruff format through the repository wrapper script so formatting is applied automatically.
 argument-hint: "[ruff format args ...]"
----------------------------------------
+---
 
 # Run Ruff format
 

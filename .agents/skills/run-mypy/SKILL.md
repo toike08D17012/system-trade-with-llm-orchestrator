@@ -2,7 +2,7 @@
 name: run-mypy
 description: Use this skill when asked to run mypy, type-check Python code, investigate mypy errors, or verify Python typing. Always execute mypy through the repository wrapper script so it works consistently from both the host environment and devcontainer/container environments.
 argument-hint: "[mypy args ...]"
---------------------------------
+---
 
 # Run mypy
 

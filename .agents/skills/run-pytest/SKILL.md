@@ -2,7 +2,7 @@
 name: run-pytest
 description: Use this skill when asked to run pytest, run Python tests, verify test failures, investigate failing tests, or check whether the project test suite passes. Always execute pytest through the repository wrapper script so it works consistently from both the host environment and devcontainer/container environments.
 argument-hint: "[pytest args ...]"
-----------------------------------
+---
 
 # Run pytest
 
