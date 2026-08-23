@@ -35,6 +35,8 @@
 
 ## 4. 全体フロー
 
+<!-- markdownlint-disable MD013 -->
+
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"darkMode": true, "background": "#0B1120", "primaryTextColor": "#F8FAFC", "lineColor": "#CBD5E1", "textColor": "#F8FAFC", "edgeLabelBackground": "#1F2937"}}}%%
 flowchart TD
@@ -102,6 +104,8 @@ flowchart TD
     linkStyle default stroke:#CBD5E1,stroke-width:2px
 ```
 
+<!-- markdownlint-enable MD013 -->
+
 | 区分 | 配色 | 実行内容 |
 | --- | --- | --- |
 | 入力・人間判断 | 紫 | 人間による条件設定と最終判断 |
@@ -166,12 +170,16 @@ Antigravity 系は通常作業者や多数決の第三票ではない。一次�
 
 文書間で同じテーマを扱う場合は、次の粒度で責務を分ける。
 
+<!-- markdownlint-disable MD013 -->
+
 | テーマ | 構想 | 全体アーキテクチャ | 一次スクリーニング | Screen判定ルール |
 | --- | --- | --- | --- | --- |
 | 処理フロー | 概念上の段階と目的 | コンポーネント間の実行フローと状態 | 一次スクリーニング内部の処理段階 | 1つのScreen内の判定フロー |
 | 入出力 | 必要な情報と成果の考え方 | システム全体のデータ契約と成果物 | スクリーニングタスク、結果、Candidate Pool | `ScreeningResult`と判定理由 |
 | 品質 | システム全体の品質原則 | 全体構成で品質を担保する仕組み | スクリーニング基盤の再現性と説明可能性 | 判定ルールとPolicyの品質 |
 | MVP | システム全体の初期境界 | 全体アーキテクチャの初期構成 | 一次スクリーニング基盤の初期範囲 | 初期Screenと判定要素 |
+
+<!-- markdownlint-enable MD013 -->
 
 詳細文書間に矛盾がある場合、本書の要約だけで解消してはならない。影響する文書、相違点、未決定事項を記録し、人間の判断を求める。
 

@@ -138,9 +138,9 @@ metadata:
 
 ---
 
-# 6. Dividend Screen
+## 6. Dividend Screen
 
-## 6.1 目的
+### 6.1 目的
 
 配当・自社株買いなどの株主還元を主要な投資仮説として検討できる銘柄を抽出する。
 
@@ -152,7 +152,7 @@ metadata:
 株主還元の持続可能性
 ```
 
-## 6.2 判定イメージ
+### 6.2 判定イメージ
 
 ```mermaid
 flowchart TB
@@ -179,16 +179,16 @@ flowchart TB
     T --> PASS
 ```
 
-## 6.3 確認したい指標
+### 6.3 確認したい指標
 
-### 還元水準
+#### 還元水準
 
 - 配当利回り
 - 年間配当額
 - 自社株買い
 - Shareholder Yield
 
-### 持続可能性
+#### 持続可能性
 
 - 配当性向
 - FCF Payout Ratio
@@ -196,21 +196,21 @@ flowchart TB
 - FCF
 - 利益推移
 
-### 財務健全性
+#### 財務健全性
 
 - 有利子負債
 - Net Debt / EBITDA
 - 自己資本比率
 - 金利負担
 
-### 安定性
+#### 安定性
 
 - 減配履歴
 - 連続増配年数
 - 配当維持年数
 - 利益・FCF の変動
 
-## 6.4 判定方針
+### 6.4 判定方針
 
 配当利回りだけで PASS にしない。
 
@@ -237,9 +237,9 @@ flowchart TB
 
 ---
 
-# 7. Growth Screen
+## 7. Growth Screen
 
-## 7.1 目的
+### 7.1 目的
 
 売上、利益、市場拡大などを主要なリターン源泉として検討できる銘柄を抽出する。
 
@@ -253,7 +253,7 @@ Growth は大きく次の2種類を想定する。
 
 MVP では `Quantitative Growth` を決定論的 Screen の中心とし、Thematic Growth は後から追加可能な構造とする。
 
-## 7.2 判定イメージ
+### 7.2 判定イメージ
 
 ```mermaid
 flowchart TB
@@ -280,9 +280,9 @@ flowchart TB
     T --> PASS
 ```
 
-## 7.3 確認したい指標
+### 7.3 確認したい指標
 
-### 成長率
+#### 成長率
 
 - 売上 YoY
 - 売上 3年 CAGR
@@ -290,14 +290,14 @@ flowchart TB
 - 営業利益 CAGR
 - FCF CAGR
 
-### 収益性
+#### 収益性
 
 - 営業利益率
 - FCF Margin
 - ROIC
 - ROE
 
-### 成長の質
+#### 成長の質
 
 - 増資・希薄化
 - 負債増加
@@ -305,7 +305,7 @@ flowchart TB
 - 一時的な大型案件依存
 - M&A のみによる成長
 
-### 補助情報
+#### 補助情報
 
 - 業績予想
 - 上方・下方修正
@@ -313,7 +313,7 @@ flowchart TB
 - Price Momentum
 - 成長市場 Exposure
 
-## 7.4 判定方針
+### 7.4 判定方針
 
 「売上が伸びている」だけで PASS にしない。
 
@@ -333,15 +333,15 @@ Valuation は後段調査、または Value Screen との組み合わせで評�
 
 ---
 
-# 8. Value Screen
+## 8. Value Screen
 
-## 8.1 目的
+### 8.1 目的
 
 現在の市場評価が、同業・過去・事業収益力などに対して相対的に低く、再評価余地を検討する価値がある銘柄を抽出する。
 
 単純な低 PER 銘柄の抽出ではなく、Value Trap をある程度除外する。
 
-## 8.2 判定イメージ
+### 8.2 判定イメージ
 
 ```mermaid
 flowchart TB
@@ -368,9 +368,9 @@ flowchart TB
     C --> PASS
 ```
 
-## 8.3 確認したい指標
+### 8.3 確認したい指標
 
-### Valuation
+#### Valuation
 
 - Forward PER
 - PBR
@@ -378,20 +378,20 @@ flowchart TB
 - EV / Operating CF
 - FCF Yield
 
-### 相対比較
+#### 相対比較
 
 - 同業内 Percentile
 - 自社過去レンジ
 - 市場全体との比較
 
-### 収益力
+#### 収益力
 
 - 営業利益
 - FCF
 - ROE / ROIC
 - 利益率
 
-### Value Trap の兆候
+#### Value Trap の兆候
 
 - 長期的な売上減少
 - 継続的な赤字
@@ -399,7 +399,7 @@ flowchart TB
 - 大規模な希薄化
 - 構造的な市場縮小
 
-## 8.4 判定方針
+### 8.4 判定方針
 
 絶対 PER より、同業内の相対評価を重視する。
 
@@ -419,7 +419,7 @@ Forward PER が同業下位30%
 
 ---
 
-# 9. Thematic / Structural Growth の扱い
+## 9. Thematic / Structural Growth の扱い
 
 AI、半導体、データセンターなどの成長テーマを Screen に含める場合、単純なキーワード一致は避ける。
 
