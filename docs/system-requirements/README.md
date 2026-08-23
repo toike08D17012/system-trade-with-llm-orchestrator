@@ -85,7 +85,7 @@ flowchart LR
 | [データソースと証拠の方針](02-data-source-and-evidence-policy.md) | 候補ソース、利用条件、鮮度、対象期間、欠損・不一致 |
 | [Agent・レビュー・追加監査の方針](03-agent-review-and-audit-policy.md) | モデル独立性、一次レビュー、再調査、争点、追加監査、人間判断 |
 | [CLIと実行運用の要件](04-cli-and-runtime-operations.md) | 操作、タイムアウト、再試行、中断、再開、利用上限、認証 |
-| [成果物・保持・セキュリティの要件](05-artifact-retention-and-security.md) | 正本、移送、保持、削除、権限、秘密情報、外部コンテンツ |
+| [成果物・保持・セキュリティの要件](05-artifact-retention-and-security.md) | 正本、移送、全量保持、権限、秘密情報、外部コンテンツ |
 
 ## 6. P0チェック項目との対応
 
@@ -99,7 +99,7 @@ flowchart LR
 | 4段階評価 | `01-detailed-analysis-mvp-scope.md` |
 | 評価と実行状態の分離 | `03-agent-review-and-audit-policy.md` |
 | CLI、制限、障害、認証 | `04-cli-and-runtime-operations.md` |
-| 成果物の正本、移送、保持、削除、権限 | `05-artifact-retention-and-security.md` |
+| 成果物の正本、移送、全量保持、権限 | `05-artifact-retention-and-security.md` |
 | 秘密情報とプロンプトインジェクション対策 | `05-artifact-retention-and-security.md` |
 | MVP成功条件 | `01-detailed-analysis-mvp-scope.md` |
 
@@ -122,12 +122,14 @@ flowchart LR
 - MVPで最初に扱う市場
 - タスク受付時刻を確定する処理境界と時計同期の要件
 - 市場ごとのタイムゾーン、取引カレンダー、直近完了取引日、時間外公表の扱い
-- 採用する価格・財務・ニュースのデータソースと利用プラン
+- `yfinance`を介したYahoo Financeデータの利用条件と、財務・為替・ニュースに使う
+  追加データソースおよび利用プラン
+- 日本株向けUSD/JPYの観測価格種別、株価との時点整合規則、欠損時の扱い
 - 採用データを各外部モデル提供者へ処理目的で送信できる条件
 - タスク単位の金額上限と、実測に基づく所要時間目標
-- 最終レポートの監査可能期間と、保存期間がデータライセンスに適合することの確認
-- 一次レビュー後の再レビュー回数と追加監査のバッチ上限
-- 人間判断、最終化、削除を実行できる役割と認可方法
+- 最終レポートを含む成果物の全量保持方針の確定
+- 限定再調査と追加監査の正確なバッチ上限
+- 人間判断と最終化を実行できる役割と認可方法
 
 ## 8. 参照資料
 
