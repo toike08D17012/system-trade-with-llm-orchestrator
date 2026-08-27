@@ -6,6 +6,7 @@
 | 決定日 | 2026-08-23 |
 | 適用範囲 | 詳細解析MVPと将来の一次スクリーニングにおける外部データ取得・Web検索 |
 | 実装状態 | 未実装 |
+| 要件反映 | 2026-08-23に`docs/system-requirements/02`〜`05`へ反映 |
 
 ## コンテキスト
 
@@ -202,7 +203,7 @@ request fingerprintは少なくとも次を含む。
 - 結果へ影響する正規化済みparameter
 - 認証scopeの非秘密alias
 - source Policy版
-- `as_of_cutoff`とpoint-in-time条件
+- request対象期間・観測条件と、固定fixture評価時のpoint-in-time条件
 - response形式と調整条件
 
 fingerprintが同じin-flight requestは1つのleaderへまとめ、consumerは結果を待つ。consumerごとの
@@ -341,14 +342,15 @@ query文字列や認証情報をmetric labelに使用しない。高cardinality�
 
 ## 要件と設計への反映
 
-このADRを永続的な決定の正本とする。実装前に次の順序で既存文書へ反映する。
+このADRは採用理由、代替案、検証条件の記録であり、対応するsystem-requirementsと
+優先順位を競う別仕様ではない。決定内容を次の文書へ反映し、ADRと要件を一致させる。
 
-1. `04-cli-and-runtime-operations.md`へ共有調整、queue、cooldown、永続化を追加する。
-2. `02-data-source-and-evidence-policy.md`へsource profileの承認項目を追加する。
-3. `03-agent-review-and-audit-policy.md`へ通信制御状態と探索内容の共有境界を追加する。
-4. `05-artifact-retention-and-security.md`へSQLite state、cache、監査ログの保持条件を追加する。
-5. `docs/TODO.md`へP1の契約、P3の直接取得、P4の検索制御、P5の監視を追加する。
-6. 要件承認後に`docs/design/`とAgent向け指示を追随更新する。
+1. `04-cli-and-runtime-operations.md`へ共有調整、queue、cooldown、永続化を反映した。
+2. `02-data-source-and-evidence-policy.md`へsource profileの承認項目を反映した。
+3. `03-agent-review-and-audit-policy.md`へ通信制御状態と探索内容の共有境界を反映した。
+4. `05-artifact-retention-and-security.md`へSQLite state、cache、監査ログの保持条件を反映した。
+5. `docs/TODO.md`へP1の契約、P3の直接取得、P4の検索制御、P5の監視を反映した。
+6. 要件の内容を`docs/design/`へ反映した。Agent向け指示はP1で契約を作成するときに反映する。
 
 要件文書が`Draft`の間は、このADRを実装済みまたは運用承認済みの挙動として扱わない。
 

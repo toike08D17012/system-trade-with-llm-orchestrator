@@ -83,6 +83,8 @@ flowchart TB
 ### 4.1 Universe 生成
 
 人間または設定から調査対象となる銘柄集合を指定する。
+初期MVPでは東京証券取引所に上場する内国現物株を対象とし、市場識別子にはMIC `XTKS`を使う。
+Prime、Standard、Growthなどの市場区分は`XTKS`とは別のuniverse条件として扱う。
 
 例：
 
@@ -236,7 +238,7 @@ screening_task:
   as_of: date
 
   universe:
-    market: string
+    market: XTKS
     source: string
 
   enabled_screens:
@@ -250,6 +252,10 @@ screening_task:
     max_candidates: optional
 ```
 
+`as_of`は一次スクリーニングの数値を評価する観測基準日であり、後段の通常詳細解析で
+利用可能な情報を打ち切る時刻ではない。後段では別途、タスク受付時刻、証拠集合の版・
+凍結時刻、最終鮮度確認時刻を記録する。
+
 ## 7. 出力
 
 銘柄単位で各 Screen の結果と根拠を保存する。
@@ -257,6 +263,7 @@ screening_task:
 ```yaml
 security:
   ticker: XXXX
+  market_identifier_code: XTKS
   name: Example Corp.
 
 common_filter:
@@ -374,8 +381,7 @@ MVP では次に限定する。
 
 ## 12. 今後決定する事項
 
-- 最初に対象とする市場
-- Universe の取得方法
+- 東証内Universeの取得方法と対象市場区分
 - 財務・株価データソース
 - 最低流動性条件
 - 各 Screen の具体的な条件と閾値

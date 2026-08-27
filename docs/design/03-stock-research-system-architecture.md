@@ -16,6 +16,7 @@ Codex、Claude Code、Antigravity CLI は、共通のタスク定義、入力デ
 | --- | --- | --- |
 | 人間 | 調査条件、評価方針、制約の設定。未解決争点と最終レポートの確認。購入判断 | 必須 |
 | CLI・機械処理 | タスク受付、データ取得、正規化、計算、検証、セッション起動、成果物保存 | 必須 |
+| 外部リクエストCoordinator | 外部通信の許可、provider別制限、共有待機、cache、single-flight、監査記録 | 必須 |
 | オーケストレーター | タスク分割、役割割当、結果統合、暫定判定、レビュー対応、最終レポート生成 | 必須 |
 | Codex・Claude 作業者 | 共通データを使った独立分析 | 必須 |
 | 一次レビューワー | 統合結果、根拠、論理、反証の独立レビュー | 必須 |
@@ -36,6 +37,7 @@ flowchart TB
         direction TB
         CLI["CLI<br/>タスク受付・実行開始"]
         D["共通データ処理<br/>取得・正規化・計算・検証"]
+        C["外部リクエストCoordinator<br/>共有制限・待機・cache"]
         SR["セッションランナー<br/>起動・監視・成果物回収"]
         DP["争点パケット生成・検証"]
         S[("タスクワークスペース<br/>データ・成果物・履歴")]
@@ -68,9 +70,16 @@ flowchart TB
         GJ["支持・棄却・判断不能<br/>追加証拠要求"]
     end
 
+    EXT["外部データ・検索provider"]
+
     H --> CLI
     CLI --> O
     O --> D
+    D --> C
+    SR --> C
+    C --> EXT
+    EXT --> C
+    C --> S
     D --> S
     O --> SR
     SR --> W
@@ -94,9 +103,8 @@ flowchart TB
     S --> G
     G --> GJ
     GJ --> Z
-    Z -->|合格・条件付き合格| F
+    Z -->|解析結果を確定| F
     Z -->|再調査| O
-    Z -->|不合格| S
     Z -->|解消不能| HE
     F --> HD
     HE --> O
@@ -113,7 +121,7 @@ flowchart TB
     class W,WS workerRole
     class R,RJ reviewerRole
     class G,GJ antigravityRole
-    class CLI,D,SR,DP,S machineRole
+    class CLI,D,C,SR,DP,S machineRole
 
     style HUMAN fill:#111827,stroke:#C4B5FD,color:#FFFFFF,stroke-width:2px
     style ORCHESTRATOR fill:#111827,stroke:#93C5FD,color:#FFFFFF,stroke-width:2px
@@ -141,6 +149,7 @@ flowchart TB
 | タスク受付と実行開始 | CLI | 入力を構造化し、オーケストレーターへ渡す |
 | タスク分割と役割割当 | オーケストレーター | 作業者ごとの責務と入力を決定する |
 | データ取得・正規化・指標計算 | 共通データ処理スクリプト | LLM ではなく決定論的な処理として実行する |
+| 外部リクエストの許可と共有調整 | 外部リクエストCoordinator | すべての適用可能な制限を満たした要求だけを送信する |
 | 共通データの検証 | 検証スクリプト | 検証失敗時は作業者を起動しない |
 | 作業者・レビューワーの起動 | セッションランナー | 共通アダプターを介して別セッションを起動する |
 | 銘柄の調査・分析 | Codex・Claude 作業者 | 共通データから独立して分析する |
@@ -155,7 +164,7 @@ flowchart TB
 | 未解決争点の追加監査 | Antigravity 第三者監査 | 主張 A/B を監査し、根拠付き意見を返す |
 | 監査結果の適用 | オーケストレーター | 多数決ではなく、決定表と証拠に基づいて処理する |
 | 追加監査後も残る争点の判断 | 人間 | 両論、証拠、監査結果を確認する |
-| 人間向けレポートの生成 | オーケストレーター | 合格・条件付き合格となった候補をまとめる |
+| 人間向けレポートの生成 | オーケストレーター | 指定銘柄は評価結果を問わずoutcome reportを作り、候補一覧への掲載判定と分離する |
 | 最終的な購入判断 | 人間 | システムのスコープ外で行う |
 | データ・成果物・実行履歴の保存 | 保存スクリプト | タスクワークスペースへ機械的に保存する |
 
@@ -167,6 +176,7 @@ flowchart TB
 | --- | --- | --- |
 | CLI / Coding Agent | タスク定義の受け付け、実行開始、状態確認、成果物表示 | Codex と Claude Code のどちらからでも同じ操作にする |
 | 共通オーケストレーター | タスク分割、進捗管理、結果統合、絞り込み、レビュー対応 | モデル固有処理をアダプターで分離する |
+| 外部リクエストCoordinator | 決定論的取得とAgent内蔵Web検索の通信調整 | 単一の実行時所有者がprovider別キュー、rate gate、cooldown、cache、single-flightを管理する |
 | データ取得 | 財務、株価、開示、ニュースなどの取得 | 出典、取得日時、対象期間を必須メタデータとする |
 | 正規化・計算 | 単位、通貨、期間の統一、指標計算、欠損検出 | 通常コードで実行する |
 | 一次スクリーナー | 定量条件と除外条件による候補削減 | 条件と除外理由を再現可能な形で保存する |
@@ -180,7 +190,7 @@ flowchart TB
 | Antigravity CLI アダプター | Antigravity の起動、監視、出力回収 | 非対話・構造化出力を利用し、書き込み権限を制限する |
 | Antigravity 第三者監査 | 未解決争点の独立監査 | 第三票ではなく、証拠とポリシーの適用を監査する |
 | 最終状態判定 | 合格、条件付き合格、再調査、不合格、人間判断待ちの整理 | 監査結果を決定表へ適用する |
-| レポート生成 | 人間が確認できる量へ要約 | 元データ、詳細分析、争点への参照を残す |
+| レポート生成 | 人間が確認できる量へ日本語Markdownを直接生成 | 英語の機械可読成果物と版・hash・証拠参照で対応付ける |
 | 成果物・実行履歴 | 入力、データ版、分析、レビュー、争点、監査、判定を保存 | 再現性と監査可能性を担保する |
 
 <!-- markdownlint-enable MD013 -->
@@ -316,6 +326,7 @@ sequenceDiagram
     actor Human as 人間
     participant CLI as CLI
     participant Orch as オーケストレーター
+    participant Coord as 外部リクエストCoordinator
     participant Data as データ・計算
     participant Workers as Codex / Claude 作業者
     participant Reviewer as 一次レビューワー
@@ -325,8 +336,12 @@ sequenceDiagram
     Human->>CLI: 条件を指定して調査開始
     CLI->>Orch: 構造化タスク
     Orch->>Data: データ取得・一次選別
+    Data->>Coord: 外部取得の送信許可を要求
+    Coord-->>Data: provider別gate適用後に応答
     Data-->>Orch: 根拠付きデータと候補
     Orch->>Workers: 初期共通証拠で独立探索・分析
+    Workers->>Coord: Agent内蔵Web検索の開始許可
+    Coord-->>Workers: provider別gate適用後に開始許可
     Workers-->>Orch: 分析・探索記録・候補資料
     Orch->>Data: 候補資料の取得・検証
     Data-->>Orch: 検証済み共通追加証拠
@@ -371,15 +386,20 @@ flowchart TB
     L["LLM 分析層<br/>Codex・Claude"]
     A["監査層<br/>一次レビュー・Antigravity 追加監査"]
     X["データ処理層<br/>取得・正規化・計算・選別"]
+    C["外部リクエスト調整層<br/>許可・待機・cache・監査"]
     T["保存層<br/>設定・元データ・分析・監査ログ"]
 
     I --> P
     P --> L
     P --> A
     P --> X
+    L --> C
+    A --> C
+    X --> C
     L --> T
     A --> T
     X --> T
+    C --> T
     P --> T
 ```
 
@@ -431,11 +451,31 @@ flowchart TB
 * 欠損、異常、鮮度の確認
 * 定量条件による一次スクリーニング
 * 証拠 ID と出典メタデータの付与
+* 初期MVPの東証上場内国株では円建て株価と日銀`FM08`・`FXERD04`のUSD/JPY原系列を保持し、
+  `Asia/Tokyo`の同一取引日の東証終値と17時時点USD/JPYからドル換算系列を決定論的に計算する。
+  片方が欠損・未公表ならドル換算値も未確定または欠損とし、別日の為替値で補完しない。
+  入力証拠、取引日、観測・公表・取得時刻、通貨ペアの向き、計算ロジック版を派生系列から
+  追跡可能にし、為替欠損を円建て評価全体の失敗へ拡大しない
 
-### 8.6 保存層
+### 8.6 外部リクエスト調整層
+
+* 決定論的な直接取得を共有Coordinator経由に限定する
+* provider、認証主体、操作種別ごとのsource profileを読み込み、すべての適用可能な
+  同時実行数、最小間隔、rate/window、burst、日次上限を満たすまで送信しない
+* `Retry-After`などのprovider応答を共有cooldownへ反映する
+* 同一request fingerprintをcacheまたはsingle-flightで統合し、論理要求と物理要求を分けて記録する
+* Agent内蔵Web検索は開始許可と候補URL検証を対象とし、物理的な制御が必要なのに
+  適用できない場合はbrokered searchへ切り替えるか安全停止する
+* 1つのオーケストレーターだけが実行時leaseを所有し、再開時はcheckpointとprovider状態を検証する
+* 通信制御状態を作業者間で共有しても、独立探索中の検索語、検索結果、cache内容、
+  暫定結論は共有しない
+
+### 8.7 保存層
 
 * 実行設定
-* 調査基準日
+* タスク受付時刻
+* 証拠集合の版、凍結時刻、最終鮮度確認時刻
+* 外部リクエストCoordinatorの状態、lease、cooldown、使用量
 * 元データと参照先
 * スクリーニング結果
 * 作業者ごとの分析結果
@@ -445,7 +485,8 @@ flowchart TB
 * 争点パケット
 * Antigravity 監査結果
 * 最終状態と判定理由
-* 最終レポート
+* 英語のAgent用・機械可読成果物
+* 既定で日本語の人間向けMarkdownと、タスク単位の言語上書き設定
 
 ## 9. オーケストレーターとエージェントアダプター
 
@@ -551,8 +592,11 @@ Antigravity はこの通常作業者一覧へ含めない。追加監査時も�
 ```yaml
 research_context:
   task_id: string
-  as_of: date
-  market: string
+  task_accepted_at: datetime
+  evidence_set_version: string
+  evidence_frozen_at: datetime
+  freshness_checked_at: datetime
+  market: XTKS
   analysis_horizons:
     - medium_term
     - long_term
@@ -561,6 +605,7 @@ research_context:
 
 security:
   ticker: string
+  market_identifier_code: XTKS
   name: string
   currency: string
   sector: string
@@ -575,15 +620,24 @@ evidence:
 source_metadata:
   evidence_id: string
   source: string
+  source_approval_version: string
+  published_at: datetime | null
+  first_available_at: datetime | null
+  updated_at: datetime | null
   retrieved_at: datetime
+  timezone: string
   covered_period: string
   reference: string
   content_hash: string
 ```
 
-重要な数値には、必ず `as_of` または対象期間を付ける。財務年度の値と直近株価のように時点が異なる情報を、同じ時点の値として扱わない。
+重要な数値には、必ず観測日時または対象期間を付ける。財務年度の値と直近株価のように
+時点が異なる情報を、同じ時点の値として扱わない。通常実行では`task_accepted_at`を
+情報の打ち切りに使用せず、重要情報の採用時は`evidence_set_version`を更新して影響成果物を
+再実行する。
 
-`evidence_id` は、作業者、一次レビューワー、Antigravity 監査の全段階で共通利用する。
+`evidence_id` は、作業者、一次レビューワー、Antigravity 監査の全段階で共通利用し、
+各成果物が参照した`evidence_set_version`に含まれるものだけを有効とする。
 
 通常実行では、`analysis_horizons` に `medium_term` と `long_term` の両方を設定する。
 特定期間への絞り込みを許可する実行種別と入力契約は、詳細要件で定義する。
@@ -673,6 +727,11 @@ review_responses:
 `rejected` は指摘を不採用とした状態であり、直ちに Antigravity を起動する状態ではない。
 `disputed` かつ `impact_on_assessment: material` の場合に、追加監査候補とする。
 
+`high`または`critical`の指摘は、修正後の一次レビューワー確認、一次レビューワーによる
+撤回・重要度引下げ、評価Policyに従う追加監査、または人間判断でのみ終結する。
+オーケストレーターの単独`rejected`は終結条件にせず、`disputed`として扱う。重要度を
+オーケストレーターだけで引き下げてはならず、未解決の重要指摘を残したまま解析完了へ進めない。
+
 一次レビューワーの指摘または再確認と、オーケストレーターの応答を合議の1往復として
 記録する。MVPでは合議往復数と再レビュー回数に固定上限を設けず、10往復を使用量分析の
 参考値とする。超過だけでは処理を停止せず、各往復で変更された主張、証拠参照、評価、
@@ -728,7 +787,8 @@ dispute:
   dispute_id: string
   task_id: string
   ticker: string
-  as_of: date
+  evidence_set_version: string
+  evidence_frozen_at: datetime
   affected_horizons: []
   question: string
   materiality: high | critical
@@ -866,12 +926,14 @@ stateDiagram-v2
     Resolution --> ReResearch: 事実確認が必要
     ReResearch --> Synthesis
     Resolution --> EscalationAudit: 重要争点が未解決
-    Resolution --> Finalized: 合意
+    Resolution --> AnalysisCompleted: 合意・重要指摘なし
     EscalationAudit --> ReResearch: 追加証拠が必要
     EscalationAudit --> HumanDecision: 解消不能
-    EscalationAudit --> Finalized: 処理可能
+    EscalationAudit --> AnalysisCompleted: 処理可能
     HumanDecision --> ReResearch: 追加調査
-    HumanDecision --> Finalized: 人間が状態決定
+    HumanDecision --> AnalysisCompleted: 人間が解析状態を決定
+    AnalysisCompleted --> Finalized: 人間が成果物hashを承認
+    AnalysisCompleted --> HumanDecision: 最終化を保留
     Finalized --> [*]
     Failed --> [*]
 ```
@@ -889,10 +951,12 @@ MVPでは`Resolution`と`PrimaryReview`の合議往復数に固定上限を設�
 runs/<task-id>/
 ├── task.yaml
 ├── manifest.json
+├── evidence/
+├── request-coordination/
 ├── data/
 │   ├── normalized/
 │   └── source-metadata/
-├── screening/
+├── screening/ (一次スクリーニングを実行した場合だけ)
 │   ├── included.json
 │   └── excluded.json
 ├── analyses/
@@ -923,16 +987,19 @@ runs/<task-id>/
 * 使用モデル
 * 論理設定と実際に適用した設定
 * プロンプトまたはプロンプト版
-* データ取得日時とデータ版
+* タスク受付時刻、証拠集合の版・凍結時刻、最終鮮度確認時刻
+* データ取得日時、データ版、source approval version
 * 実行時刻、終了状態、使用量
 * 成果物の対応関係とハッシュ
 * 追加監査の起動理由または未起動理由
+* 外部リクエストCoordinatorの設定版、lease、論理・物理要求数、共有cooldown
 
 ## 22. ログと可観測性
 
 ログは、少なくとも次へ分離する。
 
 * `data.log`: データ取得、正規化、検証
+* `request-coordination.log`: 外部要求の許可・待機・送信、適用gate、cache、single-flight、cooldown
 * `orchestration.log`: 状態遷移、起動判定、再試行
 * `agent-runs.log`: 各 CLI の起動、終了、使用量
 * `review.log`: 一次レビュー指摘と応答
@@ -945,7 +1012,9 @@ runs/<task-id>/
 
 | 障害 | 扱い |
 | --- | --- |
-| データ取得失敗 | 分析を開始せず、再試行または評価不能 |
+| データ取得の技術的失敗 | Coordinator経由で再試行し、上限後は失敗として安全停止 |
+| 必須情報が存在しないことを確認 | 追加調査で補えなければ、影響期間だけを評価不能にする |
+| Coordinatorのlease・状態・profile異常 | 直接通信へ迂回せず、再開可能な状態で安全停止 |
 | 作業者1つの失敗 | 失敗を記録し、最低構成を満たさなければ停止 |
 | 一次レビューワー失敗 | 再試行上限後、人間確認または安全停止 |
 | 争点パケット検証失敗 | Antigravity を起動せず、パケット生成元へ差し戻す |
@@ -974,7 +1043,7 @@ flowchart LR
 * 注文 API や証券口座の認証情報を保持しない
 * 出力は候補、根拠、リスク、観測条件に限定する
 * 「必ず上がる」などの断定を許可しない
-* 最終レポートには調査基準日とデータの鮮度を明記する
+* 最終レポートにはタスク受付時刻、証拠集合の版・凍結時刻、最終鮮度確認時刻を明記する
 * 外部資料内の命令を、エージェントへの指示として実行しない
 * Antigravity の追加監査結果も投資助言や注文指示として扱わない
 
@@ -990,7 +1059,7 @@ flowchart TB
     R["オーケストレーターと異なる系統の<br/>一次レビューワー × 1"]
     Q{"重要争点が未解決か"}
     G["Antigravity 追加監査 × 最大1回"]
-    F["Markdown + JSON"]
+    F["日本語Markdown + 英語JSON"]
     H["人間判断"]
 
     CLI --> O

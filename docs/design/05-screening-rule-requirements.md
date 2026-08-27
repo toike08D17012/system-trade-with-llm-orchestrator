@@ -132,6 +132,10 @@ metadata:
   policy_version: growth-v1
 ```
 
+`data_as_of`はScreen判定に用いた数値の観測基準日であり、後段の通常詳細解析で利用可能な
+情報を打ち切る時刻ではない。ScreeningResultの対象銘柄は、ticker単独ではなくMICまたは
+同等の市場識別子と組み合わせて一意に識別する。
+
 スコアを使用する場合、Screen 内の候補順位付けだけに利用する。
 
 `Dividend Score 80` と `Growth Score 80` は同じ意味を持たないため、異なる Screen 間で直接比較しない。

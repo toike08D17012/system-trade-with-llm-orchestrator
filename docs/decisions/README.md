@@ -13,10 +13,27 @@ ADRは次の状態を使用する。
 | `Rejected` | 検討したが採用しなかった |
 
 要件文書が`Draft`の場合、ADRを`Accepted`にしても要件承認や運用承認を意味しない。
-実装は、承認済み要件、ADR、実装計画の順に整合を確認してから開始する。
+実装は、対応する承認済み要件とADRが一致し、実装計画がその内容に従っていることを
+確認してから開始する。
+
+## 要件との関係
+
+Accepted ADRと、そこで採用した決定を規定するsystem requirementsは、1対1に対応させる。
+system requirementsは「何を満たすか」、ADRは「なぜその方式を採用したか」、検討した代替案、
+検証条件を記録する。同じ決定を異なる目的で記述する文書であり、どちらか一方が他方より
+優先されるという関係ではない。
+
+横断的な決定を複数の要件文書へ分けて記述する場合も、ADR一覧から対応する一組の仕様を
+一意に追跡できるようにする。ADRと対応仕様に差異がある場合は、一方を優先して解釈せず、
+未反映または不整合として記録する。実装へ進む前に両者を同期し、一方を変更する場合は
+対応する他方も同じ変更単位で更新する。
 
 ## ADR一覧
 
-| ADR | 状態 | 決定 |
-| --- | --- | --- |
-| [ADR-0001](0001-centralize-external-request-coordination.md) | `Accepted` | 外部リクエストを共有Coordinatorで調整する |
+<!-- markdownlint-disable MD013 -->
+
+| ADR | 状態 | 決定 | 対応仕様 |
+| --- | --- | --- | --- |
+| [ADR-0001](0001-centralize-external-request-coordination.md) | `Accepted` | 外部リクエストを共有Coordinatorで調整する | [データソースと証拠](../system-requirements/02-data-source-and-evidence-policy.md)、[Agent・レビュー・監査](../system-requirements/03-agent-review-and-audit-policy.md)、[CLI・実行運用](../system-requirements/04-cli-and-runtime-operations.md)、[成果物・保持・セキュリティ](../system-requirements/05-artifact-retention-and-security.md) |
+
+<!-- markdownlint-enable MD013 -->
