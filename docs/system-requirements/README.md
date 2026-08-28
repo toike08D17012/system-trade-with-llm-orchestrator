@@ -2,29 +2,29 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 文書状態 | Draft |
+| 文書状態 | Approved |
 | 要件群 | 詳細解析MVP P0 |
 | 文書オーナー | リポジトリ所有者 |
 | 承認者 | リポジトリ所有者 |
-| 版 | 0.1-draft |
+| 版 | 1.0 |
 | 作成日 | 2026-08-18 |
-| 承認日 | 未承認のため未設定 |
-| 発効日 | 未承認のため未設定 |
+| 承認日 | 2026-08-28 |
+| 発効日 | 2026-08-28 |
 
 > [!IMPORTANT]
-> このディレクトリの文書は承認前のドラフトである。設計候補を示すものであり、
-> 現在の実装、利用可能なCLI、契約済みデータソース、または運用承認を表さない。
+> このディレクトリの文書は詳細解析MVPの承認済み要件である。ただし、要件の承認は、
+> 計画中のCLI、データ取得処理、Agent連携または保存機能が実装済みであることを意味しない。
 
 ## 1. 目的
 
 `docs/system-requirements/` は、人間が承認した詳細要件を管理する場所である。
-本ドラフトは、[TODOのP0](../TODO.md#p0-詳細解析mvp要件の承認)をレビュー可能な
-単位へ分割し、P1以降の契約・実装へ進む前に決める事項を明示する。
+本文書群は、[TODOのP0](../TODO.md#p0-詳細解析mvp要件の承認)で決定した内容を
+レビュー可能な単位へ分割し、P1以降の契約・実装の基準を示す。
 
 本リポジトリは、リポジトリ所有者が私的に利用する単独運用を前提とする。文書オーナーと
 承認者は同じリポジトリ所有者でよく、第三者承認、requirement単位の安定ID、baseline ID、
 独立したapproval registryはMVPで設けない。Git履歴を版管理の正本とし、実装の根拠にした
-要件群は対象commitまたはtagで特定する。
+要件群は版`1.0`を最初に含むcommitまたはそのtagで特定する。
 
 ## 2. 文書状態
 
@@ -37,8 +37,10 @@
 | `Withdrawn` | 採用しないことが決定済み | できない |
 
 各文書は、少なくとも文書状態、文書オーナー、承認者、版、作成日を冒頭に持つ。
-`Approved`へ変更する場合は、未決定事項を解消し、承認日と、実装の根拠にするGit commit
-またはtagを本READMEへ記録する。独立した承認台帳や文書間baseline IDは要求しない。
+`Approved`へ変更する場合は、P0を阻害する未決定事項を解消し、承認日と版を記録する。
+実装の根拠は、その版を最初に含むGit commitまたはそのtagから特定する。commit自身のhashを
+同じcommitへ自己参照として記録することは要求しない。独立した承認台帳や文書間baseline IDも
+要求しない。
 
 ## 3. 優先順位
 
@@ -83,19 +85,19 @@ flowchart LR
 2. 版を更新してレビューし、旧版はGit履歴から再取得可能にする。
 3. データ利用条件や外部CLI仕様など変化し得る情報は、公式情報と確認日を記録する。
 4. 承認後に、関連する設計、TODO、契約、実装計画の整合を確認する。
-5. 実装の根拠にする要件群のcommitまたはtagを本READMEへ記録する。
+5. 実装の根拠にする要件群を、版を最初に含むcommitまたはそのtagから特定可能にする。
 
 軽微な誤字修正を除き、承認済み要件の意味を変える変更は再承認を必要とする。
 
-## 5. P0ドラフト文書
+## 5. P0承認文書
 
 | 文書 | 主な内容 |
 | --- | --- |
 | [詳細解析MVPの範囲と成功条件](01-detailed-analysis-mvp-scope.md) | 入力、実行時設定、MVP境界、5観点、4段階評価、成功条件 |
 | [データソースと証拠の方針](02-data-source-and-evidence-policy.md) | 候補ソース、利用条件、鮮度、対象期間、欠損・不一致 |
 | [Agent・レビュー・追加監査の方針](03-agent-review-and-audit-policy.md) | モデル独立性、一次レビュー、再調査、争点、追加監査、人間判断 |
-| [CLIと実行運用の要件](04-cli-and-runtime-operations.md) | 操作、タイムアウト、再試行、中断、再開、利用上限、認証 |
-| [成果物・保持・セキュリティの要件](05-artifact-retention-and-security.md) | 正本、移送、全量保持、権限、秘密情報、外部コンテンツ |
+| [CLIと実行運用の要件](04-cli-and-runtime-operations.md) | 操作、事前確認、障害、中断、再開、利用状況、認証 |
+| [成果物・保持・セキュリティの要件](05-artifact-retention-and-security.md) | 正本、ローカル保存、整理、実行権限、秘密情報、外部コンテンツ |
 | [言語と対象読者の方針](06-language-and-audience-policy.md) | 人間向けMarkdown、Agent間成果物、機械可読成果物、言語上書き |
 
 ## 6. P0チェック項目との対応
@@ -113,7 +115,7 @@ flowchart LR
 | 評価と実行状態の分離 | `03-agent-review-and-audit-policy.md` |
 | CLI、制限、障害、認証 | `04-cli-and-runtime-operations.md` |
 | 外部requestの共有調整、rate制御、queue、cooldown、永続状態 | `02-data-source-and-evidence-policy.md`、`03-agent-review-and-audit-policy.md`、`04-cli-and-runtime-operations.md`、`05-artifact-retention-and-security.md`、ADR-0001 |
-| 成果物の正本、移送、全量保持、権限 | `05-artifact-retention-and-security.md` |
+| 成果物の正本、ローカル保存、整理、実行権限 | `05-artifact-retention-and-security.md` |
 | 秘密情報とプロンプトインジェクション対策 | `05-artifact-retention-and-security.md` |
 | 人間向け文書とAgent・機械向け成果物の言語・形式 | `06-language-and-audience-policy.md` |
 | MVP成功条件 | `01-detailed-analysis-mvp-scope.md` |
@@ -130,7 +132,7 @@ flowchart LR
 | 証拠・source approval・source profile | `02` | data adapter、Coordinator、全Agent | `evidence_id` namespace、証拠集合版、source approval、rate・cache・retry profile |
 | 分析・review・dispute・audit | `03` | worker、orchestrator、reviewer、Antigravity | claim、finding、response、dispute、audit schemaと状態遷移 |
 | runtime・外部request | `04` | CLI、orchestrator、Coordinator、external runner | logical request、physical attempt、queue、limit、checkpoint、error contract |
-| artifact・権限・最終化 | `05` | 保存層、operator、finalizer | 配置、hash、approval、permission、security log |
+| artifact・実行権限 | `05` | 保存層、リポジトリ所有者 | 配置、hash、local retention、security log |
 | 言語・対象読者 | `06` | report generator、CLI、Agent、human | 人間向けMarkdownと機械可読成果物の対応 |
 
 <!-- markdownlint-enable MD013 -->
@@ -145,7 +147,7 @@ task外で参照する場合は`task_id`と組にする。
 
 - `docs/design/03-stock-research-system-architecture.md` に、タスク受付時刻、版付き証拠集合、
   証拠凍結時刻、鮮度確認時刻、詳細解析の評価可否、原データまたは外部保管参照、
-  解析完了と公開承認の分離を反映する。
+  解析完了と人間による確認の関係を反映する。
 - 人間指定タスクでは一次スクリーニング成果物を任意とし、市場識別子を詳細解析契約へ含める。
 - `docs/design/04-primary-screening-architecture.md` と
   `docs/design/05-screening-rule-requirements.md` に、上場市場を一意にする識別子と
@@ -157,18 +159,13 @@ task外で参照する場合は`task_id`と組にする。
   `docs/design/03-stock-research-system-architecture.md` に、対象読者別の言語、
   日本語Markdownの直接生成、英語の機械可読成果物との対応関係を反映する。
 
-同期済みの記述もドラフトであり、実装済みまたは承認済みの設計として扱わない。
+同期済みの設計記述も、実装済みの挙動として扱わない。
 
-## 7. 承認前に必要な決定
+## 7. P1以降で具体化・評価する事項
 
-- `解析完了` 前の鮮度確認で使用する検索範囲、material判定、証拠集合更新の最大反復条件
-- `yfinance`を介したYahoo Financeデータの利用条件と、財務・為替・ニュースに使う
-  追加データソースおよび利用プラン
-- 採用データを各外部モデル提供者へ処理目的で送信できる条件
-- タスク単位の金額上限と、実測に基づく所要時間目標
-- 最終レポートを含む成果物の全量保持方針の確定
-- 限定再調査と追加監査の正確なバッチ上限
-- 人間判断と最終化を実行できる役割と認可方法
+- task、証拠、分析、レビュー、実行状態、成果物の機械可読schema
+- providerごとのrate制約、cooldown、利用量取得方法など、実装に必要な具体値
+- 実測で時間、token、費用または反復効率の問題が明確になった場合の制約導入
 
 ## 8. 参照資料
 

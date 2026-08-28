@@ -2,18 +2,18 @@
 
 | 項目 | 内容 |
 | --- | --- |
-| 文書状態 | Draft |
+| 文書状態 | Approved |
 | 文書オーナー | リポジトリ所有者 |
 | 承認者 | リポジトリ所有者 |
-| 版 | 0.1-draft |
+| 版 | 1.0 |
 | 作成日 | 2026-08-18 |
-| 承認日 | 未承認のため未設定 |
-| 発効日 | 未承認のため未設定 |
+| 承認日 | 2026-08-28 |
+| 発効日 | 2026-08-28 |
 
 ## 1. 目的
 
 詳細解析MVPを安全に開始、監視、中断、再開、再実行するための操作と、
-タイムアウト、再試行、利用上限、障害時フォールバック、認証の要件を定める。
+事前確認、エラー処理、provider制約、利用状況の記録、認証の要件を定める。
 
 ここで示す操作名は要件上の機能名であり、実装済みコマンドではない。
 正確なCLIコマンド、引数、終了コード、設定スキーマはP1・P2で決定する。
@@ -24,9 +24,9 @@
 
 | 操作 | 要件 |
 | --- | --- |
-| タスク検証 | 外部アクセスなしで入力、Policy、設定、必要な認証種別、利用上限を検証する |
+| タスク検証 | 外部アクセスなしで入力、Policy、設定、必要な認証種別を検証する |
 | 開始 | 新しい`task_id`を発行し、`task_accepted_at`を記録して、入力と実行設定とともに開始する |
-| オンライン事前確認 | `task_id` 発行後、利用上限内で認証状態、ソース承認、source profile、`RequestCoordinator`の永続状態とruntime lease、必要な外部サービス到達性を確認し、成功前は分析を開始しない。条件付き監査だけに使うAntigravityの到達性は起動判定後に確認する |
+| オンライン事前確認 | configで選択されたAgentについて、CLI、対応版、認証状態、モデル、非対話実行、利用可能なら残り利用枠を確認する。必須条件の失敗はerror、残量を取得不能など確認不能な項目はwarningにする。ソース承認、source profile、`RequestCoordinator`の状態、必要な外部サービス到達性も確認する |
 | 状態表示 | 現在状態、完了工程、次工程、失敗、使用量、人間判断の要否を表示する |
 | 中断 | 新規外部処理を止め、進行中処理を期限内に終了させ、再開可能点を保存する |
 | 取消 | タスクを再開しない終端状態へ移し、取消理由を記録して成果物を保持する |
@@ -41,57 +41,25 @@
 暗黙の既定値で売買、外部公開、無制限利用を有効にしない。
 
 CLIの状態、エラー、確認プロンプトには日本語表示を要求せず、英語を許容する。
-CLIが人間の承認用または最終閲覧用の文書をファイルとして出力する場合は、
+CLIが人間の判断用または最終閲覧用の文書をファイルとして出力する場合は、
 [言語と対象読者の方針](06-language-and-audience-policy.md)を適用する。
 
 ## 3. タイムアウト
 
-次を初期既定値の承認候補とする。
-
-<!-- markdownlint-disable MD013 -->
-
-| 対象 | 既定値候補 | 上限到達時 |
-| --- | --- | --- |
-| タスク全体 | 未決定。試行後に承認する解析時間SLOより長くする | 現在状態を保存して中断する |
-| データ取得・検証 | 15分 | 再試行上限後、技術的に証拠充足を判定できなければ失敗、既知の必須証拠不足なら影響を受ける期間を `not_evaluable` にする |
-| 通常作業者1実行 | 30分 | 失敗を記録し、必要役割数を満たせなければ停止する |
-| 一次レビュー | 20分 | 1回再試行後、人間確認または安全停止にする |
-| Antigravity追加監査 | 20分 | 1回再試行後、人間判断待ちにする |
-
-<!-- markdownlint-enable MD013 -->
-
-タイムアウトは外部設定で短縮できる。既定値を超える設定は、タスク開始時に
-明示的な許可を必要とする。全体タイムアウトには、再試行待機、中断猶予、
-チェックポイント保存を含める。実測後に値を再承認する。
+MVPではtask全体およびAgent工程へシステム独自の固定timeoutを設けない。人間による中断と、
+OS、CLI、providerが返すエラーは受け付ける。実測で長時間停止が問題になった場合にtimeoutを追加する。
 
 ## 4. 再試行
 
-- 一時的なネットワーク・レート制限は、同じ要求条件で初回失敗後に最大3回
-  （初回を含めて最大4回）、指数バックオフする。
-- データ取得の4xx認証・権限・入力エラーは自動再試行しない。
-- Agent CLIの一時的な起動失敗は、同じモデル・設定で最大1回再試行し、初回を含めて
-  最大2回実行する。
-- 構造化出力のスキーマ違反は、違反箇所だけを示して修正再出力を最大1回要求する。
-  起動失敗とスキーマ修正は別枠で加算せず、同じ論理処理の物理実行上限を共有する。
-- 再試行ごとに原因、回数、待機時間、結果、追加費用を記録する。
-- 再試行上限を工程間で共有せず、無限ループを防ぐ総上限も持つ。
-- データ取得の再試行はsource adapter内で待機・直接再送せず、`RequestCoordinator`へ戻して
-  新しい物理attemptとしてqueueへ投入する。各attemptで利用量を予約・精算する。
-- 有効な再試行方針は、この文書の全体上限、タスク上限、source profile、operationの冪等性、
-  request deadline、provider responseのうち最も厳しい条件とする。
-- 有効な`Retry-After`は通常のbackoffより優先し、該当するprovider、credential、egressの
-  rate domainへ共有cooldownとして適用する。`Retry-After`がdeadlineを超える場合は再送しない。
-- 自動再試行時に別モデル系統、別データソース、有償プランへ切り替えない。
-- 試行回数、待機状態、使用量、予約済み上限をチェックポイントへ保存し、再開時に
-  リセットしない。
-- 外部処理ごとに論理要求IDを付け、クラッシュ時に結果が不明な要求は、提供者側の結果、
-  課金、保存済み成果物を照合してから再実行する。照合できなければ自動再実行しない。
-- 同じ `task_id` に対する状態変更操作は同時に1つだけ許可し、二重再開を防ぐ。
+MVPではAgent実行、データ取得、スキーマ不正を自動再試行しない。エラー、標準出力、標準エラー、
+終了code、完了工程を保存して`Failed`とする。再実行が必要な場合はリポジトリ所有者が明示的に
+新しいtaskを開始する。`RequestCoordinator`はproviderが要求する`Retry-After`とcooldownを守るが、
+同一task内で自動再送しない。同じ`task_id`の状態変更は同時に1つだけ許可する。
 
 ## 5. 外部リクエストの共有調整
 
 外部へ直接送信するすべての決定論的データ取得は、外部接続の直前に置く共有
-`RequestCoordinator`を経由する。Agent、source adapter、retry処理がCoordinatorを迂回して
+`RequestCoordinator`を経由する。Agentやsource adapterがCoordinatorを迂回して
 直接送信してはならない。
 
 MVPでは、1つのオーケストレーターprocessがAgent subprocessとsource adapterを起動し、
@@ -104,26 +72,25 @@ transactionで単一行のruntime leaseを取得し、有効なownerが存在す
 - source承認とrequest分類の検証
 - logical request IDとfingerprintの発行
 - cache判定と`single-flight`
-- API回数、時間、費用の予約と精算
+- providerが返す利用量の記録
 - provider別queueとtask間の公平制御
 - global、egress、provider、origin、credential、operation、task、roleのrate gate
 - 同時実行数、送信間隔、rate、burst、cooldown
-- cancellation、deadline、timeout、retry
+- cancellationとproviderのcooldown
 - physical attempt、結果不明状態、利用量の監査記録
 - limiter、cooldown、runtime leaseの永続化と再起動時復元
 
 process内schedulerはprovider別queueを持ち、同じprovider内ではtaskごとのFIFOとactive task間の
 round-robinを使う。異なるproviderへのrequestは、それぞれのgateを満たす場合に並行できる。
-retryは`not_before`を付けて同じtask queueの末尾へ戻し、常に新規requestより優先しない。
-queue待機、backoff、cooldownを工程とtaskのtimeoutへ含め、deadlineまでにpermitを取得できない
-requestは送信しない。中断されたqueued requestは取消し、未使用の予約量を解放する。
+自動retry queueは設けない。providerが`Retry-After`またはcooldownを要求した場合は状態を保存し、
+同一task内で再送せずエラーとして終了する。中断されたqueued requestは取り消す。
 
 cacheと`single-flight`はrate gateより前に適用する。利用条件、認証scope、鮮度、対象期間、
 source Policy版が一致しないcacheを暗黙に返さない。同一fingerprintのin-flight requestは1つの
 leaderへまとめるが、consumerごとのlogical request ID、task、role、発見元を保持する。
 
 Agent内蔵Web検索の物理requestを観測できない場合は、Agent sessionの開始許可、同時実行数、
-task・role・provider accountごとの検索回数、検索語数、最大利用量、cooldownを制御する。
+task・role・provider accountごとの同時実行とproviderのcooldownを制御する。
 物理request数を観測できない通信を、origin単位で制御できたものとして記録しない。
 初回独立探索では他Agentの検索内容・結果cacheを共有せず、候補URLの検証取得だけを
 Coordinator配下へ戻す。
@@ -133,8 +100,8 @@ Coordinator配下へ戻す。
 直接接続へfallbackしてはならない。
 
 Coordinator、SQLite state、source profileの検証に失敗した場合は外部接続を停止し、adapterや
-Agentが直接接続へfallbackしてはならない。連続したrate limitまたはprovider障害が承認閾値を
-超えた場合はcircuitをopenにし、cooldownまたは人間が承認した再開条件まで新規送信を開始しない。
+Agentが直接接続へfallbackしてはならない。rate limitまたはprovider障害時はproviderの
+cooldownを記録して停止し、必要な再実行は人間が開始する。
 
 ## 6. 中断と再開
 
@@ -146,12 +113,8 @@ stateDiagram-v2
     Suspended --> Running: 再開前検証に成功
     Suspended --> Failed: 入力・版・成果物が不整合
     Suspended --> Cancelled: 取消
-    Running --> UsageLimitReached: トークン等の利用枠到達
-    UsageLimitReached --> Running: 利用枠確認後に再開
-    UsageLimitReached --> Cancelled: 取消
     Running --> AnalysisCompleted: 解析完了
-    AnalysisCompleted --> Finalized: 人間が最終化を承認
-    Running --> Failed: 復旧不能
+    Running --> Failed: Agent・provider・認証・利用枠等のエラー
 ```
 
 - 中断要求後は新しい外部呼び出しを開始しない。
@@ -163,39 +126,17 @@ stateDiagram-v2
 - 既存成果物が変更されている場合は同じタスクを再開せず、原因を示して停止する。
 - モデル、Policy、データを変更してやり直す場合は再開ではなく新しいタスクとして再実行する。
 - 完了済み外部処理を再利用する場合は、再利用元と検証結果を`manifest`へ記録する。
-- `Suspended`、`UsageLimitReached`、人間判断待ちを含む非終端状態と、
-  `Finalized`、`Failed`、`Cancelled` の終端状態の成果物を全量保持する。
-  取消は権限を持つ人間または承認済みの放棄Policyだけが実行できる。
+- `Suspended`と人間確認を含む非終端状態、および`AnalysisCompleted`、`Failed`、`Cancelled`を
+  識別する。取消はリポジトリ所有者が実行する。
 
-## 7. 利用上限
+## 7. 利用状況
 
-タスク開始前に、少なくとも次の上限または利用枠を設定・確認する。
-
-- タスク全体と工程ごとの時間
-- 一時的な失敗に対する物理再試行回数と、Antigravity追加監査の論理・物理実行回数
-- Agent内蔵Web検索の呼び出し数、検索語数、候補資料数
-- provider・credential・egress・operationごとのrate、burst、同時実行数、日次上限
-- taskごとのqueued request数とin-flight数
-- 従量課金サービスの総入力・出力トークンと、サブスクリプションまたは提供者が課す利用枠
-- データAPI呼び出し数
-- 外部データ費用とAgent利用費用の合計
-- 1タスクの銘柄数と争点数
-
-MVPでは、一次レビュー後の合議往復数および再レビュー回数にハード上限を設けない。
-10往復を使用量分析の参考値として警告・記録するが、超過だけを理由に停止しない。
-将来工程のためにトークン利用枠を必ず予約することも要求せず、実行中の工程が利用可能な
-トークンを使い切り、後続の再レビューまたは追加監査を開始できなくなる状態を許容する。
-
-測定可能な上限は80%で警告する。従量課金の新規外部呼び出し前には、その呼び出しで許可する
-最大トークン、API呼び出し、時間、金額を予約し、現在使用量と予約量の合計が承認済みの
-金額その他のハード上限を超える場合は開始しない。完了後に予約量を権威ある実測値または
-保守的な推定値へ精算し、両者を区別して記録する。
-
-サブスクリプション型のAgent CLIなど、残り利用枠を呼び出し前に権威ある値として取得できない
-サービスは、承認済みプランの範囲で実行し、途中の利用枠到達をMVPの観測対象となる停止として
-許容する。停止時は、利用量、完了工程、未処理事項、未完了出力、再開に必要と見込む追加上限を
-記録する。利用上限や契約プランを実行中に自動拡張せず、プロンプト、コンテキスト配分、
-モデル設定、契約プラン、回数上限は実測後に人間が再検討する。
+MVPでは時間、token、費用、Web検索、再調査、異なる争点数にシステム独自の固定上限を設けない。
+providerまたは契約プランが課す上限は迂回しない。configで選択されたAgentについて、preflightで
+取得可能な認証状態、モデル利用可否、残り利用枠を確認し、必須条件の失敗はerror、残量取得不能は
+warningとして記録する。実行中にprovider上限へ到達した場合は`Failed`とし、人間が必要に応じて
+再実行する。実行時間、token、外部request、費用、再調査回数、合議回数、エラーを計測し、
+実測で課題が明確になった場合に制限を追加する。
 
 ## 8. 認証
 
@@ -223,11 +164,11 @@ MVPでは、一次レビュー後の合議往復数および再レビュー回�
 | 障害 | 自動処理 | 禁止する処理 |
 | --- | --- | --- |
 | データソース停止 | 承認済みキャッシュの鮮度を検証し、使えなければ停止する | 未承認ソースから補う |
-| 通常作業者1つが失敗 | 1回再試行し、Codex系・Claude系の両方が揃わなければ停止する | 片系統だけで通常完了とする |
-| 一次レビューワー失敗 | 1回再試行し、人間確認または安全停止にする | オーケストレーターが自己承認する |
-| Antigravity利用不能 | 監査起動条件を満たしたtaskだけ起動不能を記録して人間判断待ちにする。監査不要taskは続行する | Codex系・Claude系を第三者監査と表示する |
+| 通常作業者1つが失敗 | エラーを記録して`Failed`とする | 片系統だけで通常完了とする |
+| 一次レビューワー失敗 | エラーを記録して`Failed`とする | オーケストレーターが自己承認する |
+| Antigravity利用不能 | configで必須ならpreflightをerrorにし、任意ならwarningにする。監査開始時の失敗は`Failed`とする | Codex系・Claude系を第三者監査と表示する |
 | `RequestCoordinator`または永続状態の障害 | 現在状態を保存し、外部接続を停止する | adapterまたはAgentが直接外部接続する |
-| 利用上限到達 | 現在状態、中間成果物、未完了出力、未処理事項を保存して停止する | 部分出力を完成扱いする、または上限を自動拡張する |
+| provider利用枠到達 | 現在状態、中間成果物、未完了出力、未処理事項を保存して`Failed`とする | 部分出力を完成扱いする、または上限を迂回する |
 | 認証失敗 | 対象工程を開始せず、必要な認証種別だけを通知する | 秘密値をログへ出す |
 
 <!-- markdownlint-enable MD013 -->
@@ -240,27 +181,23 @@ MVPでは、一次レビュー後の合議往復数および再レビュー回�
 機械可読ログを分離し、秘密情報除去後の情報だけを保存する。
 
 外部requestはlogical requestとphysical attemptを分離し、task、role、Agent run、provider、
-rate domain、非秘密credential alias、source Policy版、queue時刻、permit取得、待機時間、deadline、
-cache判定、single-flightのleader・consumer、response分類、latency、retry、cooldown、予約量、
-実測量、精算を記録する。URL query、cookie、認証header、秘密値をログまたはmetric labelへ含めない。
+rate domain、非秘密credential alias、source Policy版、queue時刻、permit取得、待機時間、
+cache判定、single-flightのleader・consumer、response分類、latency、error、cooldown、取得可能な
+使用量を記録する。URL query、cookie、認証header、秘密値をログまたはmetric labelへ含めない。
 
-運用メトリクスにはprovider別rate・in-flight・queue長・最古待機時間、429・503件数、retry率、
-cooldown、cache hit・stale拒否・single-flight統合率、task別待機時間、API・時間・費用利用率、
-cancellation、deadline超過、circuit openを含める。高cardinalityな`task_id`やrequest IDは
+運用メトリクスにはprovider別rate・in-flight・queue長・最古待機時間、429・503件数、
+cooldown、cache hit・stale拒否・single-flight統合率、task別待機時間、取得可能な使用量、
+cancellationを含める。高cardinalityな`task_id`やrequest IDは
 監査ログだけに保存し、集計metric labelへ含めない。
 
-## 11. 承認前の未決定事項
+## 11. P1・P5で定義する事項
 
 - 正確なCLIコマンド名、引数、終了コード
-- 試行後に承認する解析時間SLOより長いタスク全体タイムアウト、各工程の既定値、中断猶予時間
-- トークン、API呼び出し、金額の具体的な上限
 - Agent CLIごとの認証状態の保管・マウント方法
 - 秘密値をオーケストレーターから分離して外部接続プロセスへ渡す方式
-- 人間判断を入力できる操作者の認可方法
-- 取消と放棄Policy、同時実行を防ぐ排他方式、外部要求の照合方式
+- 同時実行を防ぐ排他方式と外部要求の照合方式
 - providerごとのrate、window、burst、`min_interval`、`max_concurrency`
-- sourceごとのcache TTL、batch上限、retry対象
-- runtime stateの正確な保存先、backup、保持期間、破損時の照合方式
-- circuit breakerの失敗閾値とhalf-open条件
+- sourceごとのcache TTL、batch方法、cooldown処理
+- runtime stateの正確な保存先、任意backup、破損時の照合方式
 - 採用する固定`yfinance`版とsession互換性
 - Agent CLIごとの検索利用量取得方法
