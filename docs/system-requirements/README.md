@@ -3,13 +3,13 @@
 | 項目 | 内容 |
 | --- | --- |
 | 文書状態 | Approved |
-| 要件群 | 詳細解析MVP P0 |
+| 要件群 | 詳細解析MVP P0・P1契約基盤 |
 | 文書オーナー | リポジトリ所有者 |
 | 承認者 | リポジトリ所有者 |
-| 版 | 1.0 |
+| 版 | 1.1 |
 | 作成日 | 2026-08-18 |
-| 承認日 | 2026-08-28 |
-| 発効日 | 2026-08-28 |
+| 承認日 | 2026-08-31 |
+| 発効日 | 2026-08-31 |
 
 > [!IMPORTANT]
 > このディレクトリの文書は詳細解析MVPの承認済み要件である。ただし、要件の承認は、
@@ -18,13 +18,13 @@
 ## 1. 目的
 
 `docs/system-requirements/` は、人間が承認した詳細要件を管理する場所である。
-本文書群は、[TODOのP0](../TODO.md#p0-詳細解析mvp要件の承認)で決定した内容を
-レビュー可能な単位へ分割し、P1以降の契約・実装の基準を示す。
+本文書群は、[TODOのP0](../TODO.md#p0-詳細解析mvp要件の承認)で決定した内容と、P1で
+順次承認する横断契約をレビュー可能な単位へ分割し、後続の契約・実装の基準を示す。
 
 本リポジトリは、リポジトリ所有者が私的に利用する単独運用を前提とする。文書オーナーと
 承認者は同じリポジトリ所有者でよく、第三者承認、requirement単位の安定ID、baseline ID、
 独立したapproval registryはMVPで設けない。Git履歴を版管理の正本とし、実装の根拠にした
-要件群は版`1.0`を最初に含むcommitまたはそのtagで特定する。
+要件群は対象版を最初に含むcommitまたはそのtagで特定する。
 
 ## 2. 文書状態
 
@@ -100,6 +100,12 @@ flowchart LR
 | [成果物・保持・セキュリティの要件](05-artifact-retention-and-security.md) | 正本、ローカル保存、整理、実行権限、秘密情報、外部コンテンツ |
 | [言語と対象読者の方針](06-language-and-audience-policy.md) | 人間向けMarkdown、Agent間成果物、機械可読成果物、言語上書き |
 
+## 5.1 P1承認文書
+
+| 文書 | 主な内容 |
+| --- | --- |
+| [機械可読契約と人間向け成果物の要件](07-machine-readable-contracts.md) | Pydantic契約、生成JSON Schema、JSON交換、検証wrapper、Markdown最終成果物 |
+
 ## 6. P0チェック項目との対応
 
 <!-- markdownlint-disable MD013 -->
@@ -118,6 +124,7 @@ flowchart LR
 | 成果物の正本、ローカル保存、整理、実行権限 | `05-artifact-retention-and-security.md` |
 | 秘密情報とプロンプトインジェクション対策 | `05-artifact-retention-and-security.md` |
 | 人間向け文書とAgent・機械向け成果物の言語・形式 | `06-language-and-audience-policy.md` |
+| 機械可読契約、検証、版、互換性、検証エラー | `07-machine-readable-contracts.md`、ADR-0002 |
 | MVP成功条件 | `01-detailed-analysis-mvp-scope.md` |
 
 <!-- markdownlint-enable MD013 -->
@@ -134,12 +141,13 @@ flowchart LR
 | runtime・外部request | `04` | CLI、orchestrator、Coordinator、external runner | logical request、physical attempt、queue、limit、checkpoint、error contract |
 | artifact・実行権限 | `05` | 保存層、リポジトリ所有者 | 配置、hash、local retention、security log |
 | 言語・対象読者 | `06` | report generator、CLI、Agent、human | 人間向けMarkdownと機械可読成果物の対応 |
+| schema・validation | `07` | CLI、orchestrator、全Agent、保存層 | Pydantic契約、生成JSON Schema、版、互換性、検証エラー |
 
 <!-- markdownlint-enable MD013 -->
 
-P1の各schemaは、責務を持つ文書、schema version、識別子の一意性範囲、参照する契約版、
-consumerを明示する。`evidence_id`は少なくとも1taskのmanifest内で一意かつ不変とし、
-task外で参照する場合は`task_id`と組にする。
+P1の各schemaは`07`の共通要件に従い、責務を持つ文書、schema version、識別子の一意性範囲、
+参照する契約版、consumerを明示する。`evidence_id`は少なくとも1taskのmanifest内で一意かつ
+不変とし、task外で参照する場合は`task_id`と組にする。
 
 ### 6.2 設計文書との同期事項
 

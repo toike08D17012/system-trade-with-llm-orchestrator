@@ -488,6 +488,29 @@ flowchart TB
 * 英語のAgent用・機械可読成果物
 * 既定で日本語の人間向けMarkdownと、タスク単位の言語上書き設定
 
+### 8.8 契約と検証層
+
+Pydanticモデルをフィールド、型および制約の契約定義上の正本とする。Pydanticモデルから
+JSON Schema Draft 2020-12互換のスキーマを生成し、Agentへ出力契約として渡す。Agent間通信と
+機械可読成果物はJSONテキストとし、pickleその他のPython固有バイナリ形式を使用しない。
+
+```mermaid
+flowchart LR
+    C[YAML設定] --> V[共通検証wrapper]
+    P[Pydantic契約] --> V
+    P --> S[生成JSON Schema]
+    S --> A[Agent]
+    A --> J[JSON出力]
+    J --> V
+    V --> R[検証済みJSON]
+    R --> M[人間向けMarkdown]
+```
+
+共通検証wrapperはschema、semantic、reference、state transition、policyおよびsecurityの検証を
+一元化し、未対応版、未知フィールドまたは無効な参照を安全側に拒否する。人間向け最終Markdownは
+版付きテンプレートに従って検証済みJSONと共通証拠から生成し、機械可読成果物との重要項目の一致を
+保存前に検証する。具体的な要件と判断理由はsystem requirements 07およびADR-0002に従う。
+
 ## 9. オーケストレーターとエージェントアダプター
 
 モデル固有の CLI や SDK を直接ワークフローへ埋め込まず、共通インターフェースの背後にアダプターを置く。
