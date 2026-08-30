@@ -36,5 +36,6 @@ system requirementsは「何を満たすか」、ADRは「なぜその方式を�
 | --- | --- | --- | --- |
 | [ADR-0001](0001-centralize-external-request-coordination.md) | `Accepted` | 外部リクエストを共有Coordinatorで調整する | [データソースと証拠](../system-requirements/02-data-source-and-evidence-policy.md)、[Agent・レビュー・監査](../system-requirements/03-agent-review-and-audit-policy.md)、[CLI・実行運用](../system-requirements/04-cli-and-runtime-operations.md)、[成果物・保持・セキュリティ](../system-requirements/05-artifact-retention-and-security.md) |
 | [ADR-0002](0002-use-pydantic-contracts-and-json-interchange.md) | `Accepted` | Pydanticを契約定義の正本としJSONで交換する | [機械可読契約と人間向け成果物](../system-requirements/07-machine-readable-contracts.md) |
+| [ADR-0003](0003-standardize-agent-adapters-and-session-continuation.md) | `Accepted` | AgentAdapterとsession継続境界を標準化する | [AgentAdapterとsession継続](../system-requirements/08-agent-adapter-and-session-continuation.md) |
 
 <!-- markdownlint-enable MD013 -->

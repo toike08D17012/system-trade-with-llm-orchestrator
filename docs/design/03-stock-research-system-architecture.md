@@ -515,13 +515,17 @@ flowchart LR
 
 モデル固有の CLI や SDK を直接ワークフローへ埋め込まず、共通インターフェースの背後にアダプターを置く。
 
-```text
-AgentAdapter
-  - run(task, context, output_schema, execution_policy)
-  - resume(run_id, feedback)
-  - cancel(run_id)
-  - get_status(run_id)
-  - collect(run_id)
+```mermaid
+classDiagram
+    class AgentAdapter {
+        capabilities()
+        preflight(request)
+        start(request)
+        resume(request)
+        get_status(handle)
+        cancel(handle, reason)
+        collect(handle)
+    }
 ```
 
 想定アダプターは次のとおりとする。
@@ -537,13 +541,23 @@ AgentAdapter
 * プロンプトとコンテキストの渡し方
 * 作業ディレクトリ
 * 読み書き可能なパス
-* タイムアウト
 * 非対話実行
 * 標準出力、標準エラー、終了コード
 * 構造化出力
 * 使用量と実行統計
 
-`resume` を製品側が安定して提供しない場合は、共通インターフェース上で必須としない。新規実行に過去の成果物とフィードバックを渡す方式へフォールバックする。
+`SessionRunner`はsubprocess lifecycleを担当し、Adapterはprovider固有のcommand、session、response、
+errorおよびusageを共通形式へ変換する。task checkpoint、session mode、独立性、証拠・Policy・schema検証、
+状態遷移および成果物採否はオーケストレーターが担当する。
+
+MVPではCodex、Claude Code、Antigravityのnative resumeを必須能力とする。同一task・同一役割・
+同一論理Agentへのレビュー差し戻しは同じprovider sessionをresumeし、新task、別役割または独立分析は
+新しいsessionを使用する。同じsessionのrunは直列に実行し、active runがある場合はqueueへ積まず拒否する。
+resumeに失敗した場合は新規sessionへfallbackせず`Failed`とする。
+
+logical session開始時にYAML設定からmodel、effort、役割、permission、workspace、Policyおよび出力契約を
+確定し、同じlogical session内では変更しない。context圧縮またはcontext window不足への専用制御は
+MVPで設けない。詳細はsystem requirements 08およびADR-0003に従う。
 
 ## 10. 実行設定
 

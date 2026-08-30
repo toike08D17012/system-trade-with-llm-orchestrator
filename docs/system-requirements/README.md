@@ -6,7 +6,7 @@
 | 要件群 | 詳細解析MVP P0・P1契約基盤 |
 | 文書オーナー | リポジトリ所有者 |
 | 承認者 | リポジトリ所有者 |
-| 版 | 1.1 |
+| 版 | 1.2 |
 | 作成日 | 2026-08-18 |
 | 承認日 | 2026-08-31 |
 | 発効日 | 2026-08-31 |
@@ -105,6 +105,7 @@ flowchart LR
 | 文書 | 主な内容 |
 | --- | --- |
 | [機械可読契約と人間向け成果物の要件](07-machine-readable-contracts.md) | Pydantic契約、生成JSON Schema、JSON交換、検証wrapper、Markdown最終成果物 |
+| [AgentAdapterとsession継続の要件](08-agent-adapter-and-session-continuation.md) | 公開操作、process境界、native resume、session更新Policy、失敗とMVP境界 |
 
 ## 6. P0チェック項目との対応
 
@@ -125,6 +126,7 @@ flowchart LR
 | 秘密情報とプロンプトインジェクション対策 | `05-artifact-retention-and-security.md` |
 | 人間向け文書とAgent・機械向け成果物の言語・形式 | `06-language-and-audience-policy.md` |
 | 機械可読契約、検証、版、互換性、検証エラー | `07-machine-readable-contracts.md`、ADR-0002 |
+| AgentAdapter、session継続、非対話実行、構造化出力変換 | `08-agent-adapter-and-session-continuation.md`、ADR-0003 |
 | MVP成功条件 | `01-detailed-analysis-mvp-scope.md` |
 
 <!-- markdownlint-enable MD013 -->
@@ -142,6 +144,7 @@ flowchart LR
 | artifact・実行権限 | `05` | 保存層、リポジトリ所有者 | 配置、hash、local retention、security log |
 | 言語・対象読者 | `06` | report generator、CLI、Agent、human | 人間向けMarkdownと機械可読成果物の対応 |
 | schema・validation | `07` | CLI、orchestrator、全Agent、保存層 | Pydantic契約、生成JSON Schema、版、互換性、検証エラー |
+| Agent execution・session | `08` | orchestrator、SessionRunner、全Agent adapter | 公開操作、session ID、継続Policy、process結果、usage |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -166,6 +169,8 @@ P1の各schemaは`07`の共通要件に従い、責務を持つ文書、schema v
 - `docs/design/02-stock-research-system-concept.md` と
   `docs/design/03-stock-research-system-architecture.md` に、対象読者別の言語、
   日本語Markdownの直接生成、英語の機械可読成果物との対応関係を反映する。
+- ADR-0003と`08`の`AgentAdapter`公開操作、SessionRunner境界、native resume、session更新Policyおよび
+  MVP境界を`docs/design/03-stock-research-system-architecture.md`へ反映する。
 
 同期済みの設計記述も、実装済みの挙動として扱わない。
 
