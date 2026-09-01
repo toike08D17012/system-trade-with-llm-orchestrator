@@ -764,6 +764,10 @@ review_responses:
 `rejected` は指摘を不採用とした状態であり、直ちに Antigravity を起動する状態ではない。
 `disputed` かつ `impact_on_assessment: material` の場合に、追加監査候補とする。
 
+一次レビューワーが指摘と初期重要度を決定し、対象workerとオーケストレーターは理由、対象ID、
+証拠またはPolicy参照を伴う異議を提出できる。再確認で重要度を維持したことだけで指摘内容を
+正しいと確定しない。
+
 `high`または`critical`の指摘は、修正後の一次レビューワー確認、一次レビューワーによる
 撤回・重要度引下げ、評価Policyに従う追加監査、または人間判断でのみ終結する。
 オーケストレーターの単独`rejected`は終結条件にせず、`disputed`として扱う。重要度を
@@ -790,17 +794,32 @@ review_responses:
 | リスク重要度の相違 | 共通基準で再評価。重要なら Antigravity 監査候補 |
 | 文体・表現 | 通常修正。追加監査しない |
 
+主分類は1つを必須とし、副分類は0個以上を許可する。分類タグだけで保存せず、対象成果物、
+`claim_id`、JSON Pointer、対象期間、説明、分類・重要度の理由、根拠、影響および期待する解決を
+保持する。`unclassified`を終端分類にせず、分類不能時は理由と検討候補を伴う一時状態
+`classification_pending`として、レビュー合格、追加監査および解析完了を禁止する。
+
+`severity`と`materiality`を分離する。各解釈で変わる評価、評価可否、主要仮説、重大リスクまたは
+エントリー・撤退参考情報を対象ID、期間、変更内容および理由を持つimpactとして記録し、有効な
+impactが1件以上あれば`is_material = true`を機械算出する。
+
 ### 15.2 起動条件
 
 次の条件をすべて満たす場合だけ、Antigravity 追加監査を起動する。
 
-```text
-一次レビューと応答が完了
-AND 争点が未解決
-AND 事実確認だけでは解消不能
-AND 最終判定への影響が material
-AND 争点パケットを構成可能
-AND 同じ争点をAntigravityで未監査
+```mermaid
+flowchart TD
+    A[一次レビュー・応答・限定再調査が完了] --> B{双方の根拠付き解釈が未解決か}
+    B -->|いいえ| N[追加監査しない]
+    B -->|はい| C{機械修正では解消不能か}
+    C -->|いいえ| N
+    C -->|はい| D{materialか}
+    D -->|いいえ| N
+    D -->|はい| E{中立パケットが有効か}
+    E -->|いいえ| H[人間判断または生成元へ差し戻し]
+    E -->|はい| F{同一争点を有効監査済みか}
+    F -->|はい| H
+    F -->|いいえ| G[追加監査を起動]
 ```
 
 ### 15.3 機械的なゲート
@@ -810,7 +829,7 @@ AND 同じ争点をAntigravityで未監査
 * 主張 A と主張 B が両方存在する
 * 各主張に根拠または「根拠なし」の明示がある
 * 対象となる評価ポリシーが特定されている
-* 重要度が `high` または `critical`、あるいは判定影響が `material` である
+* 判定影響が`material`である
 * 同じ争点 ID で Antigravity 監査済みではない
 * データ取得失敗を争点として誤分類していない
 * 監査対象外の機密情報が含まれていない
@@ -828,8 +847,9 @@ dispute:
   evidence_frozen_at: datetime
   affected_horizons: []
   question: string
-  materiality: high | critical
-  affected_decisions: []
+  materiality:
+    impacts: []
+    is_material: true
 
 policy:
   evaluation_policy_version: string
@@ -839,14 +859,14 @@ agreed_facts:
   - statement: string
     evidence_refs: []
 
-position_a:
-  conclusion: string
+interpretation_1:
+  statement: string
   rationale: []
   evidence_refs: []
   acknowledged_uncertainties: []
 
-position_b:
-  conclusion: string
+interpretation_2:
+  statement: string
   rationale: []
   evidence_refs: []
   acknowledged_uncertainties: []
@@ -867,6 +887,7 @@ requested_audit:
 
 * オーケストレーター、作業者、一次レビューワーの製品名を主張へ付けない
 * 一方だけを「暫定正解」または「レビュー結果」と呼ばない
+* オーケストレーターの暫定結論、推奨案または優勢案を含めない
 * 双方が参照した証拠を同じ形式で含める
 * 争点と無関係な候補順位や感情的な表現を除く
 * 原文を要約した場合は、元の claim ID と finding ID を残す
@@ -881,7 +902,7 @@ Antigravity は、自由記述だけでなく、次の構造化結果を返す�
 ```yaml
 audit:
   dispute_id: string
-  conclusion: support_a | support_b | support_neither | indeterminate
+  conclusion: support_interpretation_1 | support_interpretation_2 | support_neither | indeterminate_more_evidence_possible | indeterminate_no_more_evidence | human_judgment_required
   confidence: low | medium | high
   summary: string
 
@@ -891,10 +912,10 @@ audit:
       interpretation: string
 
   position_assessment:
-    position_a:
+    interpretation_1:
       supported_parts: []
       unsupported_parts: []
-    position_b:
+    interpretation_2:
       supported_parts: []
       unsupported_parts: []
 
@@ -907,7 +928,7 @@ audit:
   omitted_counterarguments: []
   additional_evidence_needed: []
 
-  recommended_next_state: accept_a | accept_b | revise_both | research | conditional | human_escalation
+  recommended_next_state: primary_review | research | human_decision
   rationale: string
 ```
 
@@ -931,8 +952,9 @@ MVP の実行ポリシーは次のとおりとする。
 * 標準出力、標準エラー、終了コード、使用モデル、実行時間、使用量を記録する
 
 Antigravity が発見した候補資料も共通データ処理へ取り込み、検証済み追加証拠を
-Codex系・Claude系へ差し戻す。Antigravity が直接取得した情報だけで最終判定を変更せず、
-同じ争点へのAntigravity再実行を自動起動しない。
+共通証拠へ追加して`evidence_set_version`を更新し、Codex系・Claude系へ差し戻す。影響範囲の
+再分析、統合および一次レビューを行う。Antigravity が直接取得した情報だけで最終判定を変更せず、
+同じ争点への2回目のAntigravity監査を行わない。
 
 ## 19. 監査結果の適用
 
@@ -940,12 +962,12 @@ Antigravity の結論は拘束的な最終判定ではない。オーケスト�
 
 | Antigravity の結果 | 証拠状態 | 原則的な次状態 |
 | --- | --- | --- |
-| A または B を支持 | 既存証拠で十分 | 支持理由を検証し、該当案を採用または修正 |
-| どちらも支持しない | 両者に修正余地あり | 両案を修正し、必要なら条件付き合格または再調査 |
-| 判断不能 | 追加証拠を取得可能 | 限定再調査 |
-| 判断不能 | 追加証拠を取得不能 | 条件付き合格、不合格、または人間判断待ち |
-| 人間判断を推奨 | 価値判断または方針判断が必要 | 人間へエスカレーション |
-| スキーマ不正・実行失敗 | 監査結果を利用不能 | エラーを記録して失敗とし、必要なら人間が再実行 |
+| 解釈1または解釈2を支持 | 既存証拠で十分 | 支持理由を検証し、該当解釈を反映して一次レビュー |
+| どちらも支持しない | 両者に修正余地あり | 両案を修正して一次レビュー |
+| 追加証拠があれば判断可能 | 追加証拠を取得可能 | 限定再調査 |
+| 追加証拠を取得できず判断不能 | 追加証拠を取得不能 | 人間判断待ち |
+| 人間判断を推奨 | 価値判断または方針判断が必要 | 人間判断待ち |
+| スキーマ不正・実行失敗・取消 | 監査結果を利用不能 | エラーを記録して失敗とし、必要なら人間が再実行 |
 
 監査結果と異なる最終処理をオーケストレーターが選ぶ場合は、その理由と適用した評価ポリシーを明示する。この差異が重大な場合は、人間へエスカレーションする。
 
@@ -966,7 +988,7 @@ stateDiagram-v2
     Resolution --> AnalysisCompleted: 合意・重要指摘なし
     EscalationAudit --> ReResearch: 追加証拠が必要
     EscalationAudit --> HumanDecision: 解消不能
-    EscalationAudit --> AnalysisCompleted: 処理可能
+    EscalationAudit --> PrimaryReview: 監査結果を反映
     HumanDecision --> ReResearch: 追加調査
     HumanDecision --> AnalysisCompleted: 人間が解析状態を決定
     AnalysisCompleted --> [*]
@@ -979,6 +1001,10 @@ MVPでは`Resolution`と`PrimaryReview`の合議往復数に固定上限を設�
 同じ争点へ2回目のAntigravity監査を行わず、争点の分割・改名による迂回も認めない。異なる争点数と
 監査セッション数には固定上限を設けない。初期運用で合議の長期化が問題になった場合に、固定上限、進捗判定、平行線判定を
 追加する。
+
+MVPでは1つの`audit_id`を1つの`dispute_id`だけに対応させる。有効な監査結果を受領した時点で
+論理監査1回と数え、起動失敗、途中失敗、空出力または無効出力は数えない。物理試行回数の専用契約、
+高度な復旧および自動再試行は設けず、失敗を記録して安全停止する。
 
 ## 21. 成果物の構成
 

@@ -6,10 +6,10 @@
 | 要件群 | 詳細解析MVP P0・P1契約基盤 |
 | 文書オーナー | リポジトリ所有者 |
 | 承認者 | リポジトリ所有者 |
-| 版 | 1.2 |
+| 版 | 1.3 |
 | 作成日 | 2026-08-18 |
-| 承認日 | 2026-08-31 |
-| 発効日 | 2026-08-31 |
+| 承認日 | 2026-09-01 |
+| 発効日 | 2026-09-01 |
 
 > [!IMPORTANT]
 > このディレクトリの文書は詳細解析MVPの承認済み要件である。ただし、要件の承認は、
@@ -117,7 +117,7 @@ flowchart LR
 | 指定銘柄入力とMVP境界 | `01-detailed-analysis-mvp-scope.md` |
 | 5観点の入力と評価方針 | `01-detailed-analysis-mvp-scope.md` |
 | データソースと利用条件 | `02-data-source-and-evidence-policy.md` |
-| モデル、レビュー、再調査、争点、追加監査 | `03-agent-review-and-audit-policy.md` |
+| モデル、レビュー、再調査、争点、追加監査 | `03-agent-review-and-audit-policy.md`、ADR-0004 |
 | 4段階評価 | `01-detailed-analysis-mvp-scope.md` |
 | 評価と実行状態の分離 | `03-agent-review-and-audit-policy.md` |
 | CLI、制限、障害、認証 | `04-cli-and-runtime-operations.md` |
@@ -171,6 +171,9 @@ P1の各schemaは`07`の共通要件に従い、責務を持つ文書、schema v
   日本語Markdownの直接生成、英語の機械可読成果物との対応関係を反映する。
 - ADR-0003と`08`の`AgentAdapter`公開操作、SessionRunner境界、native resume、session更新Policyおよび
   MVP境界を`docs/design/03-stock-research-system-architecture.md`へ反映する。
+- ADR-0004と`03`のfinding、異議申立て、materiality、争点、1セッション1争点および監査結果の
+  適用を`docs/design/02-stock-research-system-concept.md`と
+  `docs/design/03-stock-research-system-architecture.md`へ反映する。
 
 同期済みの設計記述も、実装済みの挙動として扱わない。
 
