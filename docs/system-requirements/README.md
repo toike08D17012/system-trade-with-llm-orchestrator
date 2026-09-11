@@ -6,10 +6,10 @@
 | 要件群 | 詳細解析MVP P0・P1契約基盤 |
 | 文書オーナー | リポジトリ所有者 |
 | 承認者 | リポジトリ所有者 |
-| 版 | 1.3 |
+| 版 | 1.4 |
 | 作成日 | 2026-08-18 |
-| 承認日 | 2026-09-01 |
-| 発効日 | 2026-09-01 |
+| 承認日 | 2026-09-11 |
+| 発効日 | 2026-09-11 |
 
 > [!IMPORTANT]
 > このディレクトリの文書は詳細解析MVPの承認済み要件である。ただし、要件の承認は、
@@ -106,6 +106,7 @@ flowchart LR
 | --- | --- |
 | [機械可読契約と人間向け成果物の要件](07-machine-readable-contracts.md) | Pydantic契約、生成JSON Schema、JSON交換、検証wrapper、Markdown最終成果物 |
 | [AgentAdapterとsession継続の要件](08-agent-adapter-and-session-continuation.md) | 公開操作、process境界、native resume、session更新Policy、失敗とMVP境界 |
+| [詳細解析契約カタログ](09-detailed-analysis-contract-catalog.md) | 公開schema一覧、配置、命名、識別子、状態、エラー、P1/P5境界、完了証拠 |
 
 ## 6. P0チェック項目との対応
 

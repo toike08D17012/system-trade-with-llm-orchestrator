@@ -350,7 +350,7 @@ sequenceDiagram
     Orch->>Orch: 統合・暫定判定
     Orch->>Reviewer: 統合結果の一次レビュー
     Reviewer-->>Orch: 指摘・合否案・再調査事項
-    loop 指摘解決に必要で利用可能な上限内
+    loop 指摘を解決するか安全停止するまで
         Orch->>Reviewer: 指摘ごとの応答・修正結果
         Reviewer-->>Orch: 影響を受ける指摘の再確認
     end
@@ -587,19 +587,20 @@ roles:
     enabled: true
     activation_policy: unresolved_material_dispute
     reasoning_profile: high
-    max_runs_per_dispute: 1
     workspace_access: read_only
-
-limits:
-  max_research_rounds: 1
-  max_escalation_disputes_per_security: 3
-  max_total_tokens: configurable
-  timeout_seconds: configurable
 ```
 
 `reasoning_profile` は論理設定であり、各製品の同名オプションを前提としない。
 アダプターが、利用可能なモデル・設定へ変換する。対応する設定がない場合は、モデル選択や
 プロンプト構成で近似し、実際に適用した値を manifest に記録する。
+
+MVPでは時間、token、費用、Web検索、再調査、合議往復、異なる争点数および監査セッション数に
+システム独自の固定上限を設けない。providerまたは契約プランが課す上限へ到達した場合は迂回せず、
+中間成果物と未解決事項を保存して安全停止する。
+
+同一`dispute_id`に対するAntigravityの論理監査は、有効な監査結果を受領した1回に限る。これは
+実行回数や使用量の設定値ではなく、同じ争点への再監査を防ぐ監査Policyとして適用する。起動失敗、
+途中失敗、空出力または無効な出力は論理監査1回に数えず、自動再試行しない。
 
 ## 11. 通常作業者の役割分割
 
@@ -741,7 +742,7 @@ review:
   findings:
     - finding_id: string
       severity: low | medium | high | critical
-      category: factual_error | missing_evidence | policy_mismatch | logical_gap | omitted_risk | inconsistency
+      category: factual_error | insufficient_evidence | schema_or_format_error | policy_application_difference | logical_gap | future_hypothesis_difference | risk_materiality_difference | style_or_expression
       target_claim_refs: []
       statement: string
       evidence_refs: []
