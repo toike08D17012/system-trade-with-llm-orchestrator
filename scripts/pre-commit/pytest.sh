@@ -23,11 +23,6 @@ main() {
     return_code=$?
     set -e
 
-    if [[ "${return_code}" -eq 5 ]]; then
-        echo "No tests collected. Treating pytest exit code 5 as success."
-        exit 0
-    fi
-
     exit "${return_code}"
 }
 
