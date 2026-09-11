@@ -7,7 +7,11 @@ requires-python = ">=3.14"
 authors = [{ name = "toike08D17012" }]
 license = "MIT"
 license-files = ["LICENSE"]
-dependencies = []
+dependencies = [
+    "jinja2==3.1.6",
+    "pydantic==2.13.5",
+    "pyyaml==6.0.3",
+]
 
 [project.urls]
 Repository = "https://github.com/toike08D17012/system-trade-with-llm-orchestrator"

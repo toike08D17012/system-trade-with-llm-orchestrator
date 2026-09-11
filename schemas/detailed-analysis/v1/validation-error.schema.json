@@ -1,0 +1,159 @@
+{
+  "$defs": {
+    "ErrorCategory": {
+      "description": "Public validation error categories.",
+      "enum": [
+        "schema",
+        "semantic",
+        "reference",
+        "state_transition",
+        "policy",
+        "security"
+      ],
+      "title": "ErrorCategory",
+      "type": "string"
+    },
+    "ErrorCode": {
+      "description": "Stable error codes from the approved contract catalog.",
+      "enum": [
+        "invalid_json",
+        "unsafe_yaml",
+        "duplicate_yaml_key",
+        "non_json_yaml_value",
+        "unknown_schema",
+        "unsupported_schema_version",
+        "required_field_missing",
+        "type_mismatch",
+        "unknown_field",
+        "constraint_violation",
+        "artifact_conflict",
+        "markdown_mismatch",
+        "reference_not_found",
+        "reference_type_mismatch",
+        "reference_version_mismatch",
+        "transition_not_allowed",
+        "checkpoint_invalid",
+        "policy_not_found",
+        "policy_version_mismatch",
+        "policy_violation",
+        "secret_material_detected",
+        "external_instruction_detected",
+        "permission_scope_violation"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "JsonValue": {},
+    "ValidationTargetV1": {
+      "additionalProperties": false,
+      "description": "Artifact and schema that failed validation.",
+      "properties": {
+        "artifact_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Id"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "minLength": 1,
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "schema_id",
+        "schema_version"
+      ],
+      "title": "ValidationTargetV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.validation-error:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One normalized validation failure.",
+  "properties": {
+    "category": {
+      "$ref": "#/$defs/ErrorCategory"
+    },
+    "code": {
+      "$ref": "#/$defs/ErrorCode"
+    },
+    "context": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Context",
+      "type": "object"
+    },
+    "error_contract_version": {
+      "const": 1,
+      "title": "Error Contract Version",
+      "type": "integer"
+    },
+    "instance_path": {
+      "title": "Instance Path",
+      "type": "string"
+    },
+    "message": {
+      "minLength": 1,
+      "title": "Message",
+      "type": "string"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.validation-error",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Schema Path"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "target": {
+      "$ref": "#/$defs/ValidationTargetV1"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "error_contract_version",
+    "category",
+    "code",
+    "target",
+    "instance_path",
+    "message"
+  ],
+  "title": "ValidationErrorV1",
+  "type": "object"
+}
