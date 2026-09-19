@@ -1,0 +1,24 @@
+{
+  "schema_id": "detailed-analysis.operation-request",
+  "schema_version": 1,
+  "operation_id": "operation-status-1",
+  "operation_type": "status",
+  "requested_at": "2026-09-12T12:05:00+09:00",
+  "operator": "repository-owner",
+  "task_id": "task-1",
+  "parent_task_id": null,
+  "task_reference": null,
+  "manifest_reference": {
+    "artifact_type": "execution_manifest",
+    "artifact_id": "manifest-1",
+    "schema_id": "detailed-analysis.execution-manifest",
+    "schema_version": 1,
+    "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+  },
+  "expected_task_state": null,
+  "input_references": [],
+  "credential_aliases": [],
+  "human_decision_reference": null,
+  "reason": "Inspect current task state and progress.",
+  "non_interactive_inputs_complete": true
+}

@@ -1,0 +1,73 @@
+{
+  "coverage_version": 1,
+  "public_schema_index": "fixture-index.json",
+  "generated_invalid_cases": [
+    {
+      "case_id": "required_field_missing",
+      "expected_code": "required_field_missing",
+      "applies_to": "all_public_schemas",
+      "test": "tests/contracts/test_public_contract_matrix.py::test_every_public_contract_rejects_a_missing_required_field"
+    },
+    {
+      "case_id": "schema_id_type_mismatch",
+      "expected_code": "type_mismatch",
+      "applies_to": "all_public_schemas",
+      "test": "tests/contracts/test_public_contract_matrix.py::test_every_public_contract_rejects_schema_id_type_mismatch"
+    },
+    {
+      "case_id": "unknown_field",
+      "expected_code": "unknown_field",
+      "applies_to": "all_public_schemas",
+      "test": "tests/contracts/test_public_contract_matrix.py::test_every_public_contract_rejects_unknown_fields"
+    },
+    {
+      "case_id": "unsupported_schema_version",
+      "expected_code": "unsupported_schema_version",
+      "applies_to": "all_public_schemas",
+      "test": "tests/contracts/test_public_contract_matrix.py::test_every_public_contract_rejects_unsupported_versions"
+    },
+    {
+      "case_id": "nonpositive_schema_version",
+      "expected_code": "constraint_violation",
+      "applies_to": "all_public_schemas",
+      "test": "tests/contracts/test_public_contract_matrix.py::test_every_public_contract_rejects_nonpositive_versions"
+    }
+  ],
+  "specialized_failure_classes": [
+    {
+      "failure_class": "artifact_or_semantic_conflict",
+      "tests": [
+        "tests/contracts/test_final_result_consistency.py",
+        "tests/contracts/test_analysis_contracts.py",
+        "tests/contracts/test_review_contracts.py"
+      ]
+    },
+    {
+      "failure_class": "invalid_evidence_or_artifact_reference",
+      "tests": [
+        "tests/contracts/test_evidence_set.py",
+        "tests/contracts/test_final_result_consistency.py",
+        "tests/contracts/test_validation_rules.py"
+      ]
+    },
+    {
+      "failure_class": "state_or_policy_violation",
+      "tests": [
+        "tests/contracts/test_runtime_contracts.py",
+        "tests/contracts/test_policy_contracts.py",
+        "tests/contracts/test_dispute_audit_contracts.py"
+      ]
+    },
+    {
+      "failure_class": "security_violation",
+      "tests": [
+        "tests/contracts/test_security_fixtures.py",
+        "tests/contracts/test_validation_wrapper.py"
+      ]
+    },
+    {
+      "failure_class": "markdown_mismatch",
+      "tests": ["tests/contracts/test_markdown_rendering.py"]
+    }
+  ]
+}

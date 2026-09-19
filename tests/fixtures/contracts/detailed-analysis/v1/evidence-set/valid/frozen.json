@@ -1,0 +1,94 @@
+{
+  "schema_id": "detailed-analysis.evidence-set",
+  "schema_version": 1,
+  "task_id": "task-20260911-001",
+  "artifact_id": "evidence-set-v1",
+  "evidence_set_version": 1,
+  "state": "frozen",
+  "previous_evidence_set": null,
+  "evidence_frozen_at": "2026-09-11T10:30:00+09:00",
+  "freshness_checked_at": "2026-09-11T10:31:00+09:00",
+  "analysis_completed_at": null,
+  "records": [
+    {
+      "evidence_id": "source-meta-001",
+      "layer": "source_metadata",
+      "source_id": "fixture-source",
+      "source_approval_reference": {
+        "artifact_type": "source_approval",
+        "artifact_id": "fixture-source-approval-v1",
+        "schema_id": "detailed-analysis.source-approval",
+        "schema_version": 1,
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "provider": "Fixture Provider",
+      "service": "Fixture Service",
+      "dataset": "Daily prices",
+      "published_at": "2026-09-10T15:30:00+09:00",
+      "first_available_at": "2026-09-10T15:31:00+09:00",
+      "updated_at": null,
+      "retrieved_at": "2026-09-11T10:00:00+09:00",
+      "applicable_period": {
+        "start_date": "2026-09-10",
+        "end_date": "2026-09-10"
+      },
+      "timezone": "Asia/Tokyo",
+      "reference": "https://example.invalid/fixture-source/7203",
+      "content_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "data_version": "fixture-2026-09-10"
+    },
+    {
+      "evidence_id": "raw-001",
+      "layer": "raw",
+      "source_metadata_evidence_id": "source-meta-001",
+      "payload_reference": {
+        "artifact_type": "raw_evidence_payload",
+        "artifact_id": "raw-payload-001",
+        "schema_id": "detailed-analysis.raw-evidence-payload",
+        "schema_version": 1,
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "content_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "data_version": "fixture-raw-v1"
+    },
+    {
+      "evidence_id": "normalized-001",
+      "layer": "normalized",
+      "input_evidence_ids": [
+        "raw-001"
+      ],
+      "value": 2500.5,
+      "missing_reason": null,
+      "unit": "JPY_per_share",
+      "content_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "data_version": "fixture-normalized-v1",
+      "normalization_logic_version": 1
+    },
+    {
+      "evidence_id": "calculated-001",
+      "layer": "calculated",
+      "input_evidence_ids": [
+        "normalized-001"
+      ],
+      "value": 1.25,
+      "missing_reason": null,
+      "unit": "percent",
+      "content_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "data_version": "fixture-calculated-v1",
+      "calculation_logic_version": 1,
+      "rounding_method": "half_even_2_decimal_places"
+    }
+  ],
+  "freshness_assessments": [
+    {
+      "category": "daily-price",
+      "status": "current",
+      "evidence_ids": [
+        "normalized-001"
+      ],
+      "requirement": "Latest completed XTKS trading day",
+      "detail": "Fixture satisfies the declared period."
+    }
+  ],
+  "invalidations": []
+}

@@ -1,0 +1,4 @@
+{
+  "allowed": ["read_evidence"],
+  "requested": ["read_evidence", "write_repository"]
+}

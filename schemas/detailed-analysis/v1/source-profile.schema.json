@@ -1,0 +1,318 @@
+{
+  "$defs": {
+    "ApprovalStatus": {
+      "description": "Lifecycle state of a source approval record.",
+      "enum": [
+        "draft",
+        "approved",
+        "suspended",
+        "expired",
+        "rejected"
+      ],
+      "title": "ApprovalStatus",
+      "type": "string"
+    },
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "BatchPolicyV1": {
+      "additionalProperties": false,
+      "description": "Provider batch capability and verified maximum size.",
+      "properties": {
+        "max_batch_size": {
+          "$ref": "#/$defs/QuantitativeSettingV1"
+        },
+        "support_status": {
+          "$ref": "#/$defs/KnowledgeStatus"
+        }
+      },
+      "required": [
+        "support_status",
+        "max_batch_size"
+      ],
+      "title": "BatchPolicyV1",
+      "type": "object"
+    },
+    "CachePolicyV1": {
+      "additionalProperties": false,
+      "description": "Cache constraints included in fingerprint compatibility checks.",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "ttl_seconds": {
+          "$ref": "#/$defs/QuantitativeSettingV1"
+        },
+        "varies_by_credential_scope": {
+          "const": true,
+          "title": "Varies By Credential Scope",
+          "type": "boolean"
+        },
+        "varies_by_freshness_and_period": {
+          "const": true,
+          "title": "Varies By Freshness And Period",
+          "type": "boolean"
+        },
+        "varies_by_source_policy_version": {
+          "const": true,
+          "title": "Varies By Source Policy Version",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled",
+        "ttl_seconds",
+        "varies_by_credential_scope",
+        "varies_by_freshness_and_period",
+        "varies_by_source_policy_version"
+      ],
+      "title": "CachePolicyV1",
+      "type": "object"
+    },
+    "CooldownPolicyV1": {
+      "additionalProperties": false,
+      "description": "Provider cooldown behavior without automatic retries.",
+      "properties": {
+        "automatic_retry_allowed": {
+          "const": false,
+          "title": "Automatic Retry Allowed",
+          "type": "boolean"
+        },
+        "default_cooldown_seconds": {
+          "$ref": "#/$defs/QuantitativeSettingV1"
+        },
+        "honor_provider_retry_after": {
+          "const": true,
+          "title": "Honor Provider Retry After",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "honor_provider_retry_after",
+        "default_cooldown_seconds",
+        "automatic_retry_allowed"
+      ],
+      "title": "CooldownPolicyV1",
+      "type": "object"
+    },
+    "KnowledgeStatus": {
+      "description": "Whether an external condition was verified rather than assumed.",
+      "enum": [
+        "known",
+        "unknown",
+        "unsupported",
+        "not_retrieved"
+      ],
+      "title": "KnowledgeStatus",
+      "type": "string"
+    },
+    "QuantitativeSettingV1": {
+      "additionalProperties": false,
+      "description": "Numeric provider setting with explicit unknown and unsupported states.",
+      "properties": {
+        "evidence_reference_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Evidence Reference Ids",
+          "type": "array"
+        },
+        "knowledge_status": {
+          "$ref": "#/$defs/KnowledgeStatus"
+        },
+        "unit": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "knowledge_status",
+        "value",
+        "unit",
+        "evidence_reference_ids"
+      ],
+      "title": "QuantitativeSettingV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.source-profile:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Versioned coordinator controls for one approved source.",
+  "properties": {
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "batch_policy": {
+      "$ref": "#/$defs/BatchPolicyV1"
+    },
+    "burst": {
+      "minimum": 1,
+      "title": "Burst",
+      "type": "integer"
+    },
+    "cache_policy": {
+      "$ref": "#/$defs/CachePolicyV1"
+    },
+    "cooldown_policy": {
+      "$ref": "#/$defs/CooldownPolicyV1"
+    },
+    "credential_scope_alias": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Credential Scope Alias"
+    },
+    "direct_connection_fallback_allowed": {
+      "const": false,
+      "title": "Direct Connection Fallback Allowed",
+      "type": "boolean"
+    },
+    "egress_scope": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Egress Scope",
+      "type": "string"
+    },
+    "enabled": {
+      "title": "Enabled",
+      "type": "boolean"
+    },
+    "max_concurrency": {
+      "minimum": 1,
+      "title": "Max Concurrency",
+      "type": "integer"
+    },
+    "min_interval_seconds": {
+      "$ref": "#/$defs/QuantitativeSettingV1"
+    },
+    "policy_version": {
+      "minimum": 1,
+      "title": "Policy Version",
+      "type": "integer"
+    },
+    "profile_version": {
+      "minimum": 1,
+      "title": "Profile Version",
+      "type": "integer"
+    },
+    "rate_domain": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Rate Domain",
+      "type": "string"
+    },
+    "rate_requests": {
+      "$ref": "#/$defs/QuantitativeSettingV1"
+    },
+    "rate_window_seconds": {
+      "$ref": "#/$defs/QuantitativeSettingV1"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.source-profile",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_approval_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "source_approval_status": {
+      "$ref": "#/$defs/ApprovalStatus"
+    },
+    "source_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Source Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "artifact_id",
+    "source_id",
+    "profile_version",
+    "policy_version",
+    "source_approval_reference",
+    "source_approval_status",
+    "enabled",
+    "rate_domain",
+    "credential_scope_alias",
+    "egress_scope",
+    "max_concurrency",
+    "min_interval_seconds",
+    "rate_requests",
+    "rate_window_seconds",
+    "burst",
+    "cache_policy",
+    "batch_policy",
+    "cooldown_policy",
+    "direct_connection_fallback_allowed"
+  ],
+  "title": "SourceProfileV1",
+  "type": "object"
+}

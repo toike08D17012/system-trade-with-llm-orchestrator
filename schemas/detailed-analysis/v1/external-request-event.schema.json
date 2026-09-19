@@ -1,0 +1,489 @@
+{
+  "$defs": {
+    "AgentRole": {
+      "description": "Roles allowed to perform research in the approved workflow.",
+      "enum": [
+        "orchestrator",
+        "codex_worker",
+        "claude_worker",
+        "primary_reviewer",
+        "antigravity_auditor"
+      ],
+      "title": "AgentRole",
+      "type": "string"
+    },
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "CacheDecision": {
+      "description": "Cache decision made before queue and rate gates.",
+      "enum": [
+        "not_applicable",
+        "miss",
+        "hit",
+        "stale_rejected",
+        "policy_rejected"
+      ],
+      "title": "CacheDecision",
+      "type": "string"
+    },
+    "ExternalRequestEventType": {
+      "description": "Auditable lifecycle events emitted by the request coordinator.",
+      "enum": [
+        "logical_requested",
+        "cache_decided",
+        "single_flight_decided",
+        "queued",
+        "gates_evaluated",
+        "physical_started",
+        "physical_succeeded",
+        "physical_failed",
+        "session_started",
+        "cooldown_recorded",
+        "cancelled"
+      ],
+      "title": "ExternalRequestEventType",
+      "type": "string"
+    },
+    "GateOutcome": {
+      "description": "Outcome of evaluating one applicable rate gate.",
+      "enum": [
+        "acquired",
+        "blocked",
+        "cooldown"
+      ],
+      "title": "GateOutcome",
+      "type": "string"
+    },
+    "GateScope": {
+      "description": "Approved request gate scopes evaluated immediately before sending.",
+      "enum": [
+        "global",
+        "egress",
+        "provider",
+        "origin",
+        "credential",
+        "operation",
+        "task",
+        "role"
+      ],
+      "title": "GateScope",
+      "type": "string"
+    },
+    "RateGateResultV1": {
+      "additionalProperties": false,
+      "description": "Non-secret result for one applicable coordinator gate.",
+      "properties": {
+        "detail": {
+          "minLength": 1,
+          "title": "Detail",
+          "type": "string"
+        },
+        "key_alias": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Key Alias",
+          "type": "string"
+        },
+        "outcome": {
+          "$ref": "#/$defs/GateOutcome"
+        },
+        "scope": {
+          "$ref": "#/$defs/GateScope"
+        },
+        "waited_ms": {
+          "minimum": 0,
+          "title": "Waited Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "scope",
+        "key_alias",
+        "outcome",
+        "waited_ms",
+        "detail"
+      ],
+      "title": "RateGateResultV1",
+      "type": "object"
+    },
+    "RequestErrorV1": {
+      "additionalProperties": false,
+      "description": "Provider or coordination failure without secret response content.",
+      "properties": {
+        "cooldown_until": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cooldown Until"
+        },
+        "error_class": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Error Class",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "response_status_code": {
+          "anyOf": [
+            {
+              "maximum": 599,
+              "minimum": 100,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Response Status Code"
+        },
+        "retry_after_seconds": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Retry After Seconds"
+        }
+      },
+      "required": [
+        "error_class",
+        "message",
+        "retry_after_seconds",
+        "cooldown_until",
+        "response_status_code"
+      ],
+      "title": "RequestErrorV1",
+      "type": "object"
+    },
+    "RequestObservability": {
+      "description": "Whether an individual provider request can be observed and controlled.",
+      "enum": [
+        "physical_request",
+        "agent_session_only"
+      ],
+      "title": "RequestObservability",
+      "type": "string"
+    },
+    "RequestOutcome": {
+      "description": "Known outcome at the time an event is written.",
+      "enum": [
+        "pending",
+        "succeeded",
+        "failed",
+        "cancelled",
+        "unknown"
+      ],
+      "title": "RequestOutcome",
+      "type": "string"
+    },
+    "RequestUsageV1": {
+      "additionalProperties": false,
+      "description": "One usage metric with explicit availability semantics.",
+      "properties": {
+        "availability": {
+          "$ref": "#/$defs/UsageAvailability"
+        },
+        "metric": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Metric",
+          "type": "string"
+        },
+        "unit": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "metric",
+        "unit",
+        "availability",
+        "value"
+      ],
+      "title": "RequestUsageV1",
+      "type": "object"
+    },
+    "SingleFlightDecision": {
+      "description": "Single-flight relationship for the logical request.",
+      "enum": [
+        "not_applicable",
+        "leader",
+        "follower"
+      ],
+      "title": "SingleFlightDecision",
+      "type": "string"
+    },
+    "UsageAvailability": {
+      "description": "Distinguish a measured value from an unavailable zero-like value.",
+      "enum": [
+        "retrieved",
+        "unknown",
+        "unsupported",
+        "not_retrieved"
+      ],
+      "title": "UsageAvailability",
+      "type": "string"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.external-request-event:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Immutable coordinator event linking logical consumers and physical work.",
+  "properties": {
+    "automatic_retry_allowed": {
+      "const": false,
+      "title": "Automatic Retry Allowed",
+      "type": "boolean"
+    },
+    "cache_artifact_reference": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cache_decision": {
+      "$ref": "#/$defs/CacheDecision"
+    },
+    "consumer_role": {
+      "$ref": "#/$defs/AgentRole"
+    },
+    "credential_scope_alias": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Credential Scope Alias"
+    },
+    "direct_connection_fallback_allowed": {
+      "const": false,
+      "title": "Direct Connection Fallback Allowed",
+      "type": "boolean"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RequestErrorV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "event_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "event_type": {
+      "$ref": "#/$defs/ExternalRequestEventType"
+    },
+    "gate_results": {
+      "items": {
+        "$ref": "#/$defs/RateGateResultV1"
+      },
+      "title": "Gate Results",
+      "type": "array"
+    },
+    "leader_logical_request_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Leader Logical Request Id"
+    },
+    "logical_request_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Logical Request Id",
+      "type": "string"
+    },
+    "observability": {
+      "$ref": "#/$defs/RequestObservability"
+    },
+    "occurred_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "operation": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Operation",
+      "type": "string"
+    },
+    "origin": {
+      "minLength": 1,
+      "title": "Origin",
+      "type": "string"
+    },
+    "outcome": {
+      "$ref": "#/$defs/RequestOutcome"
+    },
+    "physical_attempt_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Physical Attempt Id"
+    },
+    "provider": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Provider",
+      "type": "string"
+    },
+    "queue_wait_ms": {
+      "minimum": 0,
+      "title": "Queue Wait Ms",
+      "type": "integer"
+    },
+    "request_fingerprint": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Request Fingerprint",
+      "type": "string"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.external-request-event",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "single_flight_decision": {
+      "$ref": "#/$defs/SingleFlightDecision"
+    },
+    "source_approval_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "source_profile_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "usage": {
+      "items": {
+        "$ref": "#/$defs/RequestUsageV1"
+      },
+      "title": "Usage",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "event_id",
+    "occurred_at",
+    "event_type",
+    "task_id",
+    "logical_request_id",
+    "physical_attempt_id",
+    "observability",
+    "consumer_role",
+    "provider",
+    "operation",
+    "origin",
+    "credential_scope_alias",
+    "source_approval_reference",
+    "source_profile_reference",
+    "request_fingerprint",
+    "cache_decision",
+    "cache_artifact_reference",
+    "single_flight_decision",
+    "leader_logical_request_id",
+    "queue_wait_ms",
+    "gate_results",
+    "outcome",
+    "error",
+    "usage",
+    "automatic_retry_allowed",
+    "direct_connection_fallback_allowed"
+  ],
+  "title": "ExternalRequestEventV1",
+  "type": "object"
+}

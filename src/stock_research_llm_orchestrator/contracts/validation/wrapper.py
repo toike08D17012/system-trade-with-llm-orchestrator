@@ -113,13 +113,37 @@ def validate_text(
         )
     schema_id = value.get("schema_id")
     schema_version = value.get("schema_version")
-    if not isinstance(schema_id, str) or not schema_id:
+    if schema_id is None:
         raise _failure(
             ErrorCategory.SCHEMA,
             ErrorCode.REQUIRED_FIELD_MISSING,
-            "schema_id must be a non-empty string",
+            "schema_id is required",
             target,
             instance_path="/schema_id",
+        )
+    if not isinstance(schema_id, str):
+        raise _failure(
+            ErrorCategory.SCHEMA,
+            ErrorCode.TYPE_MISMATCH,
+            "schema_id must be a string",
+            target,
+            instance_path="/schema_id",
+        )
+    if not schema_id:
+        raise _failure(
+            ErrorCategory.SCHEMA,
+            ErrorCode.CONSTRAINT_VIOLATION,
+            "schema_id must be non-empty",
+            target,
+            instance_path="/schema_id",
+        )
+    if schema_version is None:
+        raise _failure(
+            ErrorCategory.SCHEMA,
+            ErrorCode.REQUIRED_FIELD_MISSING,
+            "schema_version is required",
+            target,
+            instance_path="/schema_version",
         )
     if isinstance(schema_version, bool) or not isinstance(schema_version, int):
         raise _failure(

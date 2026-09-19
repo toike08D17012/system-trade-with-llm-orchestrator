@@ -1,0 +1,569 @@
+{
+  "$defs": {
+    "AgentExecutionErrorV1": {
+      "additionalProperties": false,
+      "description": "Redacted process or provider error retained for safe recovery.",
+      "properties": {
+        "error_class": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Error Class",
+          "type": "string"
+        },
+        "exit_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Exit Code"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "secret_values_redacted": {
+          "const": true,
+          "title": "Secret Values Redacted",
+          "type": "boolean"
+        },
+        "stderr_reference": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactReferenceV1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stdout_reference": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactReferenceV1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unresolved_items": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Unresolved Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "error_class",
+        "message",
+        "exit_code",
+        "stdout_reference",
+        "stderr_reference",
+        "unresolved_items",
+        "secret_values_redacted"
+      ],
+      "title": "AgentExecutionErrorV1",
+      "type": "object"
+    },
+    "AgentProcessState": {
+      "description": "Process state distinct from the task-level workflow state.",
+      "enum": [
+        "queued",
+        "running",
+        "cancelling",
+        "succeeded",
+        "failed",
+        "cancelled",
+        "unknown"
+      ],
+      "title": "AgentProcessState",
+      "type": "string"
+    },
+    "AgentRole": {
+      "description": "Roles allowed to perform research in the approved workflow.",
+      "enum": [
+        "orchestrator",
+        "codex_worker",
+        "claude_worker",
+        "primary_reviewer",
+        "antigravity_auditor"
+      ],
+      "title": "AgentRole",
+      "type": "string"
+    },
+    "AgentUsageMetricV1": {
+      "additionalProperties": false,
+      "description": "One usage value with source, scope, and unavailable-state semantics.",
+      "properties": {
+        "availability": {
+          "$ref": "#/$defs/UsageAvailability"
+        },
+        "meaning_confirmed": {
+          "title": "Meaning Confirmed",
+          "type": "boolean"
+        },
+        "metric": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Metric",
+          "type": "string"
+        },
+        "origin": {
+          "$ref": "#/$defs/UsageOrigin"
+        },
+        "scope": {
+          "$ref": "#/$defs/UsageScope"
+        },
+        "unit": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "metric",
+        "unit",
+        "availability",
+        "origin",
+        "scope",
+        "meaning_confirmed",
+        "value"
+      ],
+      "title": "AgentUsageMetricV1",
+      "type": "object"
+    },
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "LogicalSessionSettingsV1": {
+      "additionalProperties": false,
+      "description": "Settings that remain immutable throughout one logical session.",
+      "properties": {
+        "effort": {
+          "minLength": 1,
+          "title": "Effort",
+          "type": "string"
+        },
+        "external_transfer_policy_reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        "model": {
+          "minLength": 1,
+          "title": "Model",
+          "type": "string"
+        },
+        "output_schema_id": {
+          "minLength": 1,
+          "title": "Output Schema Id",
+          "type": "string"
+        },
+        "output_schema_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Output Schema Sha256",
+          "type": "string"
+        },
+        "output_schema_version": {
+          "minimum": 1,
+          "title": "Output Schema Version",
+          "type": "integer"
+        },
+        "permission_profile": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Permission Profile",
+          "type": "string"
+        },
+        "provider": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Provider",
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/$defs/AgentRole"
+        },
+        "role_instruction_reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        "settings_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Settings Sha256",
+          "type": "string"
+        },
+        "web_research_policy_reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        "workspace_profile": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Workspace Profile",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "effort",
+        "role",
+        "role_instruction_reference",
+        "permission_profile",
+        "workspace_profile",
+        "web_research_policy_reference",
+        "external_transfer_policy_reference",
+        "output_schema_id",
+        "output_schema_version",
+        "output_schema_sha256",
+        "settings_sha256"
+      ],
+      "title": "LogicalSessionSettingsV1",
+      "type": "object"
+    },
+    "SessionMode": {
+      "description": "How the logical session and provider context were started.",
+      "enum": [
+        "new",
+        "resume",
+        "native_fork",
+        "reconstructed_fork"
+      ],
+      "title": "SessionMode",
+      "type": "string"
+    },
+    "UsageAvailability": {
+      "description": "Distinguish a measured value from an unavailable zero-like value.",
+      "enum": [
+        "retrieved",
+        "unknown",
+        "unsupported",
+        "not_retrieved"
+      ],
+      "title": "UsageAvailability",
+      "type": "string"
+    },
+    "UsageOrigin": {
+      "description": "Whether a usage value was provider-reported or locally derived.",
+      "enum": [
+        "provider_reported",
+        "derived",
+        "not_available"
+      ],
+      "title": "UsageOrigin",
+      "type": "string"
+    },
+    "UsageScope": {
+      "description": "Aggregation boundary communicated by the provider or derivation.",
+      "enum": [
+        "run",
+        "session_cumulative",
+        "unknown"
+      ],
+      "title": "UsageScope",
+      "type": "string"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.agent-execution:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One Agent CLI run and its relationship to a logical session.",
+  "properties": {
+    "active_run": {
+      "title": "Active Run",
+      "type": "boolean"
+    },
+    "agent_run_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Agent Run Id",
+      "type": "string"
+    },
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "automatic_retry_allowed": {
+      "const": false,
+      "title": "Automatic Retry Allowed",
+      "type": "boolean"
+    },
+    "automatic_session_fallback_allowed": {
+      "const": false,
+      "title": "Automatic Session Fallback Allowed",
+      "type": "boolean"
+    },
+    "cancellation_requested": {
+      "title": "Cancellation Requested",
+      "type": "boolean"
+    },
+    "ended_at": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Ended At"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AgentExecutionErrorV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "exit_code": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Exit Code"
+    },
+    "input_references": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReferenceV1"
+      },
+      "minItems": 1,
+      "title": "Input References",
+      "type": "array"
+    },
+    "logical_agent": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Logical Agent",
+      "type": "string"
+    },
+    "logical_session_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Logical Session Id",
+      "type": "string"
+    },
+    "output_reference": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "parent_agent_run_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Parent Agent Run Id"
+    },
+    "parent_logical_session_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Parent Logical Session Id"
+    },
+    "process_state": {
+      "$ref": "#/$defs/AgentProcessState"
+    },
+    "provider_session_id": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Provider Session Id"
+    },
+    "purpose": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Purpose",
+      "type": "string"
+    },
+    "queued_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Queued At",
+      "type": "string"
+    },
+    "raw_output_reference": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "role": {
+      "$ref": "#/$defs/AgentRole"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.agent-execution",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "session_mode": {
+      "$ref": "#/$defs/SessionMode"
+    },
+    "session_mode_reason": {
+      "minLength": 1,
+      "title": "Session Mode Reason",
+      "type": "string"
+    },
+    "session_mode_reason_code": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Session Mode Reason Code",
+      "type": "string"
+    },
+    "settings": {
+      "$ref": "#/$defs/LogicalSessionSettingsV1"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Started At"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "usage": {
+      "items": {
+        "$ref": "#/$defs/AgentUsageMetricV1"
+      },
+      "title": "Usage",
+      "type": "array"
+    },
+    "validation_error_reference": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "logical_session_id",
+    "provider_session_id",
+    "agent_run_id",
+    "parent_agent_run_id",
+    "parent_logical_session_id",
+    "role",
+    "logical_agent",
+    "purpose",
+    "session_mode",
+    "session_mode_reason_code",
+    "session_mode_reason",
+    "settings",
+    "process_state",
+    "queued_at",
+    "started_at",
+    "ended_at",
+    "exit_code",
+    "input_references",
+    "output_reference",
+    "raw_output_reference",
+    "validation_error_reference",
+    "error",
+    "usage",
+    "cancellation_requested",
+    "active_run",
+    "automatic_retry_allowed",
+    "automatic_session_fallback_allowed"
+  ],
+  "title": "AgentExecutionV1",
+  "type": "object"
+}

@@ -1,0 +1,97 @@
+{
+  "schema_id": "detailed-analysis.audit-request",
+  "schema_version": 1,
+  "task_id": "task-1",
+  "artifact_id": "audit-request-1",
+  "audit_id": "audit-1",
+  "dispute_id": "dispute-1",
+  "dispute_reference": {
+    "artifact_type": "dispute",
+    "artifact_id": "dispute-artifact-1",
+    "schema_id": "detailed-analysis.dispute",
+    "schema_version": 1,
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "created_at": "2026-09-12T10:15:00+09:00",
+  "logical_audit_sequence": 1,
+  "audit_workspace_read_only": true,
+  "automatic_retry_allowed": false,
+  "gate": {
+    "primary_review_response_and_research_complete": true,
+    "two_substantiated_positions_unresolved": true,
+    "mechanically_resolvable": false,
+    "material": true,
+    "neutral_packet_valid": true,
+    "already_validly_audited": false,
+    "classification_pending_present": false,
+    "decision": "start_audit"
+  },
+  "packet": {
+    "task_id": "task-1",
+    "dispute_id": "dispute-1",
+    "question": "Which interpretation is better supported by the verified evidence and policy?",
+    "horizon": "medium_term",
+    "target_claim_ids": ["claim-1"],
+    "policy_references": [{
+      "artifact_type": "policy",
+      "artifact_id": "analysis-policy-1",
+      "schema_id": "detailed-analysis.detailed-analysis-policy",
+      "schema_version": 1,
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    }],
+    "agreed_facts": [{
+      "statement": "The evidence contains one partial reporting period.",
+      "evidence_ids": ["evidence-1"]
+    }],
+    "unresolved_issues": ["The policy treatment of a partial period is unresolved."],
+    "interpretation_1": {
+      "statement": "The threshold is satisfied.",
+      "rationale": ["The verified period is sufficient."],
+      "evidence_ids": ["evidence-1"],
+      "evidence_absence_reason": null,
+      "acknowledged_uncertainties": ["One period is partial."],
+      "falsification_conditions": ["A complete period falls below the threshold."]
+    },
+    "interpretation_2": {
+      "statement": "The threshold is not satisfied.",
+      "rationale": ["The period is not comparable."],
+      "evidence_ids": ["evidence-1"],
+      "evidence_absence_reason": null,
+      "acknowledged_uncertainties": ["The policy permits two readings."],
+      "falsification_conditions": ["The policy permits partial periods."]
+    },
+    "evidence_bundle": [{
+      "evidence_id": "evidence-1",
+      "content_reference": {
+        "artifact_type": "normalized_evidence",
+        "artifact_id": "normalized-1",
+        "schema_id": "detailed-analysis.evidence-set",
+        "schema_version": 1,
+        "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+      },
+      "source_metadata_reference": {
+        "artifact_type": "source_metadata",
+        "artifact_id": "source-metadata-1",
+        "schema_id": "detailed-analysis.evidence-set",
+        "schema_version": 1,
+        "sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+      }
+    }],
+    "requested_checks": {
+      "determine_evidence_support": true,
+      "check_policy_application": true,
+      "identify_missing_assumptions": true,
+      "recommend_next_state": true
+    },
+    "neutrality": {
+      "producer_names_included": false,
+      "preferred_side_included": false,
+      "reviewer_preference_included": false,
+      "orchestrator_provisional_conclusion_included": false,
+      "recommendation_included": false,
+      "out_of_scope_content_included": false,
+      "important_evidence_omitted": false,
+      "validated": true
+    }
+  }
+}

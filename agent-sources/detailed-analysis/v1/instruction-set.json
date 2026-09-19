@@ -1,0 +1,78 @@
+{
+  "instruction_set_id": "detailed-analysis-instructions",
+  "instruction_set_version": 1,
+  "composition_order": ["common", "role", "task_scoped"],
+  "common": {
+    "instruction_id": "common",
+    "instruction_version": 1,
+    "relative_path": "agent-sources/detailed-analysis/v1/common.md",
+    "content_sha256": "56afb58fe716db0fcbaf53829516126843710a1db2b4946145c59b9a2bb13d79"
+  },
+  "roles": {
+    "orchestrator": {
+      "instruction_id": "orchestrator",
+      "instruction_version": 1,
+      "relative_path": "agent-sources/detailed-analysis/v1/orchestrator.md",
+      "content_sha256": "69d75470dbed47377b016ab66a685a3943ba5fe8cb7e70a72c7d1e7672fece9a",
+      "output_schema_ids": [
+        "detailed-analysis.synthesis-result",
+        "detailed-analysis.review-response",
+        "detailed-analysis.dispute",
+        "detailed-analysis.audit-request",
+        "detailed-analysis.execution-manifest",
+        "detailed-analysis.final-analysis-result"
+      ],
+      "permission_profile": "orchestrator-task-scoped",
+      "workspace_profile": "task-scoped"
+    },
+    "codex_worker": {
+      "instruction_id": "codex-worker",
+      "instruction_version": 1,
+      "relative_path": "agent-sources/detailed-analysis/v1/codex-worker.md",
+      "content_sha256": "5101906cbaa98ae0a0e179b8452317a4495ce02552b8dd840003c6d0e670b4f5",
+      "output_schema_ids": [
+        "detailed-analysis.worker-analysis",
+        "detailed-analysis.review-response"
+      ],
+      "permission_profile": "worker-read-only",
+      "workspace_profile": "task-scoped-read-only"
+    },
+    "claude_worker": {
+      "instruction_id": "claude-worker",
+      "instruction_version": 1,
+      "relative_path": "agent-sources/detailed-analysis/v1/claude-worker.md",
+      "content_sha256": "297ef93077277cd6736b939c8516dbc187d68fbb6bc795ce2b19664ea79597d8",
+      "output_schema_ids": [
+        "detailed-analysis.worker-analysis",
+        "detailed-analysis.review-response"
+      ],
+      "permission_profile": "worker-read-only",
+      "workspace_profile": "task-scoped-read-only"
+    },
+    "primary_reviewer": {
+      "instruction_id": "primary-reviewer",
+      "instruction_version": 1,
+      "relative_path": "agent-sources/detailed-analysis/v1/primary-reviewer.md",
+      "content_sha256": "6c4c262e6bb7c841ca447d03bb59eecb18361eed01f6a1be608dbfe45e92e709",
+      "output_schema_ids": ["detailed-analysis.primary-review"],
+      "permission_profile": "reviewer-read-only",
+      "workspace_profile": "task-scoped-read-only"
+    },
+    "antigravity_auditor": {
+      "instruction_id": "antigravity-auditor",
+      "instruction_version": 1,
+      "relative_path": "agent-sources/detailed-analysis/v1/antigravity-auditor.md",
+      "content_sha256": "49d8ea2e7398c9c68a150a391ffaec261488c5ce8fc859828f8c9f62d66bffc5",
+      "output_schema_ids": ["detailed-analysis.audit-result"],
+      "permission_profile": "auditor-read-only",
+      "workspace_profile": "single-dispute-read-only"
+    }
+  },
+  "task_scoped": {
+    "required": true,
+    "content_sha256_recorded_at_application": true,
+    "contains_validated_task_and_artifact_references_only": true
+  },
+  "applied_record_schema_id": "detailed-analysis.instruction-application",
+  "physical_distribution_implemented": false
+}

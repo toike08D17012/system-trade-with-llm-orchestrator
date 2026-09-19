@@ -1,0 +1,231 @@
+{% if language == "ja" %}# 個別株 詳細解析レポート
+
+- タスクID: `{{ document.task_id }}`
+- 銘柄: `{{ document.security.security_code }}` (`{{ document.security.mic }}`)
+- 作成日時: `{{ document.created_at }}`
+- 証拠セット版: `{{ document.evidence_set_version }}`
+- 証拠凍結日時: `{{ document.evidence_frozen_at }}`
+- 鮮度確認日時: `{{ document.freshness_checked_at }}`
+
+## 鮮度確認
+
+- 確認結果: {{ document.freshness_search_result }}
+{% for item in document.freshness_search_scope %}- 確認範囲: {{ item }}
+{% endfor %}
+{% for horizon in document.horizon_results %}{% if horizon.horizon == "medium_term" %}## 中期評価{% else %}## 長期評価{% endif %}
+
+- 評価可否: `{{ horizon.evaluability }}`
+{% if horizon.assessment %}- 評価: `{{ horizon.assessment.status }}`
+- 確信度: `{{ horizon.assessment.confidence }}`
+- 根拠: {{ horizon.assessment.rationale }}
+{% else %}- 評価: 未確定
+- 確信度: 未確定
+{% endif %}- 要約: {{ horizon.summary }}
+
+### 合意した主張ID
+
+{% for item in horizon.agreed_claim_ids %}- `{{ item }}`
+{% else %}- なし
+{% endfor %}
+### 相違点ID
+
+{% for item in horizon.difference_ids %}- `{{ item }}`
+{% else %}- なし
+{% endfor %}
+### 反証条件
+
+{% for item in horizon.counterevidence_conditions %}- {{ item }}
+{% else %}- なし
+{% endfor %}
+### 欠損情報
+
+{% for item in horizon.missing_information %}- {{ item }}
+{% else %}- なし
+{% endfor %}
+{% if horizon.assessment %}### 条件・追加調査
+
+{% for item in horizon.assessment.condition_or_research_needs %}- {{ item }}
+{% else %}- なし
+{% endfor %}{% endif %}
+{% endfor %}## 期間横断要約
+
+{{ document.cross_horizon_summary.summary }}
+
+### 合意点
+
+{% for item in document.cross_horizon_summary.agreements %}- {{ item }}
+{% else %}- なし
+{% endfor %}
+### 相違点
+
+{% for item in document.cross_horizon_summary.differences %}- {{ item }}
+{% else %}- なし
+{% endfor %}
+## エントリー・撤退判断の参考情報
+
+- 価格基準日時: `{{ document.entry_exit_context.price_as_of }}`
+- 現在価格の位置付け: {{ document.entry_exit_context.current_price_context }}
+- ボラティリティ: {{ document.entry_exit_context.volatility_context }}
+
+### エントリー参考条件
+
+{% for item in document.entry_exit_context.entry_reference_conditions %}- {{ item }}
+{% else %}- なし
+{% endfor %}
+### テクニカル撤退参考条件
+
+{% for item in document.entry_exit_context.technical_exit_reference_conditions %}- {{ item }}
+{% else %}- なし
+{% endfor %}
+### 仮説無効化条件
+
+{% for item in document.entry_exit_context.thesis_invalidation_conditions %}- {{ item }}
+{% else %}- なし
+{% endfor %}
+### 今後のイベントリスク
+
+{% for item in document.entry_exit_context.upcoming_event_risks %}- {{ item }}
+{% else %}- なし
+{% endfor %}
+### 参照証拠ID
+
+{% for item in document.entry_exit_context.evidence_ids %}- `{{ item }}`
+{% endfor %}
+## 欠損と未解決事項
+
+{% for item in document.missing_information %}- {{ item }}
+{% else %}- なし
+{% endfor %}{% for item in document.unresolved_difference_ids %}- 未解決相違点ID: `{{ item }}`
+{% endfor %}
+## レビューと条件付き追加監査
+
+- 一次レビュー成果物: `{{ document.primary_review_reference.artifact_id }}` (`{{ document.primary_review_reference.sha256 }}`)
+{% for item in document.audit_invocations %}- 争点 `{{ item.dispute_id }}`: `{{ item.decision }}` — {{ item.reason }}
+{% else %}- 追加監査記録なし
+{% endfor %}
+## 成果物来歴
+
+- task: `{{ document.task_reference.artifact_id }}` (`{{ document.task_reference.sha256 }}`)
+- evidence set: `{{ document.evidence_set_reference.artifact_id }}` (`{{ document.evidence_set_reference.sha256 }}`)
+- synthesis: `{{ document.synthesis_reference.artifact_id }}` (`{{ document.synthesis_reference.sha256 }}`)
+{% for item in document.log_references %}- log: `{{ item.relative_path }}` (`{{ item.sha256 }}`)
+{% endfor %}
+## 安全上の注意
+
+これは投資助言、購入推奨、注文指示、利益保証ではありません。最終的な投資判断は人間が行います。
+{% else %}# Equity Detailed Analysis Report
+
+- Task ID: `{{ document.task_id }}`
+- Security: `{{ document.security.security_code }}` (`{{ document.security.mic }}`)
+- Created at: `{{ document.created_at }}`
+- Evidence set version: `{{ document.evidence_set_version }}`
+- Evidence frozen at: `{{ document.evidence_frozen_at }}`
+- Freshness checked at: `{{ document.freshness_checked_at }}`
+
+## Freshness check
+
+- Result: {{ document.freshness_search_result }}
+{% for item in document.freshness_search_scope %}- Scope: {{ item }}
+{% endfor %}
+{% for horizon in document.horizon_results %}{% if horizon.horizon == "medium_term" %}## Medium-term assessment{% else %}## Long-term assessment{% endif %}
+
+- Evaluability: `{{ horizon.evaluability }}`
+{% if horizon.assessment %}- Assessment: `{{ horizon.assessment.status }}`
+- Confidence: `{{ horizon.assessment.confidence }}`
+- Rationale: {{ horizon.assessment.rationale }}
+{% else %}- Assessment: not determined
+- Confidence: not determined
+{% endif %}- Summary: {{ horizon.summary }}
+
+### Agreed claim IDs
+
+{% for item in horizon.agreed_claim_ids %}- `{{ item }}`
+{% else %}- None
+{% endfor %}
+### Difference IDs
+
+{% for item in horizon.difference_ids %}- `{{ item }}`
+{% else %}- None
+{% endfor %}
+### Counterevidence conditions
+
+{% for item in horizon.counterevidence_conditions %}- {{ item }}
+{% else %}- None
+{% endfor %}
+### Missing information
+
+{% for item in horizon.missing_information %}- {{ item }}
+{% else %}- None
+{% endfor %}
+{% if horizon.assessment %}### Conditions and further research
+
+{% for item in horizon.assessment.condition_or_research_needs %}- {{ item }}
+{% else %}- None
+{% endfor %}{% endif %}
+{% endfor %}## Cross-horizon summary
+
+{{ document.cross_horizon_summary.summary }}
+
+### Agreements
+
+{% for item in document.cross_horizon_summary.agreements %}- {{ item }}
+{% else %}- None
+{% endfor %}
+### Differences
+
+{% for item in document.cross_horizon_summary.differences %}- {{ item }}
+{% else %}- None
+{% endfor %}
+## Entry and exit reference context
+
+- Price as of: `{{ document.entry_exit_context.price_as_of }}`
+- Current price context: {{ document.entry_exit_context.current_price_context }}
+- Volatility context: {{ document.entry_exit_context.volatility_context }}
+
+### Entry reference conditions
+
+{% for item in document.entry_exit_context.entry_reference_conditions %}- {{ item }}
+{% else %}- None
+{% endfor %}
+### Technical exit reference conditions
+
+{% for item in document.entry_exit_context.technical_exit_reference_conditions %}- {{ item }}
+{% else %}- None
+{% endfor %}
+### Thesis invalidation conditions
+
+{% for item in document.entry_exit_context.thesis_invalidation_conditions %}- {{ item }}
+{% else %}- None
+{% endfor %}
+### Upcoming event risks
+
+{% for item in document.entry_exit_context.upcoming_event_risks %}- {{ item }}
+{% else %}- None
+{% endfor %}
+### Evidence IDs
+
+{% for item in document.entry_exit_context.evidence_ids %}- `{{ item }}`
+{% endfor %}
+## Missing and unresolved items
+
+{% for item in document.missing_information %}- {{ item }}
+{% else %}- None
+{% endfor %}{% for item in document.unresolved_difference_ids %}- Unresolved difference ID: `{{ item }}`
+{% endfor %}
+## Review and conditional audit
+
+- Primary review artifact: `{{ document.primary_review_reference.artifact_id }}` (`{{ document.primary_review_reference.sha256 }}`)
+{% for item in document.audit_invocations %}- Dispute `{{ item.dispute_id }}`: `{{ item.decision }}` — {{ item.reason }}
+{% else %}- No conditional audit records
+{% endfor %}
+## Artifact provenance
+
+- task: `{{ document.task_reference.artifact_id }}` (`{{ document.task_reference.sha256 }}`)
+- evidence set: `{{ document.evidence_set_reference.artifact_id }}` (`{{ document.evidence_set_reference.sha256 }}`)
+- synthesis: `{{ document.synthesis_reference.artifact_id }}` (`{{ document.synthesis_reference.sha256 }}`)
+{% for item in document.log_references %}- log: `{{ item.relative_path }}` (`{{ item.sha256 }}`)
+{% endfor %}
+## Safety notice
+
+This is not investment advice, a purchase recommendation, an order instruction, or a guarantee of returns. A human makes the final investment decision.
+{% endif %}

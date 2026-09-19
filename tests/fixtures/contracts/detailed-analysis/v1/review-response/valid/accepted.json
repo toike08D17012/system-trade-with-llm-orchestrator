@@ -1,0 +1,20 @@
+{
+  "schema_id": "detailed-analysis.review-response",
+  "schema_version": 1,
+  "task_id": "task-1",
+  "artifact_id": "review-response-artifact-1",
+  "response_id": "response-1",
+  "finding_id": "finding-1",
+  "finding_severity": "medium",
+  "responder_agent_run_id": "orchestrator-run-1",
+  "responder_role": "orchestrator",
+  "created_at": "2026-09-12T10:05:00+09:00",
+  "disposition": "accepted",
+  "rationale": "The identified evidence gap will be corrected.",
+  "evidence_ids": ["evidence-1"],
+  "policy_references": [],
+  "changed_claim_ids": ["claim-1"],
+  "changed_assessments": [],
+  "materiality_objection": null,
+  "proposed_lifecycle": "re_review_required"
+}

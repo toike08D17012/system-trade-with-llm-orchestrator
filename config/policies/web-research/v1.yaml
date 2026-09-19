@@ -1,0 +1,23 @@
+schema_id: detailed-analysis.web-research-policy
+schema_version: 1
+artifact_id: web-research-policy-v1
+policy_version: 1
+effective_at: "2026-09-11T00:00:00+09:00"
+permitted_roles:
+  - orchestrator
+  - codex_worker
+  - claude_worker
+  - primary_reviewer
+  - antigravity_auditor
+fixed_search_iteration_limit: null
+search_results_are_evidence: false
+original_document_validation_required: true
+external_content_is_trusted_instruction: false
+share_peer_search_content_during_initial_analysis: false
+distribute_verified_common_evidence_to:
+  - codex_worker
+  - claude_worker
+completion_criteria:
+  - Required perspectives, material risks, and counterevidence conditions were searched.
+  - Candidate documents are separated from verified common evidence.
+  - Missing required information is recorded explicitly.

@@ -1,0 +1,642 @@
+{
+  "$defs": {
+    "ApplicablePeriodV1": {
+      "additionalProperties": false,
+      "description": "Inclusive calendar period represented by a piece of evidence.",
+      "properties": {
+        "end_date": {
+          "title": "End Date",
+          "type": "string"
+        },
+        "start_date": {
+          "title": "Start Date",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start_date",
+        "end_date"
+      ],
+      "title": "ApplicablePeriodV1",
+      "type": "object"
+    },
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "CalculatedEvidenceV1": {
+      "additionalProperties": false,
+      "description": "Deterministically calculated metric with reproducible provenance.",
+      "properties": {
+        "calculation_logic_version": {
+          "minimum": 1,
+          "title": "Calculation Logic Version",
+          "type": "integer"
+        },
+        "content_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Content Sha256",
+          "type": "string"
+        },
+        "data_version": {
+          "minLength": 1,
+          "title": "Data Version",
+          "type": "string"
+        },
+        "evidence_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "input_evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Input Evidence Ids",
+          "type": "array"
+        },
+        "layer": {
+          "const": "calculated",
+          "title": "Layer",
+          "type": "string"
+        },
+        "missing_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Missing Reason"
+        },
+        "rounding_method": {
+          "minLength": 1,
+          "title": "Rounding Method",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "input_evidence_ids",
+        "value",
+        "missing_reason",
+        "unit",
+        "content_sha256",
+        "data_version",
+        "layer",
+        "calculation_logic_version",
+        "rounding_method"
+      ],
+      "title": "CalculatedEvidenceV1",
+      "type": "object"
+    },
+    "EvidenceInvalidationV1": {
+      "additionalProperties": false,
+      "description": "Material evidence update and the exact artifacts it invalidates.",
+      "properties": {
+        "affected_artifact_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Affected Artifact Ids",
+          "type": "array"
+        },
+        "created_at": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "title": "Created At",
+          "type": "string"
+        },
+        "invalidation_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Invalidation Id",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "triggering_evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Triggering Evidence Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "invalidation_id",
+        "created_at",
+        "triggering_evidence_ids",
+        "affected_artifact_ids",
+        "reason"
+      ],
+      "title": "EvidenceInvalidationV1",
+      "type": "object"
+    },
+    "EvidenceSetState": {
+      "description": "Lifecycle state of an immutable evidence-set version.",
+      "enum": [
+        "frozen",
+        "analysis_completed",
+        "invalidated"
+      ],
+      "title": "EvidenceSetState",
+      "type": "string"
+    },
+    "FreshnessAssessmentV1": {
+      "additionalProperties": false,
+      "description": "Freshness result for one required evidence category.",
+      "properties": {
+        "category": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Category",
+          "type": "string"
+        },
+        "detail": {
+          "minLength": 1,
+          "title": "Detail",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "requirement": {
+          "minLength": 1,
+          "title": "Requirement",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/FreshnessStatus"
+        }
+      },
+      "required": [
+        "category",
+        "status",
+        "evidence_ids",
+        "requirement",
+        "detail"
+      ],
+      "title": "FreshnessAssessmentV1",
+      "type": "object"
+    },
+    "FreshnessStatus": {
+      "description": "Result of checking one required evidence category.",
+      "enum": [
+        "current",
+        "stale",
+        "missing",
+        "conflicting"
+      ],
+      "title": "FreshnessStatus",
+      "type": "string"
+    },
+    "JsonValue": {},
+    "NormalizedEvidenceV1": {
+      "additionalProperties": false,
+      "description": "Deterministically normalized evidence and its source references.",
+      "properties": {
+        "content_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Content Sha256",
+          "type": "string"
+        },
+        "data_version": {
+          "minLength": 1,
+          "title": "Data Version",
+          "type": "string"
+        },
+        "evidence_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "input_evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Input Evidence Ids",
+          "type": "array"
+        },
+        "layer": {
+          "const": "normalized",
+          "title": "Layer",
+          "type": "string"
+        },
+        "missing_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Missing Reason"
+        },
+        "normalization_logic_version": {
+          "minimum": 1,
+          "title": "Normalization Logic Version",
+          "type": "integer"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "input_evidence_ids",
+        "value",
+        "missing_reason",
+        "unit",
+        "content_sha256",
+        "data_version",
+        "layer",
+        "normalization_logic_version"
+      ],
+      "title": "NormalizedEvidenceV1",
+      "type": "object"
+    },
+    "PreviousEvidenceSetReferenceV1": {
+      "additionalProperties": false,
+      "description": "Reference to the exact immediately preceding evidence-set version.",
+      "properties": {
+        "artifact_reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        "evidence_set_version": {
+          "minimum": 1,
+          "title": "Evidence Set Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "evidence_set_version",
+        "artifact_reference"
+      ],
+      "title": "PreviousEvidenceSetReferenceV1",
+      "type": "object"
+    },
+    "RawEvidenceV1": {
+      "additionalProperties": false,
+      "description": "Exact raw payload stored without source metadata duplication.",
+      "properties": {
+        "content_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Content Sha256",
+          "type": "string"
+        },
+        "data_version": {
+          "minLength": 1,
+          "title": "Data Version",
+          "type": "string"
+        },
+        "evidence_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "layer": {
+          "const": "raw",
+          "title": "Layer",
+          "type": "string"
+        },
+        "payload_reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        "source_metadata_evidence_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Source Metadata Evidence Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "layer",
+        "source_metadata_evidence_id",
+        "payload_reference",
+        "content_sha256",
+        "data_version"
+      ],
+      "title": "RawEvidenceV1",
+      "type": "object"
+    },
+    "SourceMetadataEvidenceV1": {
+      "additionalProperties": false,
+      "description": "Source and acquisition metadata stored separately from raw content.",
+      "properties": {
+        "applicable_period": {
+          "$ref": "#/$defs/ApplicablePeriodV1"
+        },
+        "content_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Content Sha256",
+          "type": "string"
+        },
+        "data_version": {
+          "minLength": 1,
+          "title": "Data Version",
+          "type": "string"
+        },
+        "dataset": {
+          "minLength": 1,
+          "title": "Dataset",
+          "type": "string"
+        },
+        "evidence_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "first_available_at": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "First Available At"
+        },
+        "layer": {
+          "const": "source_metadata",
+          "title": "Layer",
+          "type": "string"
+        },
+        "provider": {
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Published At"
+        },
+        "reference": {
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        },
+        "retrieved_at": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "title": "Retrieved At",
+          "type": "string"
+        },
+        "service": {
+          "minLength": 1,
+          "title": "Service",
+          "type": "string"
+        },
+        "source_approval_reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        "source_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "timezone": {
+          "minLength": 1,
+          "title": "Timezone",
+          "type": "string"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Updated At"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "layer",
+        "source_id",
+        "source_approval_reference",
+        "provider",
+        "service",
+        "dataset",
+        "published_at",
+        "first_available_at",
+        "updated_at",
+        "retrieved_at",
+        "applicable_period",
+        "timezone",
+        "reference",
+        "content_sha256",
+        "data_version"
+      ],
+      "title": "SourceMetadataEvidenceV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.evidence-set:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Frozen, versioned evidence manifest used by analysis and review.",
+  "properties": {
+    "analysis_completed_at": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Analysis Completed At"
+    },
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "evidence_frozen_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Evidence Frozen At",
+      "type": "string"
+    },
+    "evidence_set_version": {
+      "minimum": 1,
+      "title": "Evidence Set Version",
+      "type": "integer"
+    },
+    "freshness_assessments": {
+      "items": {
+        "$ref": "#/$defs/FreshnessAssessmentV1"
+      },
+      "minItems": 1,
+      "title": "Freshness Assessments",
+      "type": "array"
+    },
+    "freshness_checked_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Freshness Checked At",
+      "type": "string"
+    },
+    "invalidations": {
+      "items": {
+        "$ref": "#/$defs/EvidenceInvalidationV1"
+      },
+      "title": "Invalidations",
+      "type": "array"
+    },
+    "previous_evidence_set": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PreviousEvidenceSetReferenceV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "records": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "calculated": "#/$defs/CalculatedEvidenceV1",
+            "normalized": "#/$defs/NormalizedEvidenceV1",
+            "raw": "#/$defs/RawEvidenceV1",
+            "source_metadata": "#/$defs/SourceMetadataEvidenceV1"
+          },
+          "propertyName": "layer"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/SourceMetadataEvidenceV1"
+          },
+          {
+            "$ref": "#/$defs/RawEvidenceV1"
+          },
+          {
+            "$ref": "#/$defs/NormalizedEvidenceV1"
+          },
+          {
+            "$ref": "#/$defs/CalculatedEvidenceV1"
+          }
+        ]
+      },
+      "minItems": 1,
+      "title": "Records",
+      "type": "array"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.evidence-set",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "state": {
+      "$ref": "#/$defs/EvidenceSetState"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "evidence_set_version",
+    "state",
+    "previous_evidence_set",
+    "evidence_frozen_at",
+    "freshness_checked_at",
+    "analysis_completed_at",
+    "records",
+    "freshness_assessments",
+    "invalidations"
+  ],
+  "title": "EvidenceSetV1",
+  "type": "object"
+}

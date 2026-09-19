@@ -1,0 +1,119 @@
+{% if language == "ja" %}# 人間判断依頼
+
+- タスクID: `{{ request.dispute.task_id }}`
+- 争点ID: `{{ request.dispute.dispute_id }}`
+- 対象期間: `{{ request.dispute.horizon }}`
+- finding分類: `{{ request.dispute.primary_classification }}`
+
+## 未解決の問い
+
+{{ request.dispute.unresolved_question }}
+
+## 解釈1
+
+{{ request.dispute.interpretation_1.statement }}
+
+### 根拠
+
+{% for item in request.dispute.interpretation_1.rationale %}- {{ item }}
+{% endfor %}
+### 反証条件
+
+{% for item in request.dispute.interpretation_1.falsification_conditions %}- {{ item }}
+{% endfor %}
+## 解釈2
+
+{{ request.dispute.interpretation_2.statement }}
+
+### 根拠
+
+{% for item in request.dispute.interpretation_2.rationale %}- {{ item }}
+{% endfor %}
+### 反証条件
+
+{% for item in request.dispute.interpretation_2.falsification_conditions %}- {{ item }}
+{% endfor %}
+## 合意済み事実
+
+{% for fact in request.dispute.agreed_facts %}- {{ fact.statement }}（証拠: {% for item in fact.evidence_ids %}`{{ item }}`{% if not loop.last %}, {% endif %}{% endfor %}）
+{% else %}- なし
+{% endfor %}
+## 監査結果
+
+{% if request.audit_result %}- 実行結果: `{{ request.audit_result.execution_result }}`
+- 意見: `{{ request.audit_result.opinion }}`
+- 確信度: `{{ request.audit_result.confidence }}`
+- 要約: {{ request.audit_result.summary }}
+- 次状態: `{{ request.audit_result.recommended_next_state }}`
+- 根拠: {{ request.audit_result.rationale }}
+{% else %}- 監査結果なし
+{% endif %}
+## 許可された選択肢
+
+{% for item in request.allowed_options %}- `{{ item }}`
+{% endfor %}
+選択した処理、理由、決定者、決定日時を`human-decision`契約で記録してください。
+
+## 安全上の注意
+
+これは銘柄の購入判断ではなく、未解決の解析工程を進めるためのワークフロー判断です。
+{% else %}# Human Decision Request
+
+- Task ID: `{{ request.dispute.task_id }}`
+- Dispute ID: `{{ request.dispute.dispute_id }}`
+- Horizon: `{{ request.dispute.horizon }}`
+- Finding classification: `{{ request.dispute.primary_classification }}`
+
+## Unresolved question
+
+{{ request.dispute.unresolved_question }}
+
+## Interpretation 1
+
+{{ request.dispute.interpretation_1.statement }}
+
+### Rationale
+
+{% for item in request.dispute.interpretation_1.rationale %}- {{ item }}
+{% endfor %}
+### Falsification conditions
+
+{% for item in request.dispute.interpretation_1.falsification_conditions %}- {{ item }}
+{% endfor %}
+## Interpretation 2
+
+{{ request.dispute.interpretation_2.statement }}
+
+### Rationale
+
+{% for item in request.dispute.interpretation_2.rationale %}- {{ item }}
+{% endfor %}
+### Falsification conditions
+
+{% for item in request.dispute.interpretation_2.falsification_conditions %}- {{ item }}
+{% endfor %}
+## Agreed facts
+
+{% for fact in request.dispute.agreed_facts %}- {{ fact.statement }} (evidence: {% for item in fact.evidence_ids %}`{{ item }}`{% if not loop.last %}, {% endif %}{% endfor %})
+{% else %}- None
+{% endfor %}
+## Audit result
+
+{% if request.audit_result %}- Execution result: `{{ request.audit_result.execution_result }}`
+- Opinion: `{{ request.audit_result.opinion }}`
+- Confidence: `{{ request.audit_result.confidence }}`
+- Summary: {{ request.audit_result.summary }}
+- Recommended next state: `{{ request.audit_result.recommended_next_state }}`
+- Rationale: {{ request.audit_result.rationale }}
+{% else %}- No audit result
+{% endif %}
+## Allowed options
+
+{% for item in request.allowed_options %}- `{{ item }}`
+{% endfor %}
+Record the selected workflow action, reason, decider, and decision time using the `human-decision` contract.
+
+## Safety notice
+
+This is a workflow decision for unresolved analysis, not a decision to purchase a security.
+{% endif %}

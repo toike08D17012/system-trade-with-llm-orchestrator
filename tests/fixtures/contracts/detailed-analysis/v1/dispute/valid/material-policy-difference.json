@@ -1,0 +1,58 @@
+{
+  "schema_id": "detailed-analysis.dispute",
+  "schema_version": 1,
+  "task_id": "task-1",
+  "artifact_id": "dispute-artifact-1",
+  "dispute_id": "dispute-1",
+  "created_at": "2026-09-12T10:10:00+09:00",
+  "source_finding_ids": ["finding-1"],
+  "target_claim_ids": ["claim-1"],
+  "horizon": "medium_term",
+  "primary_classification": "policy_application_difference",
+  "policy_references": [{
+    "artifact_type": "policy",
+    "artifact_id": "analysis-policy-1",
+    "schema_id": "detailed-analysis.detailed-analysis-policy",
+    "schema_version": 1,
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  }],
+  "unresolved_question": "Does the verified evidence satisfy the policy threshold?",
+  "interpretation_1": {
+    "statement": "The threshold is satisfied.",
+    "rationale": ["The policy treats the verified period as sufficient."],
+    "evidence_ids": ["evidence-1"],
+    "evidence_absence_reason": null,
+    "acknowledged_uncertainties": ["One reporting period is partial."],
+    "falsification_conditions": ["A complete period falls below the threshold."]
+  },
+  "interpretation_2": {
+    "statement": "The threshold is not satisfied.",
+    "rationale": ["The partial period is not comparable under the policy."],
+    "evidence_ids": ["evidence-1"],
+    "evidence_absence_reason": null,
+    "acknowledged_uncertainties": ["The policy wording permits two readings."],
+    "falsification_conditions": ["The policy explicitly permits the partial period."]
+  },
+  "agreed_facts": [{
+    "statement": "The evidence contains one partial reporting period.",
+    "evidence_ids": ["evidence-1"]
+  }],
+  "primary_review_completed": true,
+  "response_completed": true,
+  "permitted_limited_research_completed": true,
+  "mechanically_resolvable": false,
+  "materiality": {
+    "impacts": [{
+      "impact_id": "impact-1",
+      "impact_type": "horizon_assessment",
+      "target_id": "medium-result-1",
+      "horizon": "medium_term",
+      "interpretation_1_effect": "conditional",
+      "interpretation_2_effect": "investigate",
+      "reason": "The horizon assessment changes between interpretations.",
+      "valid": true
+    }],
+    "is_material": true
+  },
+  "parent_dispute_ids": []
+}

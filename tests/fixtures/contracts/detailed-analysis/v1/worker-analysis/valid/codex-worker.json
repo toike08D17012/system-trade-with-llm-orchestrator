@@ -1,0 +1,86 @@
+{
+  "schema_id": "detailed-analysis.worker-analysis",
+  "schema_version": 1,
+  "task_id": "task-20260911-001",
+  "artifact_id": "worker-analysis-codex-v1",
+  "agent_run_id": "agent-run-codex-001",
+  "worker_role": "codex_worker",
+  "created_at": "2026-09-12T10:00:00+09:00",
+  "security": {"security_code": "7203", "mic": "XTKS"},
+  "evidence_set_reference": {
+    "artifact_type": "evidence_set",
+    "artifact_id": "evidence-set-v1",
+    "schema_id": "detailed-analysis.evidence-set",
+    "schema_version": 1,
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "evidence_set_version": 1,
+  "evidence_frozen_at": "2026-09-12T09:00:00+09:00",
+  "freshness_checked_at": "2026-09-12T09:30:00+09:00",
+  "evaluation_policy_reference": {
+    "artifact_type": "detailed_analysis_policy",
+    "artifact_id": "detailed-analysis-policy-v1",
+    "schema_id": "detailed-analysis.detailed-analysis-policy",
+    "schema_version": 1,
+    "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+  },
+  "horizon_analyses": [
+    {
+      "horizon": "medium_term",
+      "summary": "Fixture medium-term analysis.",
+      "positive_factors": ["Verified demand evidence supports the base case."],
+      "negative_factors": ["Input-cost uncertainty remains material."],
+      "thesis": ["Execution could support the medium-term operating hypothesis."],
+      "counter_thesis": ["A demand reversal would break the hypothesis."],
+      "valuation_view": "Valuation remains conditional on verified inputs.",
+      "watch_conditions": ["Monitor the next verified disclosure."],
+      "missing_information": [],
+      "claims": [
+        {"claim_id": "mt-financial", "perspective": "financial", "statement": "The verified fixture shows positive operating cash flow.", "claim_type": "fact", "evidence_ids": ["normalized-001"], "counterevidence_ids": [], "uncertainty": "Fixture scope only.", "material": true},
+        {"claim_id": "mt-valuation", "perspective": "valuation", "statement": "The valuation range may be reasonable under the stated assumptions.", "claim_type": "inference", "evidence_ids": ["calculated-001"], "counterevidence_ids": [], "uncertainty": "Sensitive to assumptions.", "material": true},
+        {"claim_id": "mt-business", "perspective": "business", "statement": "Demand could remain resilient over the medium term.", "claim_type": "hypothesis", "evidence_ids": ["raw-001"], "counterevidence_ids": [], "uncertainty": "Future demand is uncertain.", "material": true},
+        {"claim_id": "mt-technical", "perspective": "technical_reference", "statement": "The current price context is not used as a direction forecast.", "claim_type": "inference", "evidence_ids": ["normalized-001"], "counterevidence_ids": [], "uncertainty": "Market conditions can change.", "material": false},
+        {"claim_id": "mt-risk", "perspective": "risk_and_counterevidence", "statement": "A verified demand decline would counter the medium-term thesis.", "claim_type": "hypothesis", "evidence_ids": ["raw-001"], "counterevidence_ids": [], "uncertainty": "Trigger has not occurred in the fixture.", "material": true}
+      ],
+      "evaluability": "evaluable",
+      "assessment": {"status": "conditional", "confidence": "medium", "rationale": "The base case is supported but material conditions remain.", "condition_or_research_needs": ["Verify the next disclosure."]}
+    },
+    {
+      "horizon": "long_term",
+      "summary": "Fixture long-term analysis.",
+      "positive_factors": ["The verified balance-sheet fixture supports resilience."],
+      "negative_factors": ["Long-term competitive durability remains uncertain."],
+      "thesis": ["Durable execution could support long-term value creation."],
+      "counter_thesis": ["Structural share loss would invalidate the thesis."],
+      "valuation_view": "Long-term valuation depends on unverified durability assumptions.",
+      "watch_conditions": ["Monitor verified market-share evidence."],
+      "missing_information": ["Long-term market-share series is unavailable."],
+      "claims": [
+        {"claim_id": "lt-financial", "perspective": "financial", "statement": "The fixture balance sheet is currently solvent.", "claim_type": "fact", "evidence_ids": ["normalized-001"], "counterevidence_ids": [], "uncertainty": "Future financing is unknown.", "material": true},
+        {"claim_id": "lt-valuation", "perspective": "valuation", "statement": "Long-term value depends on returns exceeding the assumed capital cost.", "claim_type": "inference", "evidence_ids": ["calculated-001"], "counterevidence_ids": [], "uncertainty": "Capital-cost assumptions may change.", "material": true},
+        {"claim_id": "lt-business", "perspective": "business", "statement": "Competitive durability could persist if investment continues.", "claim_type": "hypothesis", "evidence_ids": ["raw-001"], "counterevidence_ids": [], "uncertainty": "Durability is not directly verified.", "material": true},
+        {"claim_id": "lt-technical", "perspective": "technical_reference", "statement": "Technical context has limited relevance to the long-term thesis.", "claim_type": "inference", "evidence_ids": ["normalized-001"], "counterevidence_ids": [], "uncertainty": "Regime changes remain possible.", "material": false},
+        {"claim_id": "lt-risk", "perspective": "risk_and_counterevidence", "statement": "Structural share loss would counter the long-term thesis.", "claim_type": "hypothesis", "evidence_ids": ["raw-001"], "counterevidence_ids": [], "uncertainty": "No verified long-term series is available.", "material": true}
+      ],
+      "evaluability": "evaluable",
+      "assessment": {"status": "investigate", "confidence": "low", "rationale": "Material durability evidence remains obtainable but missing.", "condition_or_research_needs": ["Obtain verified market-share evidence."]}
+    }
+  ],
+  "cross_horizon_summary": {
+    "agreements": ["Execution quality matters in both horizons."],
+    "differences": ["Long-term durability has a larger evidence gap."],
+    "summary": "The horizons share drivers but have different uncertainty."
+  },
+  "entry_exit_context": {
+    "price_as_of": "2026-09-12T09:00:00+09:00",
+    "current_price_context": "Current price is context only and not a direction forecast.",
+    "entry_reference_conditions": ["Reassess only after verified valuation inputs update."],
+    "technical_exit_reference_conditions": ["A verified structural break would require reassessment."],
+    "thesis_invalidation_conditions": ["Verified structural share loss."],
+    "upcoming_event_risks": ["Next disclosure may change the evidence set."],
+    "volatility_context": "Fixture volatility is elevated.",
+    "evidence_ids": ["normalized-001", "calculated-001"],
+    "missing_information": [],
+    "reference_only_not_trade_instruction": true
+  }
+}

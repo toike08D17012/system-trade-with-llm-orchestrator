@@ -1,0 +1,310 @@
+{
+  "$defs": {
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "FindingLifecycle": {
+      "description": "Approved lifecycle values for immutable finding history.",
+      "enum": [
+        "open",
+        "response_submitted",
+        "re_review_required",
+        "resolved",
+        "disputed",
+        "human_decision_required"
+      ],
+      "title": "FindingLifecycle",
+      "type": "string"
+    },
+    "FindingSeverity": {
+      "description": "Impact of leaving a finding uncorrected.",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "FindingSeverity",
+      "type": "string"
+    },
+    "MaterialityAssessmentV1": {
+      "additionalProperties": false,
+      "description": "Materiality derived exactly from valid approved impact types.",
+      "properties": {
+        "impacts": {
+          "items": {
+            "$ref": "#/$defs/MaterialityImpactV1"
+          },
+          "title": "Impacts",
+          "type": "array"
+        },
+        "is_material": {
+          "title": "Is Material",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "impacts",
+        "is_material"
+      ],
+      "title": "MaterialityAssessmentV1",
+      "type": "object"
+    },
+    "MaterialityImpactType": {
+      "description": "Targets that can change the information shown to a human.",
+      "enum": [
+        "horizon_assessment",
+        "evaluability",
+        "major_thesis",
+        "major_risk",
+        "entry_exit_reference",
+        "other"
+      ],
+      "title": "MaterialityImpactType",
+      "type": "string"
+    },
+    "MaterialityImpactV1": {
+      "additionalProperties": false,
+      "description": "One claimed change between the two interpretations of an issue.",
+      "properties": {
+        "horizon": {
+          "enum": [
+            "medium_term",
+            "long_term",
+            "cross_horizon",
+            "not_applicable"
+          ],
+          "title": "Horizon",
+          "type": "string"
+        },
+        "impact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Impact Id",
+          "type": "string"
+        },
+        "impact_type": {
+          "$ref": "#/$defs/MaterialityImpactType"
+        },
+        "interpretation_1_effect": {
+          "minLength": 1,
+          "title": "Interpretation 1 Effect",
+          "type": "string"
+        },
+        "interpretation_2_effect": {
+          "minLength": 1,
+          "title": "Interpretation 2 Effect",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "target_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "valid": {
+          "title": "Valid",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "impact_id",
+        "impact_type",
+        "target_id",
+        "horizon",
+        "interpretation_1_effect",
+        "interpretation_2_effect",
+        "reason",
+        "valid"
+      ],
+      "title": "MaterialityImpactV1",
+      "type": "object"
+    },
+    "ResponseDisposition": {
+      "description": "Structured response to one immutable finding.",
+      "enum": [
+        "accepted",
+        "research_required",
+        "rejected",
+        "disputed"
+      ],
+      "title": "ResponseDisposition",
+      "type": "string"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.review-response:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One finding response and the optional primary-reviewer recheck.",
+  "properties": {
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "changed_assessments": {
+      "items": {
+        "enum": [
+          "medium_term",
+          "long_term"
+        ],
+        "type": "string"
+      },
+      "title": "Changed Assessments",
+      "type": "array"
+    },
+    "changed_claim_ids": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        "type": "string"
+      },
+      "title": "Changed Claim Ids",
+      "type": "array"
+    },
+    "created_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Created At",
+      "type": "string"
+    },
+    "disposition": {
+      "$ref": "#/$defs/ResponseDisposition"
+    },
+    "evidence_ids": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        "type": "string"
+      },
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "finding_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Finding Id",
+      "type": "string"
+    },
+    "finding_severity": {
+      "$ref": "#/$defs/FindingSeverity"
+    },
+    "materiality_objection": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MaterialityAssessmentV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "policy_references": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReferenceV1"
+      },
+      "title": "Policy References",
+      "type": "array"
+    },
+    "proposed_lifecycle": {
+      "$ref": "#/$defs/FindingLifecycle"
+    },
+    "rationale": {
+      "minLength": 1,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "responder_agent_run_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Responder Agent Run Id",
+      "type": "string"
+    },
+    "responder_role": {
+      "enum": [
+        "codex_worker",
+        "claude_worker",
+        "orchestrator"
+      ],
+      "title": "Responder Role",
+      "type": "string"
+    },
+    "response_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Response Id",
+      "type": "string"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.review-response",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "response_id",
+    "finding_id",
+    "finding_severity",
+    "responder_agent_run_id",
+    "responder_role",
+    "created_at",
+    "disposition",
+    "rationale",
+    "evidence_ids",
+    "policy_references",
+    "changed_claim_ids",
+    "changed_assessments",
+    "materiality_objection",
+    "proposed_lifecycle"
+  ],
+  "title": "ReviewResponseV1",
+  "type": "object"
+}

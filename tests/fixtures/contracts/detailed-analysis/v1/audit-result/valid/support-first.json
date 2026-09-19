@@ -1,0 +1,39 @@
+{
+  "schema_id": "detailed-analysis.audit-result",
+  "schema_version": 1,
+  "task_id": "task-1",
+  "artifact_id": "audit-result-1",
+  "audit_id": "audit-1",
+  "dispute_id": "dispute-1",
+  "created_at": "2026-09-12T10:30:00+09:00",
+  "execution_result": "succeeded",
+  "opinion": "support_interpretation_1",
+  "confidence": "medium",
+  "summary": "Interpretation 1 is more consistent with the cited policy text.",
+  "evidence_assessments": [{
+    "evidence_id": "evidence-1",
+    "relevance": "high",
+    "interpretation": "The verified period supports the disputed threshold input."
+  }],
+  "interpretation_1_assessment": {
+    "supported_parts": ["The policy permits the verified period."],
+    "unsupported_parts": []
+  },
+  "interpretation_2_assessment": {
+    "supported_parts": ["The partial-period caveat is relevant."],
+    "unsupported_parts": ["The policy does not require exclusion in this case."]
+  },
+  "established_facts": ["One reporting period is partial."],
+  "reasonable_inferences": ["The policy threshold can be applied."],
+  "unresolved_hypotheses": [],
+  "missing_assumptions": [],
+  "omitted_counterarguments": [],
+  "additional_evidence_needed": [],
+  "schema_valid": true,
+  "references_valid": true,
+  "dispute_scope_valid": true,
+  "logical_audit_counted": true,
+  "automatic_retry_allowed": false,
+  "recommended_next_state": "primary_review",
+  "rationale": "Apply the supported interpretation and return it to primary review."
+}

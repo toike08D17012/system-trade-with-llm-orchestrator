@@ -1,0 +1,71 @@
+{
+  "schema_id": "detailed-analysis.instruction-application",
+  "schema_version": 1,
+  "task_id": "task-1",
+  "artifact_id": "instruction-application-1",
+  "agent_run_id": "agent-run-1",
+  "logical_session_id": "logical-session-1",
+  "role": "codex_worker",
+  "applied_at": "2026-09-12T12:00:00+09:00",
+  "instruction_set_id": "detailed-analysis-instructions",
+  "instruction_set_version": 1,
+  "components": [
+    {
+      "order": 1,
+      "component_type": "common",
+      "instruction_id": "common",
+      "instruction_version": 1,
+      "source_reference": {
+        "artifact_id": "common-instructions-v1",
+        "relative_path": "agent-sources/detailed-analysis/v1/common.md",
+        "media_type": "text/markdown",
+        "sha256": "56afb58fe716db0fcbaf53829516126843710a1db2b4946145c59b9a2bb13d79"
+      },
+      "content_sha256": "56afb58fe716db0fcbaf53829516126843710a1db2b4946145c59b9a2bb13d79"
+    },
+    {
+      "order": 2,
+      "component_type": "role",
+      "instruction_id": "codex-worker",
+      "instruction_version": 1,
+      "source_reference": {
+        "artifact_id": "codex-worker-instructions-v1",
+        "relative_path": "agent-sources/detailed-analysis/v1/codex-worker.md",
+        "media_type": "text/markdown",
+        "sha256": "5101906cbaa98ae0a0e179b8452317a4495ce02552b8dd840003c6d0e670b4f5"
+      },
+      "content_sha256": "5101906cbaa98ae0a0e179b8452317a4495ce02552b8dd840003c6d0e670b4f5"
+    },
+    {
+      "order": 3,
+      "component_type": "task_scoped",
+      "instruction_id": "task-1-agent-run-1",
+      "instruction_version": 1,
+      "source_reference": {
+        "artifact_id": "task-scoped-instructions-agent-run-1",
+        "relative_path": "runs/task-1/input/agent-run-1-task-scoped.json",
+        "media_type": "application/json",
+        "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+      },
+      "content_sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+    }
+  ],
+  "composed_instruction_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+  "model": "configured-model",
+  "effort": "configured-effort",
+  "permission_profile": "worker-read-only",
+  "workspace_profile": "task-scoped-read-only",
+  "policy_references": [{
+    "artifact_type": "policy",
+    "artifact_id": "analysis-policy-1",
+    "schema_id": "detailed-analysis.detailed-analysis-policy",
+    "schema_version": 1,
+    "sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+  }],
+  "output_schema_id": "detailed-analysis.worker-analysis",
+  "output_schema_version": 1,
+  "output_schema_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+  "external_content_separated_from_instructions": true,
+  "external_content_treated_as_untrusted_data": true,
+  "secret_values_included": false
+}

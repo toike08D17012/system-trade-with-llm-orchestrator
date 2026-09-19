@@ -1,0 +1,146 @@
+{
+  "$defs": {
+    "FindingClassification": {
+      "description": "Approved terminal classification values for review findings.",
+      "enum": [
+        "factual_error",
+        "insufficient_evidence",
+        "schema_or_format_error",
+        "policy_application_difference",
+        "logical_gap",
+        "future_hypothesis_difference",
+        "risk_materiality_difference",
+        "style_or_expression"
+      ],
+      "title": "FindingClassification",
+      "type": "string"
+    },
+    "MaterialityImpactType": {
+      "description": "Targets that can change the information shown to a human.",
+      "enum": [
+        "horizon_assessment",
+        "evaluability",
+        "major_thesis",
+        "major_risk",
+        "entry_exit_reference",
+        "other"
+      ],
+      "title": "MaterialityImpactType",
+      "type": "string"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.review-audit-policy:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Approved review, materiality, and conditional audit boundaries.",
+  "properties": {
+    "antigravity_is_conditional_auditor_only": {
+      "const": true,
+      "title": "Antigravity Is Conditional Auditor Only",
+      "type": "boolean"
+    },
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "audit_gate_conditions": {
+      "items": {
+        "enum": [
+          "primary_review_response_and_research_complete",
+          "two_substantiated_positions_unresolved",
+          "not_mechanically_resolvable",
+          "material",
+          "neutral_packet_valid",
+          "not_already_validly_audited"
+        ],
+        "type": "string"
+      },
+      "maxItems": 6,
+      "minItems": 6,
+      "title": "Audit Gate Conditions",
+      "type": "array"
+    },
+    "audit_workspace_read_only": {
+      "const": true,
+      "title": "Audit Workspace Read Only",
+      "type": "boolean"
+    },
+    "automatic_retry_allowed": {
+      "const": false,
+      "title": "Automatic Retry Allowed",
+      "type": "boolean"
+    },
+    "classification_pending_blocks_review_audit_and_completion": {
+      "const": true,
+      "title": "Classification Pending Blocks Review Audit And Completion",
+      "type": "boolean"
+    },
+    "disputes_per_audit_session": {
+      "const": 1,
+      "title": "Disputes Per Audit Session",
+      "type": "integer"
+    },
+    "effective_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Effective At",
+      "type": "string"
+    },
+    "finding_classifications": {
+      "items": {
+        "$ref": "#/$defs/FindingClassification"
+      },
+      "maxItems": 8,
+      "minItems": 8,
+      "title": "Finding Classifications",
+      "type": "array"
+    },
+    "material_impact_types": {
+      "items": {
+        "$ref": "#/$defs/MaterialityImpactType"
+      },
+      "maxItems": 5,
+      "minItems": 5,
+      "title": "Material Impact Types",
+      "type": "array"
+    },
+    "policy_version": {
+      "minimum": 1,
+      "title": "Policy Version",
+      "type": "integer"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.review-audit-policy",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "valid_logical_audits_per_dispute": {
+      "const": 1,
+      "title": "Valid Logical Audits Per Dispute",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "artifact_id",
+    "policy_version",
+    "effective_at",
+    "finding_classifications",
+    "material_impact_types",
+    "audit_gate_conditions",
+    "valid_logical_audits_per_dispute",
+    "disputes_per_audit_session",
+    "antigravity_is_conditional_auditor_only",
+    "audit_workspace_read_only",
+    "automatic_retry_allowed",
+    "classification_pending_blocks_review_audit_and_completion"
+  ],
+  "title": "ReviewAuditPolicyV1",
+  "type": "object"
+}

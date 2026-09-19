@@ -1,0 +1,29 @@
+{
+  "schema_id": "detailed-analysis.primary-review",
+  "schema_version": 1,
+  "task_id": "task-1",
+  "artifact_id": "primary-review-1",
+  "reviewer_agent_run_id": "reviewer-run-1",
+  "reviewed_synthesis_reference": {
+    "artifact_type": "synthesis_result",
+    "artifact_id": "synthesis-1",
+    "schema_id": "detailed-analysis.synthesis-result",
+    "schema_version": 1,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "previous_review_reference": null,
+  "reviewed_response_references": [],
+  "evidence_set_version": 2,
+  "review_round": 1,
+  "created_at": "2026-09-12T10:00:00+09:00",
+  "overall_status": "approve",
+  "findings": [],
+  "reviewer_rechecks": [],
+  "completion_gate": {
+    "structured_output_valid": true,
+    "evidence_references_valid": true,
+    "finding_processing_complete": true,
+    "policy_deviation_records_complete": true
+  },
+  "review_passed": true
+}

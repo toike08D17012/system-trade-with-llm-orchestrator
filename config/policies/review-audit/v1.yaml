@@ -1,0 +1,33 @@
+schema_id: detailed-analysis.review-audit-policy
+schema_version: 1
+artifact_id: review-audit-policy-v1
+policy_version: 1
+effective_at: "2026-09-11T00:00:00+09:00"
+finding_classifications:
+  - factual_error
+  - insufficient_evidence
+  - schema_or_format_error
+  - policy_application_difference
+  - logical_gap
+  - future_hypothesis_difference
+  - risk_materiality_difference
+  - style_or_expression
+material_impact_types:
+  - horizon_assessment
+  - evaluability
+  - major_thesis
+  - major_risk
+  - entry_exit_reference
+audit_gate_conditions:
+  - primary_review_response_and_research_complete
+  - two_substantiated_positions_unresolved
+  - not_mechanically_resolvable
+  - material
+  - neutral_packet_valid
+  - not_already_validly_audited
+valid_logical_audits_per_dispute: 1
+disputes_per_audit_session: 1
+antigravity_is_conditional_auditor_only: true
+audit_workspace_read_only: true
+automatic_retry_allowed: false
+classification_pending_blocks_review_audit_and_completion: true

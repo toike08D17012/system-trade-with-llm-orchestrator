@@ -1,0 +1,16 @@
+{
+  "schema_id": "detailed-analysis.human-decision",
+  "schema_version": 1,
+  "task_id": "task-1",
+  "artifact_id": "human-decision-artifact-1",
+  "human_decision_id": "human-decision-1",
+  "target_dispute_id": "dispute-1",
+  "target_finding_id": null,
+  "allowed_options": ["mark_not_evaluable", "start_new_research_operation"],
+  "selected_option": "mark_not_evaluable",
+  "decider": "repository-owner",
+  "reason": "Approved evidence cannot resolve the policy judgment.",
+  "decided_at": "2026-09-12T11:00:00+09:00",
+  "replaces_human_decision_id": null,
+  "workflow_decision_only": true
+}

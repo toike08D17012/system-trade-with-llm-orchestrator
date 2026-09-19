@@ -1,0 +1,17 @@
+{
+  "schema_id": "detailed-analysis.validation-error",
+  "schema_version": 1,
+  "error_contract_version": 1,
+  "category": "schema",
+  "code": "invalid_json",
+  "target": {
+    "artifact_type": "detailed_analysis_task",
+    "artifact_id": null,
+    "schema_id": "detailed-analysis.detailed-analysis-task",
+    "schema_version": 1
+  },
+  "instance_path": "",
+  "schema_path": null,
+  "message": "Input is not valid JSON.",
+  "context": {}
+}

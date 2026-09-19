@@ -1,0 +1,120 @@
+{
+  "$defs": {
+    "AgentRole": {
+      "description": "Roles allowed to perform research in the approved workflow.",
+      "enum": [
+        "orchestrator",
+        "codex_worker",
+        "claude_worker",
+        "primary_reviewer",
+        "antigravity_auditor"
+      ],
+      "title": "AgentRole",
+      "type": "string"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.web-research-policy:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Research independence, validation, and untrusted-content policy.",
+  "properties": {
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "completion_criteria": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Completion Criteria",
+      "type": "array"
+    },
+    "distribute_verified_common_evidence_to": {
+      "items": {
+        "enum": [
+          "codex_worker",
+          "claude_worker"
+        ],
+        "type": "string"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Distribute Verified Common Evidence To",
+      "type": "array"
+    },
+    "effective_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Effective At",
+      "type": "string"
+    },
+    "external_content_is_trusted_instruction": {
+      "const": false,
+      "title": "External Content Is Trusted Instruction",
+      "type": "boolean"
+    },
+    "fixed_search_iteration_limit": {
+      "const": null,
+      "title": "Fixed Search Iteration Limit",
+      "type": "null"
+    },
+    "original_document_validation_required": {
+      "const": true,
+      "title": "Original Document Validation Required",
+      "type": "boolean"
+    },
+    "permitted_roles": {
+      "items": {
+        "$ref": "#/$defs/AgentRole"
+      },
+      "maxItems": 5,
+      "minItems": 5,
+      "title": "Permitted Roles",
+      "type": "array"
+    },
+    "policy_version": {
+      "minimum": 1,
+      "title": "Policy Version",
+      "type": "integer"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.web-research-policy",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "search_results_are_evidence": {
+      "const": false,
+      "title": "Search Results Are Evidence",
+      "type": "boolean"
+    },
+    "share_peer_search_content_during_initial_analysis": {
+      "const": false,
+      "title": "Share Peer Search Content During Initial Analysis",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "artifact_id",
+    "policy_version",
+    "effective_at",
+    "permitted_roles",
+    "fixed_search_iteration_limit",
+    "search_results_are_evidence",
+    "original_document_validation_required",
+    "external_content_is_trusted_instruction",
+    "share_peer_search_content_during_initial_analysis",
+    "distribute_verified_common_evidence_to",
+    "completion_criteria"
+  ],
+  "title": "WebResearchPolicyV1",
+  "type": "object"
+}

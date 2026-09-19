@@ -1,0 +1,238 @@
+{
+  "$defs": {
+    "AgentRole": {
+      "description": "Roles allowed to perform research in the approved workflow.",
+      "enum": [
+        "orchestrator",
+        "codex_worker",
+        "claude_worker",
+        "primary_reviewer",
+        "antigravity_auditor"
+      ],
+      "title": "AgentRole",
+      "type": "string"
+    },
+    "CandidateClaimTargetV1": {
+      "additionalProperties": false,
+      "description": "Potential claim that a candidate may support or counter after verification.",
+      "properties": {
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "relationship": {
+          "$ref": "#/$defs/CandidateRelationship"
+        },
+        "target_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Target Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_id",
+        "relationship",
+        "description"
+      ],
+      "title": "CandidateClaimTargetV1",
+      "type": "object"
+    },
+    "CandidateRelationship": {
+      "description": "How a candidate document may affect a proposed claim.",
+      "enum": [
+        "support",
+        "counter"
+      ],
+      "title": "CandidateRelationship",
+      "type": "string"
+    },
+    "CandidateValidationStatus": {
+      "description": "Validation outcome for a document discovered through search.",
+      "enum": [
+        "unverified",
+        "accepted",
+        "rejected"
+      ],
+      "title": "CandidateValidationStatus",
+      "type": "string"
+    },
+    "CandidateValidationV1": {
+      "additionalProperties": false,
+      "description": "Outcome of fetching and validating an original candidate document.",
+      "properties": {
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "resulting_evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Resulting Evidence Ids",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/CandidateValidationStatus"
+        },
+        "verified_at": {
+          "anyOf": [
+            {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Verified At"
+        },
+        "verifier_role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AgentRole"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "status",
+        "verified_at",
+        "verifier_role",
+        "reason",
+        "resulting_evidence_ids"
+      ],
+      "title": "CandidateValidationV1",
+      "type": "object"
+    },
+    "SearchResultV1": {
+      "additionalProperties": false,
+      "description": "Untrusted search result retained only as a document candidate.",
+      "properties": {
+        "candidate_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "claim_targets": {
+          "items": {
+            "$ref": "#/$defs/CandidateClaimTargetV1"
+          },
+          "minItems": 1,
+          "title": "Claim Targets",
+          "type": "array"
+        },
+        "headline": {
+          "minLength": 1,
+          "title": "Headline",
+          "type": "string"
+        },
+        "snippet": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Snippet"
+        },
+        "url": {
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "validation": {
+          "$ref": "#/$defs/CandidateValidationV1"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "url",
+        "headline",
+        "snippet",
+        "claim_targets",
+        "validation"
+      ],
+      "title": "SearchResultV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.search-record:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Agent-specific search record that is not itself evidence.",
+  "properties": {
+    "agent_run_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Agent Run Id",
+      "type": "string"
+    },
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "executed_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Executed At",
+      "type": "string"
+    },
+    "query": {
+      "minLength": 1,
+      "title": "Query",
+      "type": "string"
+    },
+    "researcher_role": {
+      "$ref": "#/$defs/AgentRole"
+    },
+    "results": {
+      "items": {
+        "$ref": "#/$defs/SearchResultV1"
+      },
+      "title": "Results",
+      "type": "array"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.search-record",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "search_capability": {
+      "minLength": 1,
+      "title": "Search Capability",
+      "type": "string"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "agent_run_id",
+    "researcher_role",
+    "search_capability",
+    "executed_at",
+    "query",
+    "results"
+  ],
+  "title": "SearchRecordV1",
+  "type": "object"
+}

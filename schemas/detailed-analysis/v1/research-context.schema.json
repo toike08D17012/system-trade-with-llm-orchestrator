@@ -1,0 +1,212 @@
+{
+  "$defs": {
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "SecurityIdentifierV1": {
+      "additionalProperties": false,
+      "description": "Unambiguous security code and market identifier pair.",
+      "properties": {
+        "mic": {
+          "const": "XTKS",
+          "title": "Mic",
+          "type": "string"
+        },
+        "security_code": {
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9]+$",
+          "title": "Security Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "security_code",
+        "mic"
+      ],
+      "title": "SecurityIdentifierV1",
+      "type": "object"
+    },
+    "SecurityInformationV1": {
+      "additionalProperties": false,
+      "description": "Verified security attributes produced during data preparation.",
+      "properties": {
+        "currency": {
+          "pattern": "^[A-Z]{3}$",
+          "title": "Currency",
+          "type": "string"
+        },
+        "identifier": {
+          "$ref": "#/$defs/SecurityIdentifierV1"
+        },
+        "market_segment": {
+          "minLength": 1,
+          "title": "Market Segment",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "sector": {
+          "minLength": 1,
+          "title": "Sector",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identifier",
+        "name",
+        "currency",
+        "sector",
+        "market_segment"
+      ],
+      "title": "SecurityInformationV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.research-context:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Independent worker input containing common evidence but no peer conclusion.",
+  "properties": {
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "common_evidence_ids": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Common Evidence Ids",
+      "type": "array"
+    },
+    "created_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Created At",
+      "type": "string"
+    },
+    "evidence_set_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "evidence_set_version": {
+      "minimum": 1,
+      "title": "Evidence Set Version",
+      "type": "integer"
+    },
+    "policy_references": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReferenceV1"
+      },
+      "minItems": 1,
+      "title": "Policy References",
+      "type": "array"
+    },
+    "recipient_role": {
+      "enum": [
+        "codex_worker",
+        "claude_worker"
+      ],
+      "title": "Recipient Role",
+      "type": "string"
+    },
+    "research_questions": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Research Questions",
+      "type": "array"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.research-context",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "security": {
+      "$ref": "#/$defs/SecurityInformationV1"
+    },
+    "source_metadata_evidence_ids": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Source Metadata Evidence Ids",
+      "type": "array"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "task_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "created_at",
+    "recipient_role",
+    "task_reference",
+    "evidence_set_reference",
+    "evidence_set_version",
+    "security",
+    "common_evidence_ids",
+    "source_metadata_evidence_ids",
+    "research_questions",
+    "policy_references"
+  ],
+  "title": "ResearchContextV1",
+  "type": "object"
+}

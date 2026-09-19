@@ -1,0 +1,46 @@
+{
+  "schema_id": "detailed-analysis.synthesis-result",
+  "schema_version": 1,
+  "task_id": "task-20260911-001",
+  "artifact_id": "synthesis-v1",
+  "created_at": "2026-09-12T11:00:00+09:00",
+  "worker_inputs": [
+    {"worker_role": "codex_worker", "artifact_reference": {"artifact_type": "worker_analysis", "artifact_id": "worker-analysis-codex-v1", "schema_id": "detailed-analysis.worker-analysis", "schema_version": 1, "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},
+    {"worker_role": "claude_worker", "artifact_reference": {"artifact_type": "worker_analysis", "artifact_id": "worker-analysis-claude-v1", "schema_id": "detailed-analysis.worker-analysis", "schema_version": 1, "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}
+  ],
+  "evidence_set_reference": {"artifact_type": "evidence_set", "artifact_id": "evidence-set-v1", "schema_id": "detailed-analysis.evidence-set", "schema_version": 1, "sha256": "2222222222222222222222222222222222222222222222222222222222222222"},
+  "evidence_set_version": 1,
+  "agreed_claim_ids": ["mt-financial", "lt-financial"],
+  "differences": [
+    {
+      "difference_id": "difference-long-term-durability",
+      "horizon": "long_term",
+      "codex_claim_ids": ["lt-business"],
+      "claude_claim_ids": ["claude-lt-business"],
+      "codex_position": "Durability requires more verified evidence.",
+      "claude_position": "Existing evidence may weakly support durability.",
+      "evidence_ids": ["raw-001"],
+      "missing_information": ["Verified market-share history."],
+      "resolution_status": "research_required",
+      "resolution_rationale": "The positions cannot be averaged and require common evidence."
+    }
+  ],
+  "horizon_results": [
+    {"horizon": "medium_term", "summary": "Workers broadly agree on a conditional medium-term case.", "agreed_claim_ids": ["mt-financial"], "difference_ids": [], "missing_information": [], "counterevidence_conditions": ["Verified demand reversal."], "evaluability": "evaluable", "assessment": {"status": "conditional", "confidence": "medium", "rationale": "Shared evidence supports the base case with conditions.", "condition_or_research_needs": ["Monitor the next disclosure."]}},
+    {"horizon": "long_term", "summary": "Long-term durability requires additional verified evidence.", "agreed_claim_ids": ["lt-financial"], "difference_ids": ["difference-long-term-durability"], "missing_information": ["Verified market-share history."], "counterevidence_conditions": ["Structural share loss."], "evaluability": "evaluable", "assessment": {"status": "investigate", "confidence": "low", "rationale": "Material evidence can still be obtained.", "condition_or_research_needs": ["Obtain common market-share evidence."]}}
+  ],
+  "cross_horizon_summary": {"agreements": ["Execution quality matters in both horizons."], "differences": ["Durability matters more to the long-term horizon."], "summary": "The horizons remain separate and have no combined rating."},
+  "entry_exit_context": {
+    "price_as_of": "2026-09-12T09:00:00+09:00",
+    "current_price_context": "Current price is context only.",
+    "entry_reference_conditions": ["Reassess after verified valuation inputs update."],
+    "technical_exit_reference_conditions": ["A verified structural break requires reassessment."],
+    "thesis_invalidation_conditions": ["Verified structural share loss."],
+    "upcoming_event_risks": ["Next disclosure may change the evidence set."],
+    "volatility_context": "Fixture volatility is elevated.",
+    "evidence_ids": ["normalized-001", "calculated-001"],
+    "missing_information": [],
+    "reference_only_not_trade_instruction": true
+  },
+  "differences_preserved_without_voting_or_averaging": true
+}

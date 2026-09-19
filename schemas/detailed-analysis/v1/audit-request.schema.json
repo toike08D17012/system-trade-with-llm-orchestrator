@@ -1,0 +1,494 @@
+{
+  "$defs": {
+    "AgreedFactV1": {
+      "additionalProperties": false,
+      "description": "One verified fact agreed by both interpretations.",
+      "properties": {
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "statement": {
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        }
+      },
+      "required": [
+        "statement",
+        "evidence_ids"
+      ],
+      "title": "AgreedFactV1",
+      "type": "object"
+    },
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "AuditEvidenceItemV1": {
+      "additionalProperties": false,
+      "description": "Minimal verified evidence references placed in the neutral packet.",
+      "properties": {
+        "content_reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        "evidence_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "source_metadata_reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "content_reference",
+        "source_metadata_reference"
+      ],
+      "title": "AuditEvidenceItemV1",
+      "type": "object"
+    },
+    "AuditGateConditionsV1": {
+      "additionalProperties": false,
+      "description": "The six approved conditions plus the non-terminal pending guard.",
+      "properties": {
+        "already_validly_audited": {
+          "title": "Already Validly Audited",
+          "type": "boolean"
+        },
+        "classification_pending_present": {
+          "title": "Classification Pending Present",
+          "type": "boolean"
+        },
+        "decision": {
+          "$ref": "#/$defs/AuditGateDecision"
+        },
+        "material": {
+          "title": "Material",
+          "type": "boolean"
+        },
+        "mechanically_resolvable": {
+          "title": "Mechanically Resolvable",
+          "type": "boolean"
+        },
+        "neutral_packet_valid": {
+          "title": "Neutral Packet Valid",
+          "type": "boolean"
+        },
+        "primary_review_response_and_research_complete": {
+          "title": "Primary Review Response And Research Complete",
+          "type": "boolean"
+        },
+        "two_substantiated_positions_unresolved": {
+          "title": "Two Substantiated Positions Unresolved",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "primary_review_response_and_research_complete",
+        "two_substantiated_positions_unresolved",
+        "mechanically_resolvable",
+        "material",
+        "neutral_packet_valid",
+        "already_validly_audited",
+        "classification_pending_present",
+        "decision"
+      ],
+      "title": "AuditGateConditionsV1",
+      "type": "object"
+    },
+    "AuditGateDecision": {
+      "description": "Deterministic result of the six approved audit conditions.",
+      "enum": [
+        "start_audit",
+        "do_not_audit",
+        "human_decision_required"
+      ],
+      "title": "AuditGateDecision",
+      "type": "string"
+    },
+    "DisputePositionV1": {
+      "additionalProperties": false,
+      "description": "One substantiated interpretation without producer identity.",
+      "properties": {
+        "acknowledged_uncertainties": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Acknowledged Uncertainties",
+          "type": "array"
+        },
+        "evidence_absence_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Evidence Absence Reason"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "falsification_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Falsification Conditions",
+          "type": "array"
+        },
+        "rationale": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Rationale",
+          "type": "array"
+        },
+        "statement": {
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        }
+      },
+      "required": [
+        "statement",
+        "rationale",
+        "evidence_ids",
+        "evidence_absence_reason",
+        "acknowledged_uncertainties",
+        "falsification_conditions"
+      ],
+      "title": "DisputePositionV1",
+      "type": "object"
+    },
+    "NeutralAuditPacketV1": {
+      "additionalProperties": false,
+      "description": "One anonymized, dispute-scoped packet for a read-only auditor.",
+      "properties": {
+        "agreed_facts": {
+          "items": {
+            "$ref": "#/$defs/AgreedFactV1"
+          },
+          "title": "Agreed Facts",
+          "type": "array"
+        },
+        "dispute_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Dispute Id",
+          "type": "string"
+        },
+        "evidence_bundle": {
+          "items": {
+            "$ref": "#/$defs/AuditEvidenceItemV1"
+          },
+          "minItems": 1,
+          "title": "Evidence Bundle",
+          "type": "array"
+        },
+        "horizon": {
+          "enum": [
+            "medium_term",
+            "long_term",
+            "cross_horizon"
+          ],
+          "title": "Horizon",
+          "type": "string"
+        },
+        "interpretation_1": {
+          "$ref": "#/$defs/DisputePositionV1"
+        },
+        "interpretation_2": {
+          "$ref": "#/$defs/DisputePositionV1"
+        },
+        "neutrality": {
+          "$ref": "#/$defs/NeutralityAttestationV1"
+        },
+        "policy_references": {
+          "items": {
+            "$ref": "#/$defs/ArtifactReferenceV1"
+          },
+          "minItems": 1,
+          "title": "Policy References",
+          "type": "array"
+        },
+        "question": {
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "requested_checks": {
+          "$ref": "#/$defs/RequestedAuditChecksV1"
+        },
+        "target_claim_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Target Claim Ids",
+          "type": "array"
+        },
+        "task_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "unresolved_issues": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Unresolved Issues",
+          "type": "array"
+        }
+      },
+      "required": [
+        "task_id",
+        "dispute_id",
+        "question",
+        "horizon",
+        "target_claim_ids",
+        "policy_references",
+        "agreed_facts",
+        "unresolved_issues",
+        "interpretation_1",
+        "interpretation_2",
+        "evidence_bundle",
+        "requested_checks",
+        "neutrality"
+      ],
+      "title": "NeutralAuditPacketV1",
+      "type": "object"
+    },
+    "NeutralityAttestationV1": {
+      "additionalProperties": false,
+      "description": "Explicit packet validation required before an audit may start.",
+      "properties": {
+        "important_evidence_omitted": {
+          "const": false,
+          "title": "Important Evidence Omitted",
+          "type": "boolean"
+        },
+        "orchestrator_provisional_conclusion_included": {
+          "const": false,
+          "title": "Orchestrator Provisional Conclusion Included",
+          "type": "boolean"
+        },
+        "out_of_scope_content_included": {
+          "const": false,
+          "title": "Out Of Scope Content Included",
+          "type": "boolean"
+        },
+        "preferred_side_included": {
+          "const": false,
+          "title": "Preferred Side Included",
+          "type": "boolean"
+        },
+        "producer_names_included": {
+          "const": false,
+          "title": "Producer Names Included",
+          "type": "boolean"
+        },
+        "recommendation_included": {
+          "const": false,
+          "title": "Recommendation Included",
+          "type": "boolean"
+        },
+        "reviewer_preference_included": {
+          "const": false,
+          "title": "Reviewer Preference Included",
+          "type": "boolean"
+        },
+        "validated": {
+          "const": true,
+          "title": "Validated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "producer_names_included",
+        "preferred_side_included",
+        "reviewer_preference_included",
+        "orchestrator_provisional_conclusion_included",
+        "recommendation_included",
+        "out_of_scope_content_included",
+        "important_evidence_omitted",
+        "validated"
+      ],
+      "title": "NeutralityAttestationV1",
+      "type": "object"
+    },
+    "RequestedAuditChecksV1": {
+      "additionalProperties": false,
+      "description": "Fixed neutral audit questions for the MVP.",
+      "properties": {
+        "check_policy_application": {
+          "const": true,
+          "title": "Check Policy Application",
+          "type": "boolean"
+        },
+        "determine_evidence_support": {
+          "const": true,
+          "title": "Determine Evidence Support",
+          "type": "boolean"
+        },
+        "identify_missing_assumptions": {
+          "const": true,
+          "title": "Identify Missing Assumptions",
+          "type": "boolean"
+        },
+        "recommend_next_state": {
+          "const": true,
+          "title": "Recommend Next State",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "determine_evidence_support",
+        "check_policy_application",
+        "identify_missing_assumptions",
+        "recommend_next_state"
+      ],
+      "title": "RequestedAuditChecksV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.audit-request:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Authorized logical audit request for exactly one dispute.",
+  "properties": {
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "audit_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Audit Id",
+      "type": "string"
+    },
+    "audit_workspace_read_only": {
+      "const": true,
+      "title": "Audit Workspace Read Only",
+      "type": "boolean"
+    },
+    "automatic_retry_allowed": {
+      "const": false,
+      "title": "Automatic Retry Allowed",
+      "type": "boolean"
+    },
+    "created_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Created At",
+      "type": "string"
+    },
+    "dispute_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Dispute Id",
+      "type": "string"
+    },
+    "dispute_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "gate": {
+      "$ref": "#/$defs/AuditGateConditionsV1"
+    },
+    "logical_audit_sequence": {
+      "const": 1,
+      "title": "Logical Audit Sequence",
+      "type": "integer"
+    },
+    "packet": {
+      "$ref": "#/$defs/NeutralAuditPacketV1"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.audit-request",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "audit_id",
+    "dispute_id",
+    "dispute_reference",
+    "created_at",
+    "logical_audit_sequence",
+    "audit_workspace_read_only",
+    "automatic_retry_allowed",
+    "gate",
+    "packet"
+  ],
+  "title": "AuditRequestV1",
+  "type": "object"
+}

@@ -1,0 +1,309 @@
+{
+  "$defs": {
+    "ApprovalStatus": {
+      "description": "Lifecycle state of a source approval record.",
+      "enum": [
+        "draft",
+        "approved",
+        "suspended",
+        "expired",
+        "rejected"
+      ],
+      "title": "ApprovalStatus",
+      "type": "string"
+    },
+    "KnowledgeStatus": {
+      "description": "Whether an external condition was verified rather than assumed.",
+      "enum": [
+        "known",
+        "unknown",
+        "unsupported",
+        "not_retrieved"
+      ],
+      "title": "KnowledgeStatus",
+      "type": "string"
+    },
+    "OfficialReferenceV1": {
+      "additionalProperties": false,
+      "description": "Official document reviewed for a source condition.",
+      "properties": {
+        "document_type": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Document Type",
+          "type": "string"
+        },
+        "document_version_or_sha256": {
+          "minLength": 1,
+          "title": "Document Version Or Sha256",
+          "type": "string"
+        },
+        "reference_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Reference Id",
+          "type": "string"
+        },
+        "reviewed_on": {
+          "title": "Reviewed On",
+          "type": "string"
+        },
+        "url": {
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference_id",
+        "document_type",
+        "url",
+        "document_version_or_sha256",
+        "reviewed_on"
+      ],
+      "title": "OfficialReferenceV1",
+      "type": "object"
+    },
+    "SourceConditionCategory": {
+      "description": "External conditions required before a source can be enabled.",
+      "enum": [
+        "terms",
+        "pricing",
+        "authentication",
+        "redistribution",
+        "derived_output",
+        "external_processing",
+        "provider_retention",
+        "provider_training",
+        "freshness",
+        "available_period",
+        "rate_limit",
+        "failure_behavior"
+      ],
+      "title": "SourceConditionCategory",
+      "type": "string"
+    },
+    "SourceConditionV1": {
+      "additionalProperties": false,
+      "description": "One required source condition with explicit knowledge status.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/SourceConditionCategory"
+        },
+        "knowledge_status": {
+          "$ref": "#/$defs/KnowledgeStatus"
+        },
+        "official_reference_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Official Reference Ids",
+          "type": "array"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "knowledge_status",
+        "summary",
+        "official_reference_ids"
+      ],
+      "title": "SourceConditionV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.source-approval:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Machine-readable approval record governing source use and transfer.",
+  "properties": {
+    "approval_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Approval Id",
+      "type": "string"
+    },
+    "approval_version": {
+      "minimum": 1,
+      "title": "Approval Version",
+      "type": "integer"
+    },
+    "approved_by": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Approved By"
+    },
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "conditions": {
+      "items": {
+        "$ref": "#/$defs/SourceConditionV1"
+      },
+      "minItems": 1,
+      "title": "Conditions",
+      "type": "array"
+    },
+    "contract_plan": {
+      "minLength": 1,
+      "title": "Contract Plan",
+      "type": "string"
+    },
+    "credential_scope_alias": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Credential Scope Alias"
+    },
+    "dataset": {
+      "minLength": 1,
+      "title": "Dataset",
+      "type": "string"
+    },
+    "effective_on": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Effective On"
+    },
+    "external_agent_transfer_allowed": {
+      "title": "External Agent Transfer Allowed",
+      "type": "boolean"
+    },
+    "official_references": {
+      "items": {
+        "$ref": "#/$defs/OfficialReferenceV1"
+      },
+      "minItems": 1,
+      "title": "Official References",
+      "type": "array"
+    },
+    "online_use_allowed": {
+      "title": "Online Use Allowed",
+      "type": "boolean"
+    },
+    "provider": {
+      "minLength": 1,
+      "title": "Provider",
+      "type": "string"
+    },
+    "recheck_due_on": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Recheck Due On"
+    },
+    "reviewed_on": {
+      "title": "Reviewed On",
+      "type": "string"
+    },
+    "reviewer": {
+      "minLength": 1,
+      "title": "Reviewer",
+      "type": "string"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.source-approval",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "secret_value_storage_allowed": {
+      "const": false,
+      "title": "Secret Value Storage Allowed",
+      "type": "boolean"
+    },
+    "service": {
+      "minLength": 1,
+      "title": "Service",
+      "type": "string"
+    },
+    "source_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Source Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ApprovalStatus"
+    },
+    "status_reason": {
+      "minLength": 1,
+      "title": "Status Reason",
+      "type": "string"
+    },
+    "usage_entity": {
+      "minLength": 1,
+      "title": "Usage Entity",
+      "type": "string"
+    },
+    "usage_purposes": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Usage Purposes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "artifact_id",
+    "approval_id",
+    "approval_version",
+    "source_id",
+    "status",
+    "provider",
+    "service",
+    "dataset",
+    "reviewer",
+    "reviewed_on",
+    "approved_by",
+    "effective_on",
+    "recheck_due_on",
+    "status_reason",
+    "usage_entity",
+    "usage_purposes",
+    "contract_plan",
+    "credential_scope_alias",
+    "secret_value_storage_allowed",
+    "online_use_allowed",
+    "external_agent_transfer_allowed",
+    "official_references",
+    "conditions"
+  ],
+  "title": "SourceApprovalV1",
+  "type": "object"
+}

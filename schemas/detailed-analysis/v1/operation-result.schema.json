@@ -1,0 +1,351 @@
+{
+  "$defs": {
+    "AgentUsageMetricV1": {
+      "additionalProperties": false,
+      "description": "One usage value with source, scope, and unavailable-state semantics.",
+      "properties": {
+        "availability": {
+          "$ref": "#/$defs/UsageAvailability"
+        },
+        "meaning_confirmed": {
+          "title": "Meaning Confirmed",
+          "type": "boolean"
+        },
+        "metric": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Metric",
+          "type": "string"
+        },
+        "origin": {
+          "$ref": "#/$defs/UsageOrigin"
+        },
+        "scope": {
+          "$ref": "#/$defs/UsageScope"
+        },
+        "unit": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "required": [
+        "metric",
+        "unit",
+        "availability",
+        "origin",
+        "scope",
+        "meaning_confirmed",
+        "value"
+      ],
+      "title": "AgentUsageMetricV1",
+      "type": "object"
+    },
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "OperationErrorV1": {
+      "additionalProperties": false,
+      "description": "Safe logical operation failure without embedded secret values.",
+      "properties": {
+        "error_code": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Error Code",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable_automatically": {
+          "const": false,
+          "title": "Retryable Automatically",
+          "type": "boolean"
+        },
+        "secret_values_redacted": {
+          "const": true,
+          "title": "Secret Values Redacted",
+          "type": "boolean"
+        },
+        "validation_error_reference": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactReferenceV1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "error_code",
+        "message",
+        "validation_error_reference",
+        "retryable_automatically",
+        "secret_values_redacted"
+      ],
+      "title": "OperationErrorV1",
+      "type": "object"
+    },
+    "OperationStatus": {
+      "description": "Outcome of one logical CLI operation.",
+      "enum": [
+        "accepted",
+        "succeeded",
+        "failed",
+        "rejected",
+        "cancelled"
+      ],
+      "title": "OperationStatus",
+      "type": "string"
+    },
+    "OperationType": {
+      "description": "Required logical operations independent of concrete CLI spelling.",
+      "enum": [
+        "validate_task",
+        "start",
+        "preflight",
+        "status",
+        "interrupt",
+        "cancel",
+        "resume",
+        "rerun",
+        "record_human_decision",
+        "show_artifact"
+      ],
+      "title": "OperationType",
+      "type": "string"
+    },
+    "TaskExecutionState": {
+      "description": "Approved task-level states without a Finalized state.",
+      "enum": [
+        "running",
+        "interrupting",
+        "suspended",
+        "awaiting_human_decision",
+        "analysis_completed",
+        "failed",
+        "cancelled"
+      ],
+      "title": "TaskExecutionState",
+      "type": "string"
+    },
+    "UsageAvailability": {
+      "description": "Distinguish a measured value from an unavailable zero-like value.",
+      "enum": [
+        "retrieved",
+        "unknown",
+        "unsupported",
+        "not_retrieved"
+      ],
+      "title": "UsageAvailability",
+      "type": "string"
+    },
+    "UsageOrigin": {
+      "description": "Whether a usage value was provider-reported or locally derived.",
+      "enum": [
+        "provider_reported",
+        "derived",
+        "not_available"
+      ],
+      "title": "UsageOrigin",
+      "type": "string"
+    },
+    "UsageScope": {
+      "description": "Aggregation boundary communicated by the provider or derivation.",
+      "enum": [
+        "run",
+        "session_cumulative",
+        "unknown"
+      ],
+      "title": "UsageScope",
+      "type": "string"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.operation-result:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One-to-one logical operation result for CLI and manifest consumers.",
+  "properties": {
+    "automatic_retry_allowed": {
+      "const": false,
+      "title": "Automatic Retry Allowed",
+      "type": "boolean"
+    },
+    "completed_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Completed At",
+      "type": "string"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OperationErrorV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "exit_code": {
+      "title": "Exit Code",
+      "type": "integer"
+    },
+    "generated_artifact_references": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReferenceV1"
+      },
+      "title": "Generated Artifact References",
+      "type": "array"
+    },
+    "manifest_reference": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "operation_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Operation Id",
+      "type": "string"
+    },
+    "operation_type": {
+      "$ref": "#/$defs/OperationType"
+    },
+    "previous_task_state": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TaskExecutionState"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "resulting_task_state": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TaskExecutionState"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reused_artifact_references": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReferenceV1"
+      },
+      "title": "Reused Artifact References",
+      "type": "array"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.operation-result",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "status": {
+      "$ref": "#/$defs/OperationStatus"
+    },
+    "task_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Task Id"
+    },
+    "usage": {
+      "items": {
+        "$ref": "#/$defs/AgentUsageMetricV1"
+      },
+      "title": "Usage",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "operation_id",
+    "operation_type",
+    "completed_at",
+    "status",
+    "task_id",
+    "previous_task_state",
+    "resulting_task_state",
+    "exit_code",
+    "generated_artifact_references",
+    "reused_artifact_references",
+    "manifest_reference",
+    "usage",
+    "error",
+    "automatic_retry_allowed"
+  ],
+  "title": "OperationResultV1",
+  "type": "object"
+}

@@ -1,0 +1,453 @@
+{
+  "$defs": {
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "ManifestArtifactV1": {
+      "additionalProperties": false,
+      "description": "Artifact provenance and validation status tracked by the manifest.",
+      "properties": {
+        "created_at": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "title": "Created At",
+          "type": "string"
+        },
+        "producer_role": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Producer Role",
+          "type": "string"
+        },
+        "reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        "reuse_revalidated": {
+          "title": "Reuse Revalidated",
+          "type": "boolean"
+        },
+        "reused_from_task_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reused From Task Id"
+        },
+        "validation_status": {
+          "enum": [
+            "valid",
+            "invalid",
+            "not_validated"
+          ],
+          "title": "Validation Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference",
+        "producer_role",
+        "created_at",
+        "validation_status",
+        "reused_from_task_id",
+        "reuse_revalidated"
+      ],
+      "title": "ManifestArtifactV1",
+      "type": "object"
+    },
+    "ResumeCheckpointV1": {
+      "additionalProperties": false,
+      "description": "Exact validated inputs and artifacts required for safe task resume.",
+      "properties": {
+        "artifact_references": {
+          "items": {
+            "$ref": "#/$defs/ArtifactReferenceV1"
+          },
+          "title": "Artifact References",
+          "type": "array"
+        },
+        "checkpoint_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Checkpoint Id",
+          "type": "string"
+        },
+        "completed_stage_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Completed Stage Ids",
+          "type": "array"
+        },
+        "coordinator_state_revalidated": {
+          "title": "Coordinator State Revalidated",
+          "type": "boolean"
+        },
+        "created_at": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "title": "Created At",
+          "type": "string"
+        },
+        "credentials_revalidated": {
+          "title": "Credentials Revalidated",
+          "type": "boolean"
+        },
+        "evidence_freshness_revalidated": {
+          "title": "Evidence Freshness Revalidated",
+          "type": "boolean"
+        },
+        "evidence_set_reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        "evidence_set_version": {
+          "minimum": 1,
+          "title": "Evidence Set Version",
+          "type": "integer"
+        },
+        "incomplete_stage_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Incomplete Stage Ids",
+          "type": "array"
+        },
+        "input_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Sha256",
+          "type": "string"
+        },
+        "policy_references": {
+          "items": {
+            "$ref": "#/$defs/ArtifactReferenceV1"
+          },
+          "minItems": 1,
+          "title": "Policy References",
+          "type": "array"
+        },
+        "resume_validation_completed": {
+          "title": "Resume Validation Completed",
+          "type": "boolean"
+        },
+        "reusable_for_resume": {
+          "title": "Reusable For Resume",
+          "type": "boolean"
+        },
+        "source_approvals_revalidated": {
+          "title": "Source Approvals Revalidated",
+          "type": "boolean"
+        },
+        "source_profiles_revalidated": {
+          "title": "Source Profiles Revalidated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "checkpoint_id",
+        "created_at",
+        "input_sha256",
+        "evidence_set_reference",
+        "evidence_set_version",
+        "policy_references",
+        "completed_stage_ids",
+        "incomplete_stage_ids",
+        "artifact_references",
+        "resume_validation_completed",
+        "source_approvals_revalidated",
+        "source_profiles_revalidated",
+        "credentials_revalidated",
+        "coordinator_state_revalidated",
+        "evidence_freshness_revalidated",
+        "reusable_for_resume"
+      ],
+      "title": "ResumeCheckpointV1",
+      "type": "object"
+    },
+    "TaskExecutionState": {
+      "description": "Approved task-level states without a Finalized state.",
+      "enum": [
+        "running",
+        "interrupting",
+        "suspended",
+        "awaiting_human_decision",
+        "analysis_completed",
+        "failed",
+        "cancelled"
+      ],
+      "title": "TaskExecutionState",
+      "type": "string"
+    },
+    "TaskStateTransitionV1": {
+      "additionalProperties": false,
+      "description": "One immutable task-level transition caused by a logical operation.",
+      "properties": {
+        "from_state": {
+          "enum": [
+            "initial",
+            "running",
+            "interrupting",
+            "suspended",
+            "awaiting_human_decision",
+            "analysis_completed",
+            "failed",
+            "cancelled"
+          ],
+          "title": "From State",
+          "type": "string"
+        },
+        "occurred_at": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "operation_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "reason_code": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Reason Code",
+          "type": "string"
+        },
+        "to_state": {
+          "$ref": "#/$defs/TaskExecutionState"
+        },
+        "transition_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Transition Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "transition_id",
+        "operation_id",
+        "from_state",
+        "to_state",
+        "occurred_at",
+        "reason_code",
+        "reason"
+      ],
+      "title": "TaskStateTransitionV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.execution-manifest:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Task-level source of truth for state and artifact provenance.",
+  "properties": {
+    "agent_execution_references": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReferenceV1"
+      },
+      "title": "Agent Execution References",
+      "type": "array"
+    },
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "artifacts": {
+      "items": {
+        "$ref": "#/$defs/ManifestArtifactV1"
+      },
+      "title": "Artifacts",
+      "type": "array"
+    },
+    "automatic_retry_allowed": {
+      "const": false,
+      "title": "Automatic Retry Allowed",
+      "type": "boolean"
+    },
+    "classification_pending_present": {
+      "title": "Classification Pending Present",
+      "type": "boolean"
+    },
+    "current_checkpoint": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ResumeCheckpointV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "current_evidence_set_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "current_evidence_set_version": {
+      "minimum": 1,
+      "title": "Current Evidence Set Version",
+      "type": "integer"
+    },
+    "current_state": {
+      "$ref": "#/$defs/TaskExecutionState"
+    },
+    "external_request_event_references": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReferenceV1"
+      },
+      "title": "External Request Event References",
+      "type": "array"
+    },
+    "final_analysis_result_reference": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "human_decision_required": {
+      "title": "Human Decision Required",
+      "type": "boolean"
+    },
+    "instruction_application_references": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReferenceV1"
+      },
+      "title": "Instruction Application References",
+      "type": "array"
+    },
+    "manifest_version": {
+      "minimum": 1,
+      "title": "Manifest Version",
+      "type": "integer"
+    },
+    "operation_request_references": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReferenceV1"
+      },
+      "title": "Operation Request References",
+      "type": "array"
+    },
+    "operation_result_references": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReferenceV1"
+      },
+      "title": "Operation Result References",
+      "type": "array"
+    },
+    "primary_review_passed": {
+      "title": "Primary Review Passed",
+      "type": "boolean"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.execution-manifest",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "state_transitions": {
+      "items": {
+        "$ref": "#/$defs/TaskStateTransitionV1"
+      },
+      "minItems": 1,
+      "title": "State Transitions",
+      "type": "array"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "task_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "unresolved_high_or_critical_finding_present": {
+      "title": "Unresolved High Or Critical Finding Present",
+      "type": "boolean"
+    },
+    "unresolved_material_dispute_present": {
+      "title": "Unresolved Material Dispute Present",
+      "type": "boolean"
+    },
+    "updated_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "manifest_version",
+    "updated_at",
+    "task_reference",
+    "current_state",
+    "state_transitions",
+    "current_checkpoint",
+    "current_evidence_set_reference",
+    "current_evidence_set_version",
+    "agent_execution_references",
+    "instruction_application_references",
+    "external_request_event_references",
+    "operation_request_references",
+    "operation_result_references",
+    "artifacts",
+    "final_analysis_result_reference",
+    "classification_pending_present",
+    "unresolved_high_or_critical_finding_present",
+    "unresolved_material_dispute_present",
+    "primary_review_passed",
+    "human_decision_required",
+    "automatic_retry_allowed"
+  ],
+  "title": "ExecutionManifestV1",
+  "type": "object"
+}

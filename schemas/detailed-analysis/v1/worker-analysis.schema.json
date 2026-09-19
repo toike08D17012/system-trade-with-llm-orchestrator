@@ -1,0 +1,549 @@
+{
+  "$defs": {
+    "AnalysisClaimV1": {
+      "additionalProperties": false,
+      "description": "One typed claim with evidence and explicit uncertainty.",
+      "properties": {
+        "claim_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Claim Id",
+          "type": "string"
+        },
+        "claim_type": {
+          "$ref": "#/$defs/ClaimType"
+        },
+        "counterevidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Counterevidence Ids",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "material": {
+          "title": "Material",
+          "type": "boolean"
+        },
+        "perspective": {
+          "$ref": "#/$defs/AnalysisPerspective"
+        },
+        "statement": {
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "uncertainty": {
+          "minLength": 1,
+          "title": "Uncertainty",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim_id",
+        "perspective",
+        "statement",
+        "claim_type",
+        "evidence_ids",
+        "counterevidence_ids",
+        "uncertainty",
+        "material"
+      ],
+      "title": "AnalysisClaimV1",
+      "type": "object"
+    },
+    "AnalysisPerspective": {
+      "description": "Five perspectives required for both evaluation horizons.",
+      "enum": [
+        "financial",
+        "valuation",
+        "business",
+        "technical_reference",
+        "risk_and_counterevidence"
+      ],
+      "title": "AnalysisPerspective",
+      "type": "string"
+    },
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "AssessmentStatus": {
+      "description": "Four-level horizon assessment kept separate from task execution state.",
+      "enum": [
+        "pass",
+        "conditional",
+        "investigate",
+        "reject"
+      ],
+      "title": "AssessmentStatus",
+      "type": "string"
+    },
+    "ClaimType": {
+      "description": "Required semantic classification for an analysis claim.",
+      "enum": [
+        "fact",
+        "inference",
+        "hypothesis"
+      ],
+      "title": "ClaimType",
+      "type": "string"
+    },
+    "Confidence": {
+      "description": "Qualitative confidence supported by the cited evidence.",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "CrossHorizonSummaryV1": {
+      "additionalProperties": false,
+      "description": "Comparison across horizons without a new combined assessment.",
+      "properties": {
+        "agreements": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Agreements",
+          "type": "array"
+        },
+        "differences": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Differences",
+          "type": "array"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "agreements",
+        "differences",
+        "summary"
+      ],
+      "title": "CrossHorizonSummaryV1",
+      "type": "object"
+    },
+    "EntryExitReferenceContextV1": {
+      "additionalProperties": false,
+      "description": "Current-price context that remains distinct from trading instructions.",
+      "properties": {
+        "current_price_context": {
+          "minLength": 1,
+          "title": "Current Price Context",
+          "type": "string"
+        },
+        "entry_reference_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Entry Reference Conditions",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "missing_information": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Missing Information",
+          "type": "array"
+        },
+        "price_as_of": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "title": "Price As Of",
+          "type": "string"
+        },
+        "reference_only_not_trade_instruction": {
+          "const": true,
+          "title": "Reference Only Not Trade Instruction",
+          "type": "boolean"
+        },
+        "technical_exit_reference_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Technical Exit Reference Conditions",
+          "type": "array"
+        },
+        "thesis_invalidation_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Thesis Invalidation Conditions",
+          "type": "array"
+        },
+        "upcoming_event_risks": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Upcoming Event Risks",
+          "type": "array"
+        },
+        "volatility_context": {
+          "minLength": 1,
+          "title": "Volatility Context",
+          "type": "string"
+        }
+      },
+      "required": [
+        "price_as_of",
+        "current_price_context",
+        "entry_reference_conditions",
+        "technical_exit_reference_conditions",
+        "thesis_invalidation_conditions",
+        "upcoming_event_risks",
+        "volatility_context",
+        "evidence_ids",
+        "missing_information",
+        "reference_only_not_trade_instruction"
+      ],
+      "title": "EntryExitReferenceContextV1",
+      "type": "object"
+    },
+    "Evaluability": {
+      "description": "Whether the approved policy has enough usable evidence for evaluation.",
+      "enum": [
+        "evaluable",
+        "not_evaluable"
+      ],
+      "title": "Evaluability",
+      "type": "string"
+    },
+    "HorizonAnalysisV1": {
+      "additionalProperties": false,
+      "description": "Worker analysis kept independent for one investment horizon.",
+      "properties": {
+        "assessment": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HorizonAssessmentV1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "claims": {
+          "items": {
+            "$ref": "#/$defs/AnalysisClaimV1"
+          },
+          "minItems": 1,
+          "title": "Claims",
+          "type": "array"
+        },
+        "counter_thesis": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Counter Thesis",
+          "type": "array"
+        },
+        "evaluability": {
+          "$ref": "#/$defs/Evaluability"
+        },
+        "horizon": {
+          "enum": [
+            "medium_term",
+            "long_term"
+          ],
+          "title": "Horizon",
+          "type": "string"
+        },
+        "missing_information": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Missing Information",
+          "type": "array"
+        },
+        "negative_factors": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Negative Factors",
+          "type": "array"
+        },
+        "positive_factors": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Positive Factors",
+          "type": "array"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "thesis": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Thesis",
+          "type": "array"
+        },
+        "valuation_view": {
+          "minLength": 1,
+          "title": "Valuation View",
+          "type": "string"
+        },
+        "watch_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Watch Conditions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "horizon",
+        "summary",
+        "positive_factors",
+        "negative_factors",
+        "thesis",
+        "counter_thesis",
+        "valuation_view",
+        "watch_conditions",
+        "missing_information",
+        "claims",
+        "evaluability",
+        "assessment"
+      ],
+      "title": "HorizonAnalysisV1",
+      "type": "object"
+    },
+    "HorizonAssessmentV1": {
+      "additionalProperties": false,
+      "description": "Four-level assessment for one evaluable horizon.",
+      "properties": {
+        "condition_or_research_needs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Condition Or Research Needs",
+          "type": "array"
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/AssessmentStatus"
+        }
+      },
+      "required": [
+        "status",
+        "confidence",
+        "rationale",
+        "condition_or_research_needs"
+      ],
+      "title": "HorizonAssessmentV1",
+      "type": "object"
+    },
+    "SecurityIdentifierV1": {
+      "additionalProperties": false,
+      "description": "Unambiguous security code and market identifier pair.",
+      "properties": {
+        "mic": {
+          "const": "XTKS",
+          "title": "Mic",
+          "type": "string"
+        },
+        "security_code": {
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9]+$",
+          "title": "Security Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "security_code",
+        "mic"
+      ],
+      "title": "SecurityIdentifierV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.worker-analysis:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Structured output from one independent normal worker.",
+  "properties": {
+    "agent_run_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Agent Run Id",
+      "type": "string"
+    },
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "created_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Created At",
+      "type": "string"
+    },
+    "cross_horizon_summary": {
+      "$ref": "#/$defs/CrossHorizonSummaryV1"
+    },
+    "entry_exit_context": {
+      "$ref": "#/$defs/EntryExitReferenceContextV1"
+    },
+    "evaluation_policy_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "evidence_frozen_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Evidence Frozen At",
+      "type": "string"
+    },
+    "evidence_set_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "evidence_set_version": {
+      "minimum": 1,
+      "title": "Evidence Set Version",
+      "type": "integer"
+    },
+    "freshness_checked_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Freshness Checked At",
+      "type": "string"
+    },
+    "horizon_analyses": {
+      "items": {
+        "$ref": "#/$defs/HorizonAnalysisV1"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Horizon Analyses",
+      "type": "array"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.worker-analysis",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "security": {
+      "$ref": "#/$defs/SecurityIdentifierV1"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "worker_role": {
+      "enum": [
+        "codex_worker",
+        "claude_worker"
+      ],
+      "title": "Worker Role",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "agent_run_id",
+    "worker_role",
+    "created_at",
+    "security",
+    "evidence_set_reference",
+    "evidence_set_version",
+    "evidence_frozen_at",
+    "freshness_checked_at",
+    "evaluation_policy_reference",
+    "horizon_analyses",
+    "cross_horizon_summary",
+    "entry_exit_context"
+  ],
+  "title": "WorkerAnalysisV1",
+  "type": "object"
+}

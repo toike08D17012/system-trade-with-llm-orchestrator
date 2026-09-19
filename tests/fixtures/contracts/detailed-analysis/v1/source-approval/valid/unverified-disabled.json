@@ -1,0 +1,50 @@
+{
+  "schema_id": "detailed-analysis.source-approval",
+  "schema_version": 1,
+  "artifact_id": "fixture-source-approval-v1",
+  "approval_id": "fixture-source-approval",
+  "approval_version": 1,
+  "source_id": "fixture-source",
+  "status": "draft",
+  "provider": "Fixture Provider",
+  "service": "Fixture Service",
+  "dataset": "Fixture Dataset",
+  "reviewer": "fixture-owner",
+  "reviewed_on": "2026-09-12",
+  "approved_by": null,
+  "effective_on": null,
+  "recheck_due_on": null,
+  "status_reason": "Current external conditions have not been verified for production-equivalent use.",
+  "usage_entity": "private_individual_internal_analysis",
+  "usage_purposes": [
+    "contract_fixture_validation"
+  ],
+  "contract_plan": "unknown",
+  "credential_scope_alias": null,
+  "secret_value_storage_allowed": false,
+  "online_use_allowed": false,
+  "external_agent_transfer_allowed": false,
+  "official_references": [
+    {
+      "reference_id": "fixture-official-reference",
+      "document_type": "terms",
+      "url": "https://example.invalid/terms",
+      "document_version_or_sha256": "not_retrieved",
+      "reviewed_on": "2026-09-12"
+    }
+  ],
+  "conditions": [
+    {"category": "terms", "knowledge_status": "not_retrieved", "summary": "Not retrieved.", "official_reference_ids": ["fixture-official-reference"]},
+    {"category": "pricing", "knowledge_status": "unknown", "summary": "Unknown.", "official_reference_ids": []},
+    {"category": "authentication", "knowledge_status": "unknown", "summary": "Unknown.", "official_reference_ids": []},
+    {"category": "redistribution", "knowledge_status": "unknown", "summary": "Unknown.", "official_reference_ids": []},
+    {"category": "derived_output", "knowledge_status": "unknown", "summary": "Unknown.", "official_reference_ids": []},
+    {"category": "external_processing", "knowledge_status": "unknown", "summary": "Unknown.", "official_reference_ids": []},
+    {"category": "provider_retention", "knowledge_status": "unknown", "summary": "Unknown.", "official_reference_ids": []},
+    {"category": "provider_training", "knowledge_status": "unknown", "summary": "Unknown.", "official_reference_ids": []},
+    {"category": "freshness", "knowledge_status": "unknown", "summary": "Unknown.", "official_reference_ids": []},
+    {"category": "available_period", "knowledge_status": "unknown", "summary": "Unknown.", "official_reference_ids": []},
+    {"category": "rate_limit", "knowledge_status": "unknown", "summary": "Unknown.", "official_reference_ids": []},
+    {"category": "failure_behavior", "knowledge_status": "unknown", "summary": "Unknown.", "official_reference_ids": []}
+  ]
+}

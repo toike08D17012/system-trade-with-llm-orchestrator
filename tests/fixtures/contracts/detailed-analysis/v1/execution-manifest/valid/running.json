@@ -1,0 +1,47 @@
+{
+  "schema_id": "detailed-analysis.execution-manifest",
+  "schema_version": 1,
+  "task_id": "task-1",
+  "artifact_id": "manifest-1",
+  "manifest_version": 1,
+  "updated_at": "2026-09-12T12:00:00+09:00",
+  "task_reference": {
+    "artifact_type": "detailed_analysis_task",
+    "artifact_id": "task-artifact-1",
+    "schema_id": "detailed-analysis.detailed-analysis-task",
+    "schema_version": 1,
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "current_state": "running",
+  "state_transitions": [{
+    "transition_id": "transition-1",
+    "operation_id": "operation-1",
+    "from_state": "initial",
+    "to_state": "running",
+    "occurred_at": "2026-09-12T12:00:00+09:00",
+    "reason_code": "task-started",
+    "reason": "The validated task was accepted for processing."
+  }],
+  "current_checkpoint": null,
+  "current_evidence_set_reference": {
+    "artifact_type": "evidence_set",
+    "artifact_id": "evidence-set-1",
+    "schema_id": "detailed-analysis.evidence-set",
+    "schema_version": 1,
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "current_evidence_set_version": 1,
+  "agent_execution_references": [],
+  "instruction_application_references": [],
+  "external_request_event_references": [],
+  "operation_request_references": [],
+  "operation_result_references": [],
+  "artifacts": [],
+  "final_analysis_result_reference": null,
+  "classification_pending_present": false,
+  "unresolved_high_or_critical_finding_present": false,
+  "unresolved_material_dispute_present": false,
+  "primary_review_passed": false,
+  "human_decision_required": false,
+  "automatic_retry_allowed": false
+}

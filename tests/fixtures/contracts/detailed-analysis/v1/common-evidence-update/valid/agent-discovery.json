@@ -1,0 +1,65 @@
+{
+  "schema_id": "detailed-analysis.common-evidence-update",
+  "schema_version": 1,
+  "task_id": "task-20260911-001",
+  "artifact_id": "common-evidence-update-v2",
+  "updated_at": "2026-09-11T11:00:00+09:00",
+  "previous_evidence_set_reference": {
+    "artifact_type": "evidence_set",
+    "artifact_id": "evidence-set-v1",
+    "schema_id": "detailed-analysis.evidence-set",
+    "schema_version": 1,
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "previous_evidence_set_version": 1,
+  "new_evidence_set_reference": {
+    "artifact_type": "evidence_set",
+    "artifact_id": "evidence-set-v2",
+    "schema_id": "detailed-analysis.evidence-set",
+    "schema_version": 1,
+    "sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+  },
+  "new_evidence_set_version": 2,
+  "added_evidence_ids": [
+    "source-meta-002",
+    "raw-002"
+  ],
+  "discoveries": [
+    {
+      "evidence_id": "source-meta-002",
+      "origin": "agent_search",
+      "discovered_by_role": "codex_worker",
+      "search_record_reference": {
+        "artifact_type": "search_record",
+        "artifact_id": "search-record-codex-001",
+        "schema_id": "detailed-analysis.search-record",
+        "schema_version": 1,
+        "sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "candidate_id": "candidate-001",
+      "detail": "Source metadata created after original-document validation."
+    },
+    {
+      "evidence_id": "raw-002",
+      "origin": "agent_search",
+      "discovered_by_role": "codex_worker",
+      "search_record_reference": {
+        "artifact_type": "search_record",
+        "artifact_id": "search-record-codex-001",
+        "schema_id": "detailed-analysis.search-record",
+        "schema_version": 1,
+        "sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "candidate_id": "candidate-001",
+      "detail": "Raw evidence created after original-document validation."
+    }
+  ],
+  "distributed_to": [
+    "codex_worker",
+    "claude_worker"
+  ],
+  "invalidated_artifact_ids": [
+    "worker-analysis-codex-v1",
+    "worker-analysis-claude-v1"
+  ]
+}

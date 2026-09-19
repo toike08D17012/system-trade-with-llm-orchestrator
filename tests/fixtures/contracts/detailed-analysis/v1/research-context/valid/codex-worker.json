@@ -1,0 +1,54 @@
+{
+  "schema_id": "detailed-analysis.research-context",
+  "schema_version": 1,
+  "task_id": "task-20260911-001",
+  "artifact_id": "research-context-codex-v1",
+  "created_at": "2026-09-11T10:35:00+09:00",
+  "recipient_role": "codex_worker",
+  "task_reference": {
+    "artifact_type": "detailed_analysis_task",
+    "artifact_id": "task-input-v1",
+    "schema_id": "detailed-analysis.detailed-analysis-task",
+    "schema_version": 1,
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "evidence_set_reference": {
+    "artifact_type": "evidence_set",
+    "artifact_id": "evidence-set-v1",
+    "schema_id": "detailed-analysis.evidence-set",
+    "schema_version": 1,
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "evidence_set_version": 1,
+  "security": {
+    "identifier": {
+      "security_code": "7203",
+      "mic": "XTKS"
+    },
+    "name": "Fixture Motor Corporation",
+    "currency": "JPY",
+    "sector": "Transportation Equipment",
+    "market_segment": "Prime"
+  },
+  "common_evidence_ids": [
+    "source-meta-001",
+    "raw-001",
+    "normalized-001"
+  ],
+  "source_metadata_evidence_ids": [
+    "source-meta-001"
+  ],
+  "research_questions": [
+    "Which verified facts could support or break the medium-term business hypothesis?",
+    "Which material long-term risks remain unsupported by current common evidence?"
+  ],
+  "policy_references": [
+    {
+      "artifact_type": "detailed_analysis_policy",
+      "artifact_id": "detailed-analysis-policy-v1",
+      "schema_id": "detailed-analysis.detailed-analysis-policy",
+      "schema_version": 1,
+      "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  ]
+}

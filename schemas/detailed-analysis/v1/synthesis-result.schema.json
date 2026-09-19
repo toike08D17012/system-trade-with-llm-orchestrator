@@ -1,0 +1,520 @@
+{
+  "$defs": {
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "AssessmentStatus": {
+      "description": "Four-level horizon assessment kept separate from task execution state.",
+      "enum": [
+        "pass",
+        "conditional",
+        "investigate",
+        "reject"
+      ],
+      "title": "AssessmentStatus",
+      "type": "string"
+    },
+    "Confidence": {
+      "description": "Qualitative confidence supported by the cited evidence.",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "CrossHorizonSummaryV1": {
+      "additionalProperties": false,
+      "description": "Comparison across horizons without a new combined assessment.",
+      "properties": {
+        "agreements": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Agreements",
+          "type": "array"
+        },
+        "differences": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Differences",
+          "type": "array"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "agreements",
+        "differences",
+        "summary"
+      ],
+      "title": "CrossHorizonSummaryV1",
+      "type": "object"
+    },
+    "EntryExitReferenceContextV1": {
+      "additionalProperties": false,
+      "description": "Current-price context that remains distinct from trading instructions.",
+      "properties": {
+        "current_price_context": {
+          "minLength": 1,
+          "title": "Current Price Context",
+          "type": "string"
+        },
+        "entry_reference_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Entry Reference Conditions",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "missing_information": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Missing Information",
+          "type": "array"
+        },
+        "price_as_of": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "title": "Price As Of",
+          "type": "string"
+        },
+        "reference_only_not_trade_instruction": {
+          "const": true,
+          "title": "Reference Only Not Trade Instruction",
+          "type": "boolean"
+        },
+        "technical_exit_reference_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Technical Exit Reference Conditions",
+          "type": "array"
+        },
+        "thesis_invalidation_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Thesis Invalidation Conditions",
+          "type": "array"
+        },
+        "upcoming_event_risks": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Upcoming Event Risks",
+          "type": "array"
+        },
+        "volatility_context": {
+          "minLength": 1,
+          "title": "Volatility Context",
+          "type": "string"
+        }
+      },
+      "required": [
+        "price_as_of",
+        "current_price_context",
+        "entry_reference_conditions",
+        "technical_exit_reference_conditions",
+        "thesis_invalidation_conditions",
+        "upcoming_event_risks",
+        "volatility_context",
+        "evidence_ids",
+        "missing_information",
+        "reference_only_not_trade_instruction"
+      ],
+      "title": "EntryExitReferenceContextV1",
+      "type": "object"
+    },
+    "Evaluability": {
+      "description": "Whether the approved policy has enough usable evidence for evaluation.",
+      "enum": [
+        "evaluable",
+        "not_evaluable"
+      ],
+      "title": "Evaluability",
+      "type": "string"
+    },
+    "HorizonAssessmentV1": {
+      "additionalProperties": false,
+      "description": "Four-level assessment for one evaluable horizon.",
+      "properties": {
+        "condition_or_research_needs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Condition Or Research Needs",
+          "type": "array"
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/AssessmentStatus"
+        }
+      },
+      "required": [
+        "status",
+        "confidence",
+        "rationale",
+        "condition_or_research_needs"
+      ],
+      "title": "HorizonAssessmentV1",
+      "type": "object"
+    },
+    "SynthesisDifferenceV1": {
+      "additionalProperties": false,
+      "description": "Unaveraged difference between worker claims or assessments.",
+      "properties": {
+        "claude_claim_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Claude Claim Ids",
+          "type": "array"
+        },
+        "claude_position": {
+          "minLength": 1,
+          "title": "Claude Position",
+          "type": "string"
+        },
+        "codex_claim_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Codex Claim Ids",
+          "type": "array"
+        },
+        "codex_position": {
+          "minLength": 1,
+          "title": "Codex Position",
+          "type": "string"
+        },
+        "difference_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Difference Id",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "horizon": {
+          "enum": [
+            "medium_term",
+            "long_term",
+            "cross_horizon"
+          ],
+          "title": "Horizon",
+          "type": "string"
+        },
+        "missing_information": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Missing Information",
+          "type": "array"
+        },
+        "resolution_rationale": {
+          "minLength": 1,
+          "title": "Resolution Rationale",
+          "type": "string"
+        },
+        "resolution_status": {
+          "enum": [
+            "unresolved",
+            "resolved",
+            "research_required"
+          ],
+          "title": "Resolution Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "difference_id",
+        "horizon",
+        "codex_claim_ids",
+        "claude_claim_ids",
+        "codex_position",
+        "claude_position",
+        "evidence_ids",
+        "missing_information",
+        "resolution_status",
+        "resolution_rationale"
+      ],
+      "title": "SynthesisDifferenceV1",
+      "type": "object"
+    },
+    "SynthesizedHorizonResultV1": {
+      "additionalProperties": false,
+      "description": "Synthesis result for one horizon, preserving sources and differences.",
+      "properties": {
+        "agreed_claim_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Agreed Claim Ids",
+          "type": "array"
+        },
+        "assessment": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HorizonAssessmentV1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "counterevidence_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Counterevidence Conditions",
+          "type": "array"
+        },
+        "difference_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Difference Ids",
+          "type": "array"
+        },
+        "evaluability": {
+          "$ref": "#/$defs/Evaluability"
+        },
+        "horizon": {
+          "enum": [
+            "medium_term",
+            "long_term"
+          ],
+          "title": "Horizon",
+          "type": "string"
+        },
+        "missing_information": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Missing Information",
+          "type": "array"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "horizon",
+        "summary",
+        "agreed_claim_ids",
+        "difference_ids",
+        "missing_information",
+        "counterevidence_conditions",
+        "evaluability",
+        "assessment"
+      ],
+      "title": "SynthesizedHorizonResultV1",
+      "type": "object"
+    },
+    "WorkerAnalysisInputV1": {
+      "additionalProperties": false,
+      "description": "Exact independent worker artifact used by synthesis.",
+      "properties": {
+        "artifact_reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        "worker_role": {
+          "enum": [
+            "codex_worker",
+            "claude_worker"
+          ],
+          "title": "Worker Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "worker_role",
+        "artifact_reference"
+      ],
+      "title": "WorkerAnalysisInputV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.synthesis-result:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Orchestrator synthesis that preserves both independent worker positions.",
+  "properties": {
+    "agreed_claim_ids": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        "type": "string"
+      },
+      "title": "Agreed Claim Ids",
+      "type": "array"
+    },
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "created_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Created At",
+      "type": "string"
+    },
+    "cross_horizon_summary": {
+      "$ref": "#/$defs/CrossHorizonSummaryV1"
+    },
+    "differences": {
+      "items": {
+        "$ref": "#/$defs/SynthesisDifferenceV1"
+      },
+      "title": "Differences",
+      "type": "array"
+    },
+    "differences_preserved_without_voting_or_averaging": {
+      "const": true,
+      "title": "Differences Preserved Without Voting Or Averaging",
+      "type": "boolean"
+    },
+    "entry_exit_context": {
+      "$ref": "#/$defs/EntryExitReferenceContextV1"
+    },
+    "evidence_set_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "evidence_set_version": {
+      "minimum": 1,
+      "title": "Evidence Set Version",
+      "type": "integer"
+    },
+    "horizon_results": {
+      "items": {
+        "$ref": "#/$defs/SynthesizedHorizonResultV1"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Horizon Results",
+      "type": "array"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.synthesis-result",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "worker_inputs": {
+      "items": {
+        "$ref": "#/$defs/WorkerAnalysisInputV1"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Worker Inputs",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "created_at",
+    "worker_inputs",
+    "evidence_set_reference",
+    "evidence_set_version",
+    "agreed_claim_ids",
+    "differences",
+    "horizon_results",
+    "cross_horizon_summary",
+    "entry_exit_context",
+    "differences_preserved_without_voting_or_averaging"
+  ],
+  "title": "SynthesisResultV1",
+  "type": "object"
+}

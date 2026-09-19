@@ -10,7 +10,11 @@ from stock_research_llm_orchestrator.contracts.validation.artifact_consistency i
 from stock_research_llm_orchestrator.contracts.validation.issues import RuleValidationError
 from stock_research_llm_orchestrator.contracts.validation.policy import ensure_policy_version
 from stock_research_llm_orchestrator.contracts.validation.references import ensure_references_exist
-from stock_research_llm_orchestrator.contracts.validation.security import ensure_no_secret_fields
+from stock_research_llm_orchestrator.contracts.validation.security import (
+    ensure_external_content_is_data,
+    ensure_no_secret_fields,
+    ensure_permission_scope,
+)
 from stock_research_llm_orchestrator.contracts.validation.semantics import ensure_values_match
 from stock_research_llm_orchestrator.contracts.validation.state_transitions import ensure_transition_allowed
 
@@ -23,6 +27,14 @@ from stock_research_llm_orchestrator.contracts.validation.state_transitions impo
         (lambda: ensure_transition_allowed("failed", "running", set()), ErrorCode.TRANSITION_NOT_ALLOWED),
         (lambda: ensure_policy_version(1, 2), ErrorCode.POLICY_VERSION_MISMATCH),
         (lambda: ensure_no_secret_fields({"api_key": "not-recorded"}), ErrorCode.SECRET_MATERIAL_DETECTED),
+        (
+            lambda: ensure_external_content_is_data({"external_instruction": "do not execute"}),
+            ErrorCode.EXTERNAL_INSTRUCTION_DETECTED,
+        ),
+        (
+            lambda: ensure_permission_scope(["read", "write"], ["read"]),
+            ErrorCode.PERMISSION_SCOPE_VIOLATION,
+        ),
         (lambda: ensure_sha256(b"actual", hashlib.sha256(b"other").hexdigest()), ErrorCode.ARTIFACT_CONFLICT),
     ],
 )

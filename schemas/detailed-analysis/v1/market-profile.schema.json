@@ -1,0 +1,99 @@
+{
+  "$defs": {
+    "KnowledgeStatus": {
+      "description": "Whether an external condition was verified rather than assumed.",
+      "enum": [
+        "known",
+        "unknown",
+        "unsupported",
+        "not_retrieved"
+      ],
+      "title": "KnowledgeStatus",
+      "type": "string"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.market-profile:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Versioned XTKS interpretation profile without embedded holiday guesses.",
+  "properties": {
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "calendar_authority": {
+      "const": "JPX",
+      "title": "Calendar Authority",
+      "type": "string"
+    },
+    "calendar_data_status": {
+      "$ref": "#/$defs/KnowledgeStatus"
+    },
+    "calendar_reference": {
+      "minLength": 1,
+      "title": "Calendar Reference",
+      "type": "string"
+    },
+    "calendar_reviewed_on": {
+      "title": "Calendar Reviewed On",
+      "type": "string"
+    },
+    "enabled_for_runtime_date_resolution": {
+      "title": "Enabled For Runtime Date Resolution",
+      "type": "boolean"
+    },
+    "instrument_scope": {
+      "const": "domestic_cash_equity",
+      "title": "Instrument Scope",
+      "type": "string"
+    },
+    "mic": {
+      "const": "XTKS",
+      "title": "Mic",
+      "type": "string"
+    },
+    "profile_version": {
+      "minimum": 1,
+      "title": "Profile Version",
+      "type": "integer"
+    },
+    "regular_session_close_local": {
+      "const": "15:30:00",
+      "title": "Regular Session Close Local",
+      "type": "string"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.market-profile",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "timezone": {
+      "const": "Asia/Tokyo",
+      "title": "Timezone",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "artifact_id",
+    "profile_version",
+    "mic",
+    "timezone",
+    "instrument_scope",
+    "regular_session_close_local",
+    "calendar_authority",
+    "calendar_reference",
+    "calendar_reviewed_on",
+    "calendar_data_status",
+    "enabled_for_runtime_date_resolution"
+  ],
+  "title": "MarketProfileV1",
+  "type": "object"
+}

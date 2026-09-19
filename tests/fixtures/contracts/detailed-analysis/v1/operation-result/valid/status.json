@@ -1,0 +1,24 @@
+{
+  "schema_id": "detailed-analysis.operation-result",
+  "schema_version": 1,
+  "operation_id": "operation-status-1",
+  "operation_type": "status",
+  "completed_at": "2026-09-12T12:05:01+09:00",
+  "status": "succeeded",
+  "task_id": "task-1",
+  "previous_task_state": "running",
+  "resulting_task_state": "running",
+  "exit_code": 0,
+  "generated_artifact_references": [],
+  "reused_artifact_references": [],
+  "manifest_reference": {
+    "artifact_type": "execution_manifest",
+    "artifact_id": "manifest-1",
+    "schema_id": "detailed-analysis.execution-manifest",
+    "schema_version": 1,
+    "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+  },
+  "usage": [],
+  "error": null,
+  "automatic_retry_allowed": false
+}

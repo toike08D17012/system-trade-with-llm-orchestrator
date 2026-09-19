@@ -1,0 +1,36 @@
+{
+  "schema_id": "detailed-analysis.search-record",
+  "schema_version": 1,
+  "task_id": "task-20260911-001",
+  "artifact_id": "search-record-codex-001",
+  "agent_run_id": "agent-run-codex-001",
+  "researcher_role": "codex_worker",
+  "search_capability": "agent_builtin_web_search",
+  "executed_at": "2026-09-11T10:40:00+09:00",
+  "query": "Fixture Motor Corporation official disclosure medium term risk",
+  "results": [
+    {
+      "candidate_id": "candidate-001",
+      "url": "https://example.invalid/fixture-disclosure",
+      "headline": "Fixture disclosure",
+      "snippet": "Untrusted search-result excerpt retained only for candidate triage.",
+      "claim_targets": [
+        {
+          "target_id": "medium-term-business-hypothesis",
+          "relationship": "counter",
+          "description": "May contradict the assumed medium-term demand outlook."
+        }
+      ],
+      "validation": {
+        "status": "accepted",
+        "verified_at": "2026-09-11T10:50:00+09:00",
+        "verifier_role": "orchestrator",
+        "reason": "The original document was fetched through the approved validation path.",
+        "resulting_evidence_ids": [
+          "source-meta-002",
+          "raw-002"
+        ]
+      }
+    }
+  ]
+}

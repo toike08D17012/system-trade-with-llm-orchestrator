@@ -1,0 +1,76 @@
+{
+  "schema_id": "detailed-analysis.external-request-event",
+  "schema_version": 1,
+  "event_id": "request-event-001",
+  "occurred_at": "2026-09-12T09:00:00+09:00",
+  "event_type": "physical_failed",
+  "task_id": "task-20260911-001",
+  "logical_request_id": "logical-request-001",
+  "physical_attempt_id": "physical-attempt-001",
+  "observability": "physical_request",
+  "consumer_role": "orchestrator",
+  "provider": "fixture-provider",
+  "operation": "fetch-document",
+  "origin": "https://example.invalid",
+  "credential_scope_alias": "fixture-readonly",
+  "source_approval_reference": {
+    "artifact_type": "source_approval",
+    "artifact_id": "fixture-source-approval-v1",
+    "schema_id": "detailed-analysis.source-approval",
+    "schema_version": 1,
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "source_profile_reference": {
+    "artifact_type": "source_profile",
+    "artifact_id": "fixture-source-profile-v1",
+    "schema_id": "detailed-analysis.source-profile",
+    "schema_version": 1,
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "request_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "cache_decision": "miss",
+  "cache_artifact_reference": null,
+  "single_flight_decision": "leader",
+  "leader_logical_request_id": null,
+  "queue_wait_ms": 125,
+  "gate_results": [
+    {
+      "scope": "provider",
+      "key_alias": "fixture-provider",
+      "outcome": "acquired",
+      "waited_ms": 25,
+      "detail": "Provider permit acquired before the physical request."
+    },
+    {
+      "scope": "credential",
+      "key_alias": "fixture-readonly",
+      "outcome": "acquired",
+      "waited_ms": 0,
+      "detail": "Non-secret credential alias gate acquired."
+    }
+  ],
+  "outcome": "failed",
+  "error": {
+    "error_class": "provider-rate-limit",
+    "message": "Provider requested a cooldown; no automatic retry was scheduled.",
+    "retry_after_seconds": 60.0,
+    "cooldown_until": "2026-09-12T09:01:00+09:00",
+    "response_status_code": 429
+  },
+  "usage": [
+    {
+      "metric": "request-count",
+      "unit": "request",
+      "availability": "retrieved",
+      "value": 1
+    },
+    {
+      "metric": "provider-quota-remaining",
+      "unit": "request",
+      "availability": "not_retrieved",
+      "value": null
+    }
+  ],
+  "automatic_retry_allowed": false,
+  "direct_connection_fallback_allowed": false
+}

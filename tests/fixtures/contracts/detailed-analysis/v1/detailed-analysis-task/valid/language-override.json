@@ -1,0 +1,36 @@
+{
+  "schema_id": "detailed-analysis.detailed-analysis-task",
+  "schema_version": 1,
+  "task_id": "task-20260911-004",
+  "parent_task_id": null,
+  "task_accepted_at": "2026-09-11T10:30:00+09:00",
+  "origin": "human_selected",
+  "security": {
+    "security_code": "7203",
+    "mic": "XTKS"
+  },
+  "market": {
+    "mic": "XTKS",
+    "timezone": "Asia/Tokyo",
+    "instrument_scope": "domestic_cash_equity"
+  },
+  "analysis_horizons": [
+    "medium_term",
+    "long_term"
+  ],
+  "evaluation_policy_version": 1,
+  "human_document_language_override": {
+    "target_documents": [
+      "final_report"
+    ],
+    "language": "en-US",
+    "reason": "The repository owner requested an English review document."
+  },
+  "constraints": {
+    "external_publication_allowed": false,
+    "brokerage_connection_allowed": false,
+    "order_submission_allowed": false,
+    "automated_trading_allowed": false,
+    "automated_final_investment_decision_allowed": false
+  }
+}

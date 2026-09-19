@@ -1,0 +1,313 @@
+{
+  "$defs": {
+    "AuditEvidenceAssessmentV1": {
+      "additionalProperties": false,
+      "description": "Auditor assessment of one evidence item used by the dispute.",
+      "properties": {
+        "evidence_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "interpretation": {
+          "minLength": 1,
+          "title": "Interpretation",
+          "type": "string"
+        },
+        "relevance": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Relevance",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "relevance",
+        "interpretation"
+      ],
+      "title": "AuditEvidenceAssessmentV1",
+      "type": "object"
+    },
+    "AuditExecutionResult": {
+      "description": "Physical execution result kept separate from the audit opinion.",
+      "enum": [
+        "succeeded",
+        "invalid_output",
+        "execution_failed",
+        "cancelled"
+      ],
+      "title": "AuditExecutionResult",
+      "type": "string"
+    },
+    "AuditOpinion": {
+      "description": "Valid neutral audit opinions from ADR-0004.",
+      "enum": [
+        "support_interpretation_1",
+        "support_interpretation_2",
+        "support_neither",
+        "indeterminate_more_evidence_possible",
+        "indeterminate_no_more_evidence",
+        "human_judgment_required"
+      ],
+      "title": "AuditOpinion",
+      "type": "string"
+    },
+    "AuditPositionAssessmentV1": {
+      "additionalProperties": false,
+      "description": "Supported and unsupported parts of one anonymous interpretation.",
+      "properties": {
+        "supported_parts": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Supported Parts",
+          "type": "array"
+        },
+        "unsupported_parts": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Unsupported Parts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "supported_parts",
+        "unsupported_parts"
+      ],
+      "title": "AuditPositionAssessmentV1",
+      "type": "object"
+    },
+    "AuditRecommendedNextState": {
+      "description": "Workflow destination derived from a valid opinion or execution failure.",
+      "enum": [
+        "primary_review",
+        "research",
+        "human_decision",
+        "failed"
+      ],
+      "title": "AuditRecommendedNextState",
+      "type": "string"
+    },
+    "Confidence": {
+      "description": "Qualitative confidence supported by the cited evidence.",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.audit-result:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Validated audit opinion or a separate physical execution failure.",
+  "properties": {
+    "additional_evidence_needed": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Additional Evidence Needed",
+      "type": "array"
+    },
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "audit_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Audit Id",
+      "type": "string"
+    },
+    "automatic_retry_allowed": {
+      "const": false,
+      "title": "Automatic Retry Allowed",
+      "type": "boolean"
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Confidence"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "created_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Created At",
+      "type": "string"
+    },
+    "dispute_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Dispute Id",
+      "type": "string"
+    },
+    "dispute_scope_valid": {
+      "title": "Dispute Scope Valid",
+      "type": "boolean"
+    },
+    "established_facts": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Established Facts",
+      "type": "array"
+    },
+    "evidence_assessments": {
+      "items": {
+        "$ref": "#/$defs/AuditEvidenceAssessmentV1"
+      },
+      "title": "Evidence Assessments",
+      "type": "array"
+    },
+    "execution_result": {
+      "$ref": "#/$defs/AuditExecutionResult"
+    },
+    "interpretation_1_assessment": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AuditPositionAssessmentV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "interpretation_2_assessment": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AuditPositionAssessmentV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "logical_audit_counted": {
+      "title": "Logical Audit Counted",
+      "type": "boolean"
+    },
+    "missing_assumptions": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Missing Assumptions",
+      "type": "array"
+    },
+    "omitted_counterarguments": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Omitted Counterarguments",
+      "type": "array"
+    },
+    "opinion": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AuditOpinion"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "rationale": {
+      "minLength": 1,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "reasonable_inferences": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Reasonable Inferences",
+      "type": "array"
+    },
+    "recommended_next_state": {
+      "$ref": "#/$defs/AuditRecommendedNextState"
+    },
+    "references_valid": {
+      "title": "References Valid",
+      "type": "boolean"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.audit-result",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_valid": {
+      "title": "Schema Valid",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "summary": {
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "unresolved_hypotheses": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Unresolved Hypotheses",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "audit_id",
+    "dispute_id",
+    "created_at",
+    "execution_result",
+    "opinion",
+    "confidence",
+    "summary",
+    "evidence_assessments",
+    "interpretation_1_assessment",
+    "interpretation_2_assessment",
+    "established_facts",
+    "reasonable_inferences",
+    "unresolved_hypotheses",
+    "missing_assumptions",
+    "omitted_counterarguments",
+    "additional_evidence_needed",
+    "schema_valid",
+    "references_valid",
+    "dispute_scope_valid",
+    "logical_audit_counted",
+    "automatic_retry_allowed",
+    "recommended_next_state",
+    "rationale"
+  ],
+  "title": "AuditResultV1",
+  "type": "object"
+}

@@ -1,0 +1,31 @@
+schema_id: detailed-analysis.session-continuation-policy
+schema_version: 1
+artifact_id: session-continuation-policy-v1
+policy_version: 1
+effective_at: "2026-09-11T00:00:00+09:00"
+session_modes:
+  - new
+  - resume
+  - native_fork
+  - reconstructed_fork
+resume_requires_same:
+  - task
+  - role
+  - logical_agent
+  - purpose
+  - logical_session_settings
+new_session_required_when_changed:
+  - task
+  - security_or_market
+  - purpose
+  - role
+  - logical_agent
+  - model_family
+  - safety
+  - permissions
+max_active_runs_per_logical_session: 1
+persistent_session_queue_enabled: false
+cross_role_provider_session_resume_allowed: false
+resume_failure_automatic_fallback_allowed: false
+settings_immutable_within_logical_session: true
+duplicate_operation_rejected_as: session_busy

@@ -1,0 +1,33 @@
+schema_id: detailed-analysis.detailed-analysis-policy
+schema_version: 1
+artifact_id: detailed-analysis-policy-v1
+policy_version: 1
+effective_at: "2026-09-11T00:00:00+09:00"
+market_mic: XTKS
+market_timezone: Asia/Tokyo
+instrument_scope: domestic_cash_equity
+horizons:
+  - horizon: medium_term
+    minimum_months: 12
+    maximum_months: 24
+    maximum_inclusive: false
+  - horizon: long_term
+    minimum_months: 24
+    maximum_months: 60
+    maximum_inclusive: true
+completion_criteria:
+  - Both horizons cover the five required perspectives, material risks, and counterevidence conditions.
+  - Material factual claims have verified common-evidence candidates or an explicit evidence gap.
+  - No additional search has produced a new material candidate and the responsible Agent records coverage.
+system_limits:
+  task_timeout_seconds: null
+  agent_timeout_seconds: null
+  token_limit: null
+  external_request_limit: null
+  cost_limit: null
+  search_iteration_limit: null
+  review_round_limit: null
+brokerage_connection_allowed: false
+order_submission_allowed: false
+automated_trading_allowed: false
+automated_final_investment_decision_allowed: false

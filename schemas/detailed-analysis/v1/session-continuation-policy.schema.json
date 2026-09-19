@@ -1,0 +1,131 @@
+{
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.session-continuation-policy:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Approved logical-session continuation and isolation policy.",
+  "properties": {
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "cross_role_provider_session_resume_allowed": {
+      "const": false,
+      "title": "Cross Role Provider Session Resume Allowed",
+      "type": "boolean"
+    },
+    "duplicate_operation_rejected_as": {
+      "const": "session_busy",
+      "title": "Duplicate Operation Rejected As",
+      "type": "string"
+    },
+    "effective_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Effective At",
+      "type": "string"
+    },
+    "max_active_runs_per_logical_session": {
+      "const": 1,
+      "title": "Max Active Runs Per Logical Session",
+      "type": "integer"
+    },
+    "new_session_required_when_changed": {
+      "items": {
+        "enum": [
+          "task",
+          "security_or_market",
+          "purpose",
+          "role",
+          "logical_agent",
+          "model_family",
+          "safety",
+          "permissions"
+        ],
+        "type": "string"
+      },
+      "maxItems": 8,
+      "minItems": 8,
+      "title": "New Session Required When Changed",
+      "type": "array"
+    },
+    "persistent_session_queue_enabled": {
+      "const": false,
+      "title": "Persistent Session Queue Enabled",
+      "type": "boolean"
+    },
+    "policy_version": {
+      "minimum": 1,
+      "title": "Policy Version",
+      "type": "integer"
+    },
+    "resume_failure_automatic_fallback_allowed": {
+      "const": false,
+      "title": "Resume Failure Automatic Fallback Allowed",
+      "type": "boolean"
+    },
+    "resume_requires_same": {
+      "items": {
+        "enum": [
+          "task",
+          "role",
+          "logical_agent",
+          "purpose",
+          "logical_session_settings"
+        ],
+        "type": "string"
+      },
+      "maxItems": 5,
+      "minItems": 5,
+      "title": "Resume Requires Same",
+      "type": "array"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.session-continuation-policy",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "session_modes": {
+      "items": {
+        "enum": [
+          "new",
+          "resume",
+          "native_fork",
+          "reconstructed_fork"
+        ],
+        "type": "string"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "title": "Session Modes",
+      "type": "array"
+    },
+    "settings_immutable_within_logical_session": {
+      "const": true,
+      "title": "Settings Immutable Within Logical Session",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "artifact_id",
+    "policy_version",
+    "effective_at",
+    "session_modes",
+    "resume_requires_same",
+    "new_session_required_when_changed",
+    "max_active_runs_per_logical_session",
+    "persistent_session_queue_enabled",
+    "cross_role_provider_session_resume_allowed",
+    "resume_failure_automatic_fallback_allowed",
+    "settings_immutable_within_logical_session",
+    "duplicate_operation_rejected_as"
+  ],
+  "title": "SessionContinuationPolicyV1",
+  "type": "object"
+}

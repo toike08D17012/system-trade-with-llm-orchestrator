@@ -1,0 +1,624 @@
+{
+  "$defs": {
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "ClassificationCandidateV1": {
+      "additionalProperties": false,
+      "description": "One considered classification and why it was not yet selected.",
+      "properties": {
+        "classification": {
+          "$ref": "#/$defs/FindingClassification"
+        },
+        "rejected_reason": {
+          "minLength": 1,
+          "title": "Rejected Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "classification",
+        "rejected_reason"
+      ],
+      "title": "ClassificationCandidateV1",
+      "type": "object"
+    },
+    "ClassificationPendingV1": {
+      "additionalProperties": false,
+      "description": "Temporary state that requires an explicit next classifier.",
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/ClassificationCandidateV1"
+          },
+          "minItems": 1,
+          "title": "Candidates",
+          "type": "array"
+        },
+        "next_classifier": {
+          "enum": [
+            "primary_reviewer",
+            "orchestrator",
+            "human"
+          ],
+          "title": "Next Classifier",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "candidates",
+        "next_classifier"
+      ],
+      "title": "ClassificationPendingV1",
+      "type": "object"
+    },
+    "FindingClassification": {
+      "description": "Approved terminal classification values for review findings.",
+      "enum": [
+        "factual_error",
+        "insufficient_evidence",
+        "schema_or_format_error",
+        "policy_application_difference",
+        "logical_gap",
+        "future_hypothesis_difference",
+        "risk_materiality_difference",
+        "style_or_expression"
+      ],
+      "title": "FindingClassification",
+      "type": "string"
+    },
+    "FindingLifecycle": {
+      "description": "Approved lifecycle values for immutable finding history.",
+      "enum": [
+        "open",
+        "response_submitted",
+        "re_review_required",
+        "resolved",
+        "disputed",
+        "human_decision_required"
+      ],
+      "title": "FindingLifecycle",
+      "type": "string"
+    },
+    "FindingSeverity": {
+      "description": "Impact of leaving a finding uncorrected.",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "FindingSeverity",
+      "type": "string"
+    },
+    "MaterialityAssessmentV1": {
+      "additionalProperties": false,
+      "description": "Materiality derived exactly from valid approved impact types.",
+      "properties": {
+        "impacts": {
+          "items": {
+            "$ref": "#/$defs/MaterialityImpactV1"
+          },
+          "title": "Impacts",
+          "type": "array"
+        },
+        "is_material": {
+          "title": "Is Material",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "impacts",
+        "is_material"
+      ],
+      "title": "MaterialityAssessmentV1",
+      "type": "object"
+    },
+    "MaterialityImpactType": {
+      "description": "Targets that can change the information shown to a human.",
+      "enum": [
+        "horizon_assessment",
+        "evaluability",
+        "major_thesis",
+        "major_risk",
+        "entry_exit_reference",
+        "other"
+      ],
+      "title": "MaterialityImpactType",
+      "type": "string"
+    },
+    "MaterialityImpactV1": {
+      "additionalProperties": false,
+      "description": "One claimed change between the two interpretations of an issue.",
+      "properties": {
+        "horizon": {
+          "enum": [
+            "medium_term",
+            "long_term",
+            "cross_horizon",
+            "not_applicable"
+          ],
+          "title": "Horizon",
+          "type": "string"
+        },
+        "impact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Impact Id",
+          "type": "string"
+        },
+        "impact_type": {
+          "$ref": "#/$defs/MaterialityImpactType"
+        },
+        "interpretation_1_effect": {
+          "minLength": 1,
+          "title": "Interpretation 1 Effect",
+          "type": "string"
+        },
+        "interpretation_2_effect": {
+          "minLength": 1,
+          "title": "Interpretation 2 Effect",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "target_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Target Id",
+          "type": "string"
+        },
+        "valid": {
+          "title": "Valid",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "impact_id",
+        "impact_type",
+        "target_id",
+        "horizon",
+        "interpretation_1_effect",
+        "interpretation_2_effect",
+        "reason",
+        "valid"
+      ],
+      "title": "MaterialityImpactV1",
+      "type": "object"
+    },
+    "ReReviewDecision": {
+      "description": "Primary reviewer's decision after a finding response.",
+      "enum": [
+        "accepted",
+        "partially_accepted",
+        "rejected",
+        "evidence_or_change_required",
+        "finding_withdrawn"
+      ],
+      "title": "ReReviewDecision",
+      "type": "string"
+    },
+    "ReviewCompletionGateV1": {
+      "additionalProperties": false,
+      "description": "Machine-verifiable primary-review completion inputs.",
+      "properties": {
+        "evidence_references_valid": {
+          "title": "Evidence References Valid",
+          "type": "boolean"
+        },
+        "finding_processing_complete": {
+          "title": "Finding Processing Complete",
+          "type": "boolean"
+        },
+        "policy_deviation_records_complete": {
+          "title": "Policy Deviation Records Complete",
+          "type": "boolean"
+        },
+        "structured_output_valid": {
+          "title": "Structured Output Valid",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "structured_output_valid",
+        "evidence_references_valid",
+        "finding_processing_complete",
+        "policy_deviation_records_complete"
+      ],
+      "title": "ReviewCompletionGateV1",
+      "type": "object"
+    },
+    "ReviewFindingV1": {
+      "additionalProperties": false,
+      "description": "Immutable, structured finding emitted by the primary reviewer.",
+      "properties": {
+        "classification_pending": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClassificationPendingV1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "classification_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Classification Reason"
+        },
+        "detail": {
+          "minLength": 1,
+          "title": "Detail",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "expected_resolution": {
+          "minLength": 1,
+          "title": "Expected Resolution",
+          "type": "string"
+        },
+        "finding_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Finding Id",
+          "type": "string"
+        },
+        "horizon": {
+          "enum": [
+            "medium_term",
+            "long_term",
+            "cross_horizon",
+            "artifact"
+          ],
+          "title": "Horizon",
+          "type": "string"
+        },
+        "json_pointer": {
+          "pattern": "^(?:/(?:[^~/]|~0|~1)*)*$",
+          "title": "Json Pointer",
+          "type": "string"
+        },
+        "lifecycle": {
+          "$ref": "#/$defs/FindingLifecycle"
+        },
+        "materiality": {
+          "$ref": "#/$defs/MaterialityAssessmentV1"
+        },
+        "policy_references": {
+          "items": {
+            "$ref": "#/$defs/ArtifactReferenceV1"
+          },
+          "title": "Policy References",
+          "type": "array"
+        },
+        "primary_classification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FindingClassification"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_references": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Schema References",
+          "type": "array"
+        },
+        "secondary_classifications": {
+          "items": {
+            "$ref": "#/$defs/FindingClassification"
+          },
+          "title": "Secondary Classifications",
+          "type": "array"
+        },
+        "severity": {
+          "$ref": "#/$defs/FindingSeverity"
+        },
+        "severity_reason": {
+          "minLength": 1,
+          "title": "Severity Reason",
+          "type": "string"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "target_artifact_reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        "target_claim_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Target Claim Ids",
+          "type": "array"
+        },
+        "unresolved_retention_reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Unresolved Retention Reason"
+        }
+      },
+      "required": [
+        "finding_id",
+        "target_artifact_reference",
+        "target_claim_ids",
+        "json_pointer",
+        "horizon",
+        "summary",
+        "detail",
+        "primary_classification",
+        "secondary_classifications",
+        "classification_reason",
+        "classification_pending",
+        "severity",
+        "severity_reason",
+        "evidence_ids",
+        "policy_references",
+        "schema_references",
+        "materiality",
+        "expected_resolution",
+        "lifecycle",
+        "unresolved_retention_reason"
+      ],
+      "title": "ReviewFindingV1",
+      "type": "object"
+    },
+    "ReviewOverallStatus": {
+      "description": "Primary review disposition for the reviewed synthesis.",
+      "enum": [
+        "approve",
+        "approve_with_changes",
+        "rework",
+        "object"
+      ],
+      "title": "ReviewOverallStatus",
+      "type": "string"
+    },
+    "ReviewerRecheckV1": {
+      "additionalProperties": false,
+      "description": "Primary reviewer's immutable recheck after one response.",
+      "properties": {
+        "created_at": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "title": "Created At",
+          "type": "string"
+        },
+        "decision": {
+          "$ref": "#/$defs/ReReviewDecision"
+        },
+        "finding_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Finding Id",
+          "type": "string"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "recheck_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Recheck Id",
+          "type": "string"
+        },
+        "response_reference": {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        "resulting_lifecycle": {
+          "$ref": "#/$defs/FindingLifecycle"
+        },
+        "resulting_severity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FindingSeverity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reviewer_agent_run_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Reviewer Agent Run Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "recheck_id",
+        "finding_id",
+        "response_reference",
+        "reviewer_agent_run_id",
+        "created_at",
+        "decision",
+        "rationale",
+        "resulting_severity",
+        "resulting_lifecycle"
+      ],
+      "title": "ReviewerRecheckV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.primary-review:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Primary review result with a deterministically checked pass flag.",
+  "properties": {
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "completion_gate": {
+      "$ref": "#/$defs/ReviewCompletionGateV1"
+    },
+    "created_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Created At",
+      "type": "string"
+    },
+    "evidence_set_version": {
+      "minimum": 1,
+      "title": "Evidence Set Version",
+      "type": "integer"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/ReviewFindingV1"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "overall_status": {
+      "$ref": "#/$defs/ReviewOverallStatus"
+    },
+    "previous_review_reference": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ArtifactReferenceV1"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "review_passed": {
+      "title": "Review Passed",
+      "type": "boolean"
+    },
+    "review_round": {
+      "minimum": 1,
+      "title": "Review Round",
+      "type": "integer"
+    },
+    "reviewed_response_references": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReferenceV1"
+      },
+      "title": "Reviewed Response References",
+      "type": "array"
+    },
+    "reviewed_synthesis_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "reviewer_agent_run_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Reviewer Agent Run Id",
+      "type": "string"
+    },
+    "reviewer_rechecks": {
+      "items": {
+        "$ref": "#/$defs/ReviewerRecheckV1"
+      },
+      "title": "Reviewer Rechecks",
+      "type": "array"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.primary-review",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "reviewer_agent_run_id",
+    "reviewed_synthesis_reference",
+    "previous_review_reference",
+    "reviewed_response_references",
+    "evidence_set_version",
+    "review_round",
+    "created_at",
+    "overall_status",
+    "findings",
+    "reviewer_rechecks",
+    "completion_gate",
+    "review_passed"
+  ],
+  "title": "PrimaryReviewV1",
+  "type": "object"
+}

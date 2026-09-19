@@ -1,0 +1,85 @@
+{
+  "schema_id": "detailed-analysis.agent-execution",
+  "schema_version": 1,
+  "task_id": "task-1",
+  "artifact_id": "agent-execution-1",
+  "logical_session_id": "logical-session-1",
+  "provider_session_id": "provider-session-opaque-1",
+  "agent_run_id": "agent-run-1",
+  "parent_agent_run_id": null,
+  "parent_logical_session_id": null,
+  "role": "codex_worker",
+  "logical_agent": "worker-a",
+  "purpose": "initial-analysis",
+  "session_mode": "new",
+  "session_mode_reason_code": "new-task-role",
+  "session_mode_reason": "This is the first run for the task and worker role.",
+  "settings": {
+    "provider": "codex-cli",
+    "model": "configured-model",
+    "effort": "configured-effort",
+    "role": "codex_worker",
+    "role_instruction_reference": {
+      "artifact_type": "instruction_set",
+      "artifact_id": "instructions-1",
+      "schema_id": "detailed-analysis.instruction-application",
+      "schema_version": 1,
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "permission_profile": "worker-read-only",
+    "workspace_profile": "task-scoped-read-only",
+    "web_research_policy_reference": {
+      "artifact_type": "policy",
+      "artifact_id": "web-policy-1",
+      "schema_id": "detailed-analysis.web-research-policy",
+      "schema_version": 1,
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "external_transfer_policy_reference": {
+      "artifact_type": "policy",
+      "artifact_id": "source-approval-1",
+      "schema_id": "detailed-analysis.source-approval",
+      "schema_version": 1,
+      "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    "output_schema_id": "detailed-analysis.worker-analysis",
+    "output_schema_version": 1,
+    "output_schema_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+    "settings_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+  },
+  "process_state": "succeeded",
+  "queued_at": "2026-09-12T12:00:00+09:00",
+  "started_at": "2026-09-12T12:00:01+09:00",
+  "ended_at": "2026-09-12T12:01:00+09:00",
+  "exit_code": 0,
+  "input_references": [{
+    "artifact_type": "research_context",
+    "artifact_id": "research-context-1",
+    "schema_id": "detailed-analysis.research-context",
+    "schema_version": 1,
+    "sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+  }],
+  "output_reference": {
+    "artifact_type": "worker_analysis",
+    "artifact_id": "worker-analysis-1",
+    "schema_id": "detailed-analysis.worker-analysis",
+    "schema_version": 1,
+    "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+  },
+  "raw_output_reference": null,
+  "validation_error_reference": null,
+  "error": null,
+  "usage": [{
+    "metric": "input_tokens",
+    "unit": "tokens",
+    "availability": "not_retrieved",
+    "origin": "not_available",
+    "scope": "unknown",
+    "meaning_confirmed": false,
+    "value": null
+  }],
+  "cancellation_requested": false,
+  "active_run": false,
+  "automatic_retry_allowed": false,
+  "automatic_session_fallback_allowed": false
+}

@@ -1,0 +1,148 @@
+{
+  "schema_id": "detailed-analysis.final-analysis-result",
+  "schema_version": 1,
+  "task_id": "task-1",
+  "artifact_id": "final-analysis-result-1",
+  "created_at": "2026-09-12T14:00:00+09:00",
+  "security": {"security_code": "7203", "mic": "XTKS"},
+  "task_reference": {
+    "artifact_type": "detailed_analysis_task",
+    "artifact_id": "task-artifact-1",
+    "schema_id": "detailed-analysis.detailed-analysis-task",
+    "schema_version": 1,
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "evidence_set_reference": {
+    "artifact_type": "evidence_set",
+    "artifact_id": "evidence-set-1",
+    "schema_id": "detailed-analysis.evidence-set",
+    "schema_version": 1,
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "evidence_set_version": 2,
+  "evidence_frozen_at": "2026-09-12T13:00:00+09:00",
+  "freshness_checked_at": "2026-09-12T13:10:00+09:00",
+  "freshness_search_scope": ["Required disclosures and approved market-data sources."],
+  "freshness_search_result": "No new material verified evidence was found.",
+  "synthesis_reference": {
+    "artifact_type": "synthesis_result",
+    "artifact_id": "synthesis-1",
+    "schema_id": "detailed-analysis.synthesis-result",
+    "schema_version": 1,
+    "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+  },
+  "primary_review_reference": {
+    "artifact_type": "primary_review",
+    "artifact_id": "primary-review-1",
+    "schema_id": "detailed-analysis.primary-review",
+    "schema_version": 1,
+    "sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+  },
+  "horizon_results": [
+    {
+      "horizon": "medium_term",
+      "summary": "The medium-term result is conditional.",
+      "agreed_claim_ids": ["claim-medium-1"],
+      "difference_ids": [],
+      "missing_information": [],
+      "counterevidence_conditions": ["A verified demand reversal would invalidate the thesis."],
+      "evaluability": "evaluable",
+      "assessment": {
+        "status": "conditional",
+        "confidence": "medium",
+        "rationale": "Verified evidence supports the thesis subject to stated conditions.",
+        "condition_or_research_needs": ["Monitor the next verified disclosure."]
+      }
+    },
+    {
+      "horizon": "long_term",
+      "summary": "The long-term result requires further investigation.",
+      "agreed_claim_ids": ["claim-long-1"],
+      "difference_ids": [],
+      "missing_information": ["Verified long-term market-share history."],
+      "counterevidence_conditions": ["Structural share loss would invalidate the thesis."],
+      "evaluability": "evaluable",
+      "assessment": {
+        "status": "investigate",
+        "confidence": "low",
+        "rationale": "Material long-term evidence is still missing.",
+        "condition_or_research_needs": ["Obtain verified long-term share evidence."]
+      }
+    }
+  ],
+  "cross_horizon_summary": {
+    "agreements": ["Execution quality matters in both horizons."],
+    "differences": ["Evidence sufficiency differs by horizon."],
+    "summary": "The separate horizon assessments are preserved without a combined rating."
+  },
+  "entry_exit_context": {
+    "price_as_of": "2026-09-12T09:00:00+09:00",
+    "current_price_context": "Current price is context only.",
+    "entry_reference_conditions": ["Reassess after verified valuation inputs update."],
+    "technical_exit_reference_conditions": ["A verified structural break requires reassessment."],
+    "thesis_invalidation_conditions": ["Verified structural share loss."],
+    "upcoming_event_risks": ["The next disclosure may change the evidence set."],
+    "volatility_context": "Fixture volatility is elevated.",
+    "evidence_ids": ["normalized-1", "calculated-1"],
+    "missing_information": [],
+    "reference_only_not_trade_instruction": true
+  },
+  "unresolved_difference_ids": [],
+  "missing_information": ["Verified long-term market-share history."],
+  "audit_invocations": [],
+  "human_decision_references": [],
+  "human_document_language_override": null,
+  "human_documents": [{
+    "document_type": "final_report",
+    "language": "ja",
+    "markdown_reference": {
+      "artifact_id": "final-report-1",
+      "relative_path": "runs/task-1/final/final-report.md",
+      "media_type": "text/markdown",
+      "sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+    },
+    "generated_at": "2026-09-12T13:55:00+09:00",
+    "template_provenance": {
+      "template_id": "final-report",
+      "template_version": 1,
+      "template_reference": {
+        "artifact_id": "final-report-template-v1",
+        "relative_path": "templates/detailed-analysis/v1/final-report.md.j2",
+        "media_type": "text/x-jinja2",
+        "sha256": "b40159c8762ba5c6457de293784526cab7d80a90009d5f0c0077a73ba1c7b5e9"
+      },
+      "input_references": [{
+        "artifact_type": "synthesis_result",
+        "artifact_id": "synthesis-1",
+        "schema_id": "detailed-analysis.synthesis-result",
+        "schema_version": 1,
+        "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+      }]
+    },
+    "validation": {
+      "markdown_format_valid": true,
+      "configured_language_valid": true,
+      "foreign_quotes_have_configured_language_summary": true,
+      "assessments_match_machine_result": true,
+      "evaluability_matches_machine_result": true,
+      "confidence_matches_machine_result": true,
+      "missing_information_matches_machine_result": true,
+      "counterevidence_matches_machine_result": true,
+      "evidence_references_match_machine_result": true,
+      "new_fact_assessment_evidence_or_recommendation_added": false,
+      "secrets_or_disallowed_content_present": false
+    }
+  }],
+  "log_references": [{
+    "artifact_id": "audit-log-1",
+    "relative_path": "runs/task-1/logs/audit.jsonl",
+    "media_type": "application/x-ndjson",
+    "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+  }],
+  "machine_readable_natural_language": "en",
+  "investment_advice": false,
+  "purchase_recommendation": false,
+  "order_instruction": false,
+  "return_guarantee": false,
+  "human_final_investment_decision_required": true
+}

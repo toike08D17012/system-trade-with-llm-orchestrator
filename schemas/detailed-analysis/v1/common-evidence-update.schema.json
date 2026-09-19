@@ -1,0 +1,228 @@
+{
+  "$defs": {
+    "AgentRole": {
+      "description": "Roles allowed to perform research in the approved workflow.",
+      "enum": [
+        "orchestrator",
+        "codex_worker",
+        "claude_worker",
+        "primary_reviewer",
+        "antigravity_auditor"
+      ],
+      "title": "AgentRole",
+      "type": "string"
+    },
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "DiscoveryOrigin": {
+      "description": "Origin retained when verified evidence enters the common set.",
+      "enum": [
+        "agent_search",
+        "deterministic_acquisition"
+      ],
+      "title": "DiscoveryOrigin",
+      "type": "string"
+    },
+    "EvidenceDiscoveryV1": {
+      "additionalProperties": false,
+      "description": "Discovery provenance retained for each newly verified evidence item.",
+      "properties": {
+        "candidate_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Candidate Id"
+        },
+        "detail": {
+          "minLength": 1,
+          "title": "Detail",
+          "type": "string"
+        },
+        "discovered_by_role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AgentRole"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "origin": {
+          "$ref": "#/$defs/DiscoveryOrigin"
+        },
+        "search_record_reference": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactReferenceV1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "evidence_id",
+        "origin",
+        "discovered_by_role",
+        "search_record_reference",
+        "candidate_id",
+        "detail"
+      ],
+      "title": "EvidenceDiscoveryV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.common-evidence-update:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Versioned verified-evidence union distributed equally to both workers.",
+  "properties": {
+    "added_evidence_ids": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Added Evidence Ids",
+      "type": "array"
+    },
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "discoveries": {
+      "items": {
+        "$ref": "#/$defs/EvidenceDiscoveryV1"
+      },
+      "minItems": 1,
+      "title": "Discoveries",
+      "type": "array"
+    },
+    "distributed_to": {
+      "items": {
+        "enum": [
+          "codex_worker",
+          "claude_worker"
+        ],
+        "type": "string"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Distributed To",
+      "type": "array"
+    },
+    "invalidated_artifact_ids": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+        "type": "string"
+      },
+      "title": "Invalidated Artifact Ids",
+      "type": "array"
+    },
+    "new_evidence_set_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "new_evidence_set_version": {
+      "minimum": 2,
+      "title": "New Evidence Set Version",
+      "type": "integer"
+    },
+    "previous_evidence_set_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "previous_evidence_set_version": {
+      "minimum": 1,
+      "title": "Previous Evidence Set Version",
+      "type": "integer"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.common-evidence-update",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    },
+    "updated_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "updated_at",
+    "previous_evidence_set_reference",
+    "previous_evidence_set_version",
+    "new_evidence_set_reference",
+    "new_evidence_set_version",
+    "added_evidence_ids",
+    "discoveries",
+    "distributed_to",
+    "invalidated_artifact_ids"
+  ],
+  "title": "CommonEvidenceUpdateV1",
+  "type": "object"
+}

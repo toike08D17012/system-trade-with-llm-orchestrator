@@ -1,0 +1,15 @@
+{
+  "schema_id": "detailed-analysis.market-profile",
+  "schema_version": 1,
+  "artifact_id": "xtks-market-profile-v1",
+  "profile_version": 1,
+  "mic": "XTKS",
+  "timezone": "Asia/Tokyo",
+  "instrument_scope": "domestic_cash_equity",
+  "regular_session_close_local": "15:30:00",
+  "calendar_authority": "JPX",
+  "calendar_reference": "https://www.jpx.co.jp/equities/trading/domestic/01.html",
+  "calendar_reviewed_on": "2026-08-24",
+  "calendar_data_status": "not_retrieved",
+  "enabled_for_runtime_date_resolution": false
+}

@@ -1,0 +1,198 @@
+{
+  "$defs": {
+    "EvaluationHorizonPolicyV1": {
+      "additionalProperties": false,
+      "description": "Approved month range for one investment evaluation horizon.",
+      "properties": {
+        "horizon": {
+          "enum": [
+            "medium_term",
+            "long_term"
+          ],
+          "title": "Horizon",
+          "type": "string"
+        },
+        "maximum_inclusive": {
+          "title": "Maximum Inclusive",
+          "type": "boolean"
+        },
+        "maximum_months": {
+          "minimum": 1,
+          "title": "Maximum Months",
+          "type": "integer"
+        },
+        "minimum_months": {
+          "minimum": 1,
+          "title": "Minimum Months",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "horizon",
+        "minimum_months",
+        "maximum_months",
+        "maximum_inclusive"
+      ],
+      "title": "EvaluationHorizonPolicyV1",
+      "type": "object"
+    },
+    "SystemLimitPolicyV1": {
+      "additionalProperties": false,
+      "description": "Approved absence of system-defined fixed execution limits.",
+      "properties": {
+        "agent_timeout_seconds": {
+          "const": null,
+          "title": "Agent Timeout Seconds",
+          "type": "null"
+        },
+        "cost_limit": {
+          "const": null,
+          "title": "Cost Limit",
+          "type": "null"
+        },
+        "external_request_limit": {
+          "const": null,
+          "title": "External Request Limit",
+          "type": "null"
+        },
+        "review_round_limit": {
+          "const": null,
+          "title": "Review Round Limit",
+          "type": "null"
+        },
+        "search_iteration_limit": {
+          "const": null,
+          "title": "Search Iteration Limit",
+          "type": "null"
+        },
+        "task_timeout_seconds": {
+          "const": null,
+          "title": "Task Timeout Seconds",
+          "type": "null"
+        },
+        "token_limit": {
+          "const": null,
+          "title": "Token Limit",
+          "type": "null"
+        }
+      },
+      "required": [
+        "task_timeout_seconds",
+        "agent_timeout_seconds",
+        "token_limit",
+        "external_request_limit",
+        "cost_limit",
+        "search_iteration_limit",
+        "review_round_limit"
+      ],
+      "title": "SystemLimitPolicyV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.detailed-analysis-policy:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Initial market, horizon, completion, and safety policy.",
+  "properties": {
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "automated_final_investment_decision_allowed": {
+      "const": false,
+      "title": "Automated Final Investment Decision Allowed",
+      "type": "boolean"
+    },
+    "automated_trading_allowed": {
+      "const": false,
+      "title": "Automated Trading Allowed",
+      "type": "boolean"
+    },
+    "brokerage_connection_allowed": {
+      "const": false,
+      "title": "Brokerage Connection Allowed",
+      "type": "boolean"
+    },
+    "completion_criteria": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Completion Criteria",
+      "type": "array"
+    },
+    "effective_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Effective At",
+      "type": "string"
+    },
+    "horizons": {
+      "items": {
+        "$ref": "#/$defs/EvaluationHorizonPolicyV1"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Horizons",
+      "type": "array"
+    },
+    "instrument_scope": {
+      "const": "domestic_cash_equity",
+      "title": "Instrument Scope",
+      "type": "string"
+    },
+    "market_mic": {
+      "const": "XTKS",
+      "title": "Market Mic",
+      "type": "string"
+    },
+    "market_timezone": {
+      "const": "Asia/Tokyo",
+      "title": "Market Timezone",
+      "type": "string"
+    },
+    "order_submission_allowed": {
+      "const": false,
+      "title": "Order Submission Allowed",
+      "type": "boolean"
+    },
+    "policy_version": {
+      "minimum": 1,
+      "title": "Policy Version",
+      "type": "integer"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.detailed-analysis-policy",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "system_limits": {
+      "$ref": "#/$defs/SystemLimitPolicyV1"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "artifact_id",
+    "policy_version",
+    "effective_at",
+    "market_mic",
+    "market_timezone",
+    "instrument_scope",
+    "horizons",
+    "completion_criteria",
+    "system_limits",
+    "brokerage_connection_allowed",
+    "order_submission_allowed",
+    "automated_trading_allowed",
+    "automated_final_investment_decision_allowed"
+  ],
+  "title": "DetailedAnalysisPolicyV1",
+  "type": "object"
+}
