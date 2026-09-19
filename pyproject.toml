@@ -13,6 +13,9 @@ dependencies = [
     "pyyaml==6.0.3",
 ]
 
+[project.scripts]
+stock-research = "stock_research_llm_orchestrator.cli:main"
+
 [project.urls]
 Repository = "https://github.com/toike08D17012/system-trade-with-llm-orchestrator"
 
