@@ -3,7 +3,8 @@
 Codex、Claude Code、Antigravity CLI を組み合わせ、個別株の調査・比較・反証・レビューを支援するシステムの設計・実装リポジトリです。多数の銘柄から、中長期的な値上がり候補を人間が確認できる件数まで絞り込み、根拠と不確実性を追跡できるレポートとして出力することを目指します。
 
 > [!IMPORTANT]
-> 現在は構想・設計段階です。個別株を調査するPythonアプリケーション、実行用CLI、データ取得処理、それらのテストはまだ実装されていません。
+> 現在は設計と契約基盤の初期実装段階です。詳細解析MVPの承認済み要件と契約検証基盤はありますが、
+> 実装済みのCLIはoffline設定検証だけです。個別株の調査、データ取得、Agent実行はまだ実装されていません。
 
 ## 目的
 
@@ -57,17 +58,15 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 
 ## 初期MVP
 
-初期実装では、次の範囲から開始する想定です。
+初期実装では、次の範囲から開始します。
 
-- 人間が指定した少数銘柄を対象とする
+- 人間が指定した1銘柄を対象とし、自動一次スクリーニングは実行しない
 - Codex系とClaude系の作業者を1つずつ利用する
 - 各実行で、オーケストレーターと異なるモデル系統の一次レビューワーを1つ利用する
-- 限定再調査は1回を上限候補とし、Antigravity追加監査は最大1回とする
-- 一次レビュー後の合議往復数と再レビュー回数に固定上限を設けず、10往復を
-  使用量分析の参考値とする
-- Agent処理の途中でトークン利用枠へ到達した場合は、中間状態を保存して停止し、
-  実測後にトークンの使い方、モデル設定、契約プラン、回数上限を見直す
-- 最終候補は最大5銘柄程度とする
+- システム独自の時間、token、費用、Web検索、再調査、合議往復、再レビュー、
+  異なる争点数の固定上限を設けない
+- 同一争点に対する有効なAntigravity論理監査は1回に限定する
+- providerまたは契約プランの上限到達時は、中間成果物と未解決事項を保存して安全停止する
 - MarkdownとJSONで結果を保存する
 - 売買執行、証券口座連携、自動通知は実装しない
 
@@ -76,13 +75,13 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | 項目 | 状態 |
 | --- | --- |
 | 構想・アーキテクチャ | 設計資料あり |
-| 詳細解析MVP要件 | P0ドラフト6文書あり。未承認のため実装根拠には未使用 |
-| Pythonパッケージ・アプリケーション | 未実装 |
-| 実行用CLI | 未実装 |
-| データソース・評価指標・閾値 | 日米株式の市場データ取得は`yfinance`を採用方針とした。利用条件、追加ソース、評価指標、閾値は未決定 |
-| Pythonバージョン・依存関係 | Python 3.14、開発依存関係、品質ツール、ロックファイルを定義済み |
-| テスト・lint・型チェック | 品質ツールと検証ラッパーは設定済み。追跡対象のテストは未作成 |
-| CI・Docker・devcontainer | Docker標準開発環境の構成あり。devcontainerとCIは未作成 |
+| 詳細解析MVP要件 | P0要件6文書とP1契約基盤文書を承認済み |
+| Pythonパッケージ・アプリケーション | 契約基盤とtask・証拠・調査・外部request契約を実装済み。個別株調査アプリケーションは未実装 |
+| 実行用CLI | `config validate`によるoffline設定検証を実装済み。調査・運用commandは未実装 |
+| データソース・評価指標・閾値 | source方針承認済み。`yfinance`は許可確認済み・有効。adapterと実取得は未実装 |
+| Pythonバージョン・依存関係 | Python 3.14、runtime・開発依存関係、品質ツール、ロックファイルを定義済み |
+| テスト・lint・型チェック | 契約、版付きYAML設定、CLI、loggingの追跡対象テストあり |
+| CI・Docker・devcontainer | Docker標準開発環境とGitHub Actions CIあり。devcontainerは未作成 |
 | ライセンス | MIT License |
 
 ## セットアップ
@@ -94,8 +93,8 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 ./docker/run-docker.sh
 ```
 
-コンテナ起動時に開発依存関係を同期します。個別株調査アプリケーションの
-ランタイムと実行コマンドはまだ実装されていません。
+コンテナ起動時に開発依存関係を同期します。offline設定検証以外の
+個別株調査ランタイムと実行commandはまだ実装されていません。
 
 現在のCompose構成は、複数のCoding Agent CLI、認証状態、リポジトリを共有する
 開発環境です。将来の株式調査ランタイムで求める役割別の資格情報分離、読み取り専用化、
@@ -119,9 +118,9 @@ base imageも含めて広く更新する場合は、`--pull` も指定します�
 `:latest` imageが置き換わる可能性があります。公開時にはpullの優先順位と、
 image内のUID/GIDを改めて確認してください。
 
-Pythonは3.14を使用します。`pyproject.toml` には開発用のRuff、Mypy、
-Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykernel` を
-定義しています。実行可能なアプリケーションとランタイム依存関係はまだありません。
+Pythonは3.14を使用します。`pyproject.toml` には契約基盤のruntime依存関係、
+開発用のRuff、Mypy、Pytest、pre-commitと、VS Code上でNotebookを実行するための
+`ipykernel` を定義しています。実行可能な個別株調査アプリケーションはまだありません。
 
 ### Coding Agent CLIのインストール補助
 
@@ -137,10 +136,22 @@ Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykerne
 
 ## 使い方
 
-スクリーニングシステムの実行コマンドは未実装です。現段階では、最初に
-[システム要件文書の管理方針](docs/system-requirements/README.md)でP0ドラフトと
-承認状態を確認し、次の設計資料をレビューします。P0文書は `Approved` になるまで
-実装根拠として使用しません。
+版付き設定をnetwork、credential、Agent CLIへ接続せず検証できます。
+
+```bash
+stock-research config validate
+stock-research config validate --config-dir ./config
+python -m stock_research_llm_orchestrator config validate
+```
+
+`--config-dir`の既定値は、呼出元のcurrent working directoryにある`./config`です。
+成功時は検証済みartifact数をstdoutへ出力します。失敗時はsecret-safeなmessageを
+stderrへ出力し、設定内容の不正は終了code 3、pathまたはfileの問題は終了code 4を返します。
+
+個別株の調査・運用commandは未実装です。現段階では、最初に
+[システム要件文書の管理方針](docs/system-requirements/README.md)で承認済み要件と
+変更手順を確認し、次の設計資料をレビューします。設計資料に記載された将来の構成は、
+対応する実装と検証が完了するまで実装済みとして扱いません。
 
 1. [個別株調査・スクリーニングシステム全体像](docs/design/01-stock-research-system-overview.md)
 2. [個別株調査・スクリーニングシステム構想](docs/design/02-stock-research-system-concept.md)
@@ -155,17 +166,20 @@ Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykerne
 | `.agents/instructions/` | Python、Markdown、Shellなど、開発時に適用する言語別ルール | 定義済み |
 | `.agents/skills/` | 調査、計画、検証など、Codexが開発時に使用するリポジトリ固有スキル | 定義済み |
 | `.codex/agents/` | リポジトリ調査・設計・品質確認を担当するCodexサブエージェント定義 | 定義済み |
-| `agent-sources/` | 実行Agent向けの役割別指示と入出力契約の原本 | 配置方針のREADMEのみ |
+| `agent-sources/` | 実行Agent向けの役割別指示と入出力契約の原本 | P1 v1の共通指示、5役割別指示、合成定義あり |
+| `config/` | 版付きPolicy・profile | 内部Policyと承認済み`yfinance` profileあり |
 | `docs/design/` | システム全体像、構想、アーキテクチャ、一次スクリーニング設計、判定ルール要求 | 5文書あり |
-| `docs/system-requirements/` | 詳細解析MVPの承認対象となるシステム要件 | P0ドラフト6文書あり。未承認 |
+| `docs/system-requirements/` | 詳細解析MVPの承認済みシステム要件 | P0要件6文書とP1契約基盤文書を承認済み |
 | `docs/agent-reports/` | Coding Agentが生成する開発用の調査、計画、構成確認レポート | 追跡対象外のローカル生成物 |
 | `reports/agent-reports/` | 銘柄調査・レビュー・監査の中間レポート | 空。形式は今後確定 |
 | `reports/finalized-reports/` | 人間向けに確定した個別株調査・スクリーニングレポート | 空。形式は今後確定 |
 | `docker/` | 標準開発環境のDockerfile、Compose設定、実行ラッパー | 構成あり |
-| `scripts/` | Coding Agent CLIの導入補助とpre-commit検証ラッパー | 構成あり |
-| `src/` | PythonアプリケーションとPython開発指示 | 開発指示とパッケージ骨格のみ |
+| `scripts/` | Coding Agent CLIの導入補助、pre-commit・CI検証ラッパー | 構成あり |
+| `schemas/` | 生成JSON Schema | P1フェーズ3までの28公開Schemaあり |
+| `src/` | PythonアプリケーションとPython開発指示 | 契約基盤とoffline設定検証CLIあり |
+| `tests/` | Python実装の追跡対象テスト | 契約、生成Schema、版付き設定、CLI、loggingのテストあり |
 | `AGENTS.md` | スクリーニング実行時の共通原則、安全境界、成果物配置、最小限のリポジトリ構成 | 定義済み |
-| `pyproject.toml` / `uv.lock` | Python、依存関係、品質ツール | 設定とロックファイルあり。アプリケーションは未実装 |
+| `pyproject.toml` / `uv.lock` | Python、依存関係、品質ツール | 設定、ロックファイル、CLI entrypointあり |
 | `LICENSE` | リポジトリと将来の配布物に適用するライセンス | MIT License |
 
 開発支援用の `docs/agent-reports/` と、スクリーニング結果用の
@@ -181,7 +195,7 @@ Pytest、pre-commitと、VS Code上でNotebookを実行するための `ipykerne
 設計上は、1回の実行に関する入力、元データ、分析、レビュー、争点、最終成果物を
 `runs/<task-id>/` 配下へまとめる構成も想定しています。正本、移送、保持のP0案は
 [成果物・保持・セキュリティの要件](docs/system-requirements/05-artifact-retention-and-security.md)
-にありますが、未承認かつ未実装です。
+で承認済みですが、保存処理と実行ディレクトリは未実装です。
 
 ## 開発への参加
 
@@ -201,7 +215,11 @@ Pythonの開発前に `src/AGENTS.md` と `.agents/instructions/python.md` を
 ## テストと品質確認
 
 Ruff、Mypy、Pytest、pre-commitと各検証ラッパーは設定済みです。
-Pythonアプリケーションの実装、追跡対象のテスト、CIはまだありません。
+P1契約、版付きYAML設定、P2 CLI、loggingの追跡対象テストと、非破壊checkを実行するCIがあります。
+
+```bash
+./docker/run-docker.sh ./scripts/ci/checks.sh
+```
 
 対象を限定した構成・構文確認は次のとおりです。
 
@@ -231,8 +249,7 @@ uv tool install pre-commit
 ./docker/run-docker.sh ./scripts/pre-commit/checks.sh
 ```
 
-PythonのPytestテストが未作成の現在は、Pytestの終了コード5を成功として扱います。
-最初のPythonテストスイート追加時に、この暫定扱いを削除します。
+Pytestの終了コード5は、テストの未収集を検出する失敗としてそのまま扱います。
 
 ## セキュリティとデータ取り扱い
 
