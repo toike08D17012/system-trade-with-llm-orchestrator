@@ -4,7 +4,7 @@ set -euo pipefail
 
 prepare_agent_state_paths() {
     local -a required_directories=(
-        "${HOST_CODEX_HOME:-${HOME}/.codex}"
+        "${HOST_CODEX_HOME:-${CODEX_HOME:-${HOME}/.codex}}"
         "${HOST_CLAUDE_HOME:-${HOME}/.claude}"
         "${HOST_ANTIGRAVITY_HOME:-${HOME}/.gemini}"
     )

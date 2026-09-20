@@ -19,6 +19,20 @@ def test_development_app_has_no_credential_mount() -> None:
     assert "EDINET_API_KEY_FILE" not in rendered
 
 
+def test_development_app_exposes_codex_home_and_preserves_custom_host_state() -> None:
+    """Keep Codex pointed at the mounted state directory inside the container."""
+    compose = _load_compose("docker-compose.yml")
+    app = compose["services"]["app"]
+
+    assert app["environment"] == {"CODEX_HOME": "/home/${USER_NAME:-kujira}/.codex"}
+    assert {
+        "type": "bind",
+        "source": "${HOST_CODEX_HOME:-${CODEX_HOME:-${HOME}/.codex}}",
+        "target": "/home/${USER_NAME:-kujira}/.codex",
+        "bind": {"create_host_path": False},
+    } in app["volumes"]
+
+
 def test_edinet_overlay_adds_one_read_only_file_to_the_same_app() -> None:
     """Add only the path-valued EDINET credential contract when opted in."""
     compose = _load_compose("docker-compose.edinet.yml")

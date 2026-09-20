@@ -12,11 +12,13 @@ services:
         USER_UID: ${USER_UID:-1000}
         USER_GID: ${USER_GID:-1000}
     image: ghcr.io/${GITHUB_REPOSITORY}:latest
+    environment:
+      CODEX_HOME: /home/${USER_NAME:-kujira}/.codex
     volumes:
       - .bash_history:/home/${USER_NAME:-kujira}/.bash_history
       - ../:/home/${USER_NAME:-kujira}/workspace/${REPO_NAME:?REPO_NAME is required}
       - type: bind
-        source: ${HOST_CODEX_HOME:-${HOME}/.codex}
+        source: ${HOST_CODEX_HOME:-${CODEX_HOME:-${HOME}/.codex}}
         target: /home/${USER_NAME:-kujira}/.codex
         bind:
           create_host_path: false
