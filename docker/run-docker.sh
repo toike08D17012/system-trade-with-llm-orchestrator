@@ -11,10 +11,15 @@ Usage:
 Description:
   Runs the app development service with the host user's UID/GID.
   Pulls the image first and builds locally if the pull fails.
+  Set ENABLE_EDINET_CREDENTIAL=1 and HOST_EDINET_API_KEY_FILE to opt in
+  to the single-file, read-only EDINET credential mount.
 
 Examples:
   ./docker/run-docker.sh
   ./docker/run-docker.sh pytest -q
+  ENABLE_EDINET_CREDENTIAL=1 \
+    HOST_EDINET_API_KEY_FILE=/path/outside/repository/edinet-api-key \
+    ./docker/run-docker.sh COMMAND
 EOF
 }
 
@@ -81,9 +86,24 @@ main() {
         command=(bash)
     fi
 
-    local -a docker_compose_cmd=(docker compose)
+    local -a docker_compose_cmd=(docker compose -f docker-compose.yml)
 
-    if ! docker compose pull; then
+    case "${ENABLE_EDINET_CREDENTIAL:-0}" in
+        0) ;;
+        1)
+            if [[ -z "${HOST_EDINET_API_KEY_FILE:-}" ]]; then
+                echo "HOST_EDINET_API_KEY_FILE is required when ENABLE_EDINET_CREDENTIAL=1." >&2
+                return 2
+            fi
+            docker_compose_cmd+=(-f docker-compose.edinet.yml)
+            ;;
+        *)
+            echo "ENABLE_EDINET_CREDENTIAL must be 0 or 1." >&2
+            return 2
+            ;;
+    esac
+
+    if ! "${docker_compose_cmd[@]}" pull; then
         echo "Remote image pull failed; building locally." >&2
         ./build-docker.sh
     fi

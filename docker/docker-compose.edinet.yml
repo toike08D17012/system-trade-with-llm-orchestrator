@@ -1,0 +1,11 @@
+services:
+  app:
+    environment:
+      EDINET_API_KEY_FILE: /run/secrets/edinet_api_key
+    volumes:
+      - type: bind
+        source: ${HOST_EDINET_API_KEY_FILE:?HOST_EDINET_API_KEY_FILE is required}
+        target: /run/secrets/edinet_api_key
+        read_only: true
+        bind:
+          create_host_path: false
