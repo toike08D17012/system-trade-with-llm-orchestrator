@@ -26,7 +26,8 @@ Python、設定、スクリプト、CI、依存関係、公開インターフェ
 - `docs/system-requirements/` のP0要件6文書と承認済みP1契約基盤文書は`Approved`である。
   各文書の現在版は同ディレクトリのREADMEを正本とする。P1契約基盤とP2のCLI・設定検証、
   追跡対象テスト、CIは実装済みだが、`runs/` は未作成である。
-- `agent-sources/` には配置方針だけがあり、実行時の役割別指示と入出力契約は未作成である。
+- `agent-sources/detailed-analysis/v1/` には共通指示、5役割の指示、指示合成定義があり、
+  対応する入出力契約も実装済みである。指示を適用してAgentを実行するruntimeは未実装である。
 - `runs/<task-id>/` を実行履歴の正本、`reports/` を任意の参照用コピーとし、いずれも
   ローカル保存してGit追跡しない方針である。
 - 証券会社接続、注文送信、自動売買、最終投資判断の自動化は対象外である。
@@ -141,10 +142,20 @@ P0承認の阻害課題へ混在させない。
 - [x] `AgentAdapter` の必須・任意メソッド、各CLIの非対話実行、製品固有の構造化出力を共通契約へ
   変換する方法、native resume、session更新PolicyおよびMVP境界をADR-0003とsystem requirements 08へ
   定義する。
-- [ ] 採用するCodex、Claude Code、Antigravityの各CLIについて、sessionを新規開始・resumeした場合に
-  取得できるtoken、費用、所要時間、turn数などの使用量項目と、値がrun単位かsession累積かを
-  固定fixtureまたは最小の実測で確認する。簡単に取得できる項目だけを実験的に共通契約へ記録し、
-  取得不能な項目を`0`とせず、未取得・provider非対応・意味未確認を区別する。
+- [ ] 採用する3つのAgent CLIについて、sessionを新規開始・resumeした場合の使用量を確認する。
+  取得できるtoken、費用、所要時間、turn数と、値がrun単位かsession累積かを固定fixtureまたは
+  最小の実測で確認する。取得不能な項目を`0`とせず、未取得・provider非対応・意味未確認を区別する。
+  - [x] Codex CLI `0.155.1`の新規・resumeを実測し、版付きfixtureと検証テストを作成する。
+    token fieldは観測できたがscopeを確定できないため、共通usageの数値には採用しない。
+    費用・turn数は未取得、local wall timeはrun単位の派生値として記録する。
+  - [x] Antigravity CLI `1.2.7`の新規・resumeを実測し、版付きfixtureと検証テストを作成する。
+    token、provider duration、turn数は観測できたがscopeを確定できないため、共通usageの数値には
+    採用しない。費用は未取得、local wall timeはrun単位の派生値として記録する。
+  - [ ] Claude Codeは契約と認証環境が利用可能になった後、採用版の非対話新規実行と
+    session ID指定resumeを最小実測し、同じfixture形式で使用量fieldとscopeを検証する。
+    アカウント作成、契約、credit購入、対話loginはこの作業へ含めない。
+  CodexとAntigravityの実測条件、取得field、解釈およびClaude Codeの残件は、
+  [Agent CLI使用量観測fixture](../tests/fixtures/cli-usage/v1/README.md)を完了証拠とする。
 - [x] 作業者の期間別分析、主張、事実・推論・仮説、根拠参照、確信度、評価可否、
   4段階評価と、期間横断要約、エントリー・撤退参考情報の契約を作成する。
 - [x] 統合結果と、期間別の合意点、相違点、欠損、反証条件、暫定判定、期間横断要約の

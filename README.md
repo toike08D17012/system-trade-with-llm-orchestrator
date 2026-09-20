@@ -102,6 +102,9 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 
 `docker/run-docker.sh` は最初に `ghcr.io` の `:latest` imageをpullし、
 pullに失敗した場合だけ、ホストのUID/GIDを反映したimageをローカルでbuildします。
+開発用serviceは`app`です。`USER_NAME`の既定値は`kujira`で、`GROUP_NAME`を
+省略した場合は同じ名前を使います。変更する場合は、build時と起動時に同じ値を指定し、
+対応するimageを再buildしてください。entrypointはimageに記録したユーザーを使います。
 Coding Agent CLIのinstallerを明示的に再実行して更新する場合は、次を実行します。
 
 ```bash
