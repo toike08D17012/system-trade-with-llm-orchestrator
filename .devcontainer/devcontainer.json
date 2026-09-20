@@ -1,0 +1,70 @@
+{
+    "name": "System Trade with LLM Orchestrator",
+    "dockerComposeFile": [
+        "../docker/docker-compose.yml"
+    ],
+    "initializeCommand": "bash .devcontainer/init-env.sh",
+    "service": "app",
+    "workspaceFolder": "/home/kujira/workspace/${localEnv:REPO_NAME}",
+    "shutdownAction": "stopCompose",
+    "remoteUser": "kujira",
+    "updateRemoteUserUID": true,
+    "postCreateCommand": "uv sync --frozen && scripts/pre-commit/install-githooks.sh",
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": true,
+            "configureZshAsDefaultShell": true,
+            "installOhMyZsh": true,
+            "upgradePackages": false,
+            "username": "kujira"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "charliermarsh.ruff",
+                "codezombiech.gitignore",
+                "openai.chatgpt",
+                "DavidAnson.vscode-markdownlint",
+                "donjayamanne.githistory",
+                "donjayamanne.vscode-default-python-kernel",
+                "eamodio.gitlens",
+                "github.copilot-chat",
+                "grapecity.gc-excelviewer",
+                "Gruntfuggly.todo-tree",
+                "ionutvmi.path-autocomplete",
+                "ise-hve-essentials.hve-core-all",
+                "mecatroner.rainbow-csv",
+                "ms-python.mypy-type-checker",
+                "ms-python.python",
+                "ms-toolsai.jupyter",
+                "njpwerner.autodocstring",
+                "redhadt.vscode-yaml",
+                "streetsidesoftware.code-spell-checker",
+                "tamasfe.even-better-toml",
+                "timonwong.shellcheck"
+            ],
+            "settings": {
+                "autoDocstring.docstringFormat": "google",
+                "editor.formatOnSave": true,
+                "mypy-type-checker.importStrategy": "fromEnvironment",
+                "python.testing.pytestEnabled": true,
+                "python.defaultInterpreterPath": "/home/kujira/.venv/bin/python",
+                "[python]": {
+                    "editor.formatOnSave": true,
+                    "editor.codeActionsOnSave": {
+                        "source.fixAll.ruff": "explicit",
+                        "source.organizeImports.ruff": "explicit"
+                    },
+                    "editor.defaultFormatter": "charliermarsh.ruff",
+                    "files.trimTrailingWhitespace": true
+                },
+                "notebook.formatOnSave.enabled": true,
+                "notebook.codeActionsOnSave": {
+                    "notebook.source.fixAll.ruff": "explicit",
+                    "notebook.source.organizeImports.ruff": "explicit"
+                }
+            }
+        }
+    }
+}

@@ -2,6 +2,34 @@
 
 set -euo pipefail
 
+prepare_agent_state_paths() {
+    local -a required_directories=(
+        "${HOST_CODEX_HOME:-${HOME}/.codex}"
+        "${HOST_CLAUDE_HOME:-${HOME}/.claude}"
+        "${HOST_ANTIGRAVITY_HOME:-${HOME}/.gemini}"
+    )
+    local claude_state_file="${HOST_CLAUDE_STATE_FILE:-${HOME}/.claude.json}"
+    local path
+
+    for path in "${required_directories[@]}"; do
+        if [[ -e "${path}" && ! -d "${path}" ]]; then
+            echo "Agent state path is not a directory: ${path}" >&2
+            return 1
+        fi
+
+        mkdir -p -- "${path}"
+    done
+
+    if [[ -e "${claude_state_file}" && ! -f "${claude_state_file}" ]]; then
+        echo "Claude state path is not a file: ${claude_state_file}" >&2
+        return 1
+    fi
+
+    if [[ ! -e "${claude_state_file}" ]]; then
+        printf '{}\n' >"${claude_state_file}"
+    fi
+}
+
 get_git_remote_url() {
     git config --get remote.origin.url
 }
