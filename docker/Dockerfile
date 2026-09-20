@@ -16,7 +16,6 @@ RUN npm install --global "markdownlint-cli2@${MARKDOWNLINT_CLI2_VERSION}" \
 # ======================================================================
 FROM debian:bookworm-slim
 
-ARG USERNAME=agent
 ARG USER_UID=1000
 ARG USER_GID=1000
 ARG REPO_NAME
@@ -75,10 +74,11 @@ RUN ln -s \
 # ----------------------------------------------------------------------
 ARG USER_UID
 ARG USER_GID
-ARG USER_NAME
+ARG USER_NAME=kujira
 ARG GROUP_NAME=${USER_NAME}
 
-ENV HOME=/home/${USER_NAME}
+ENV HOME=/home/${USER_NAME} \
+    CONTAINER_USER=${USER_NAME}
 
 RUN userdel -r ubuntu 2>/dev/null || true \
     && groupadd --gid ${USER_GID} --non-unique ${GROUP_NAME} \

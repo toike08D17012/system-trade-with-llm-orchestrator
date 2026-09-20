@@ -9,9 +9,8 @@ Usage:
   ./docker/run-docker.sh -h | --help
 
 Description:
-  Runs the project container with automatic CPU/GPU switching.
-  If NVIDIA GPU is available, it runs app-gpu with --profile gpu.
-  Otherwise, it runs app.
+  Runs the app development service with the host user's UID/GID.
+  Pulls the image first and builds locally if the pull fails.
 
 Examples:
   ./docker/run-docker.sh
@@ -59,7 +58,6 @@ main() {
     source common.sh
 
     local service_name="app"
-    local -a profile_args=()
 
     GITHUB_REPOSITORY="$(get_github_repository)"
     export GITHUB_REPOSITORY
@@ -84,9 +82,6 @@ main() {
     fi
 
     local -a docker_compose_cmd=(docker compose)
-    if ((${#profile_args[@]} > 0)); then
-        docker_compose_cmd+=("${profile_args[@]}")
-    fi
 
     if ! docker compose pull; then
         echo "Remote image pull failed; building locally." >&2

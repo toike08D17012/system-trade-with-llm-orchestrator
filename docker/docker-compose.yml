@@ -8,7 +8,7 @@ services:
       args:
         REPO_NAME: ${REPO_NAME}
         USER_NAME: ${USER_NAME:-kujira}
-        GROUP_NAME: ${GROUP_NAME:-kujira}
+        GROUP_NAME: ${GROUP_NAME:-${USER_NAME:-kujira}}
         USER_UID: ${USER_UID:-1000}
         USER_GID: ${USER_GID:-1000}
     image: ghcr.io/${GITHUB_REPOSITORY}:latest

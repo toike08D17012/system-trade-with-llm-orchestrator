@@ -1,6 +1,6 @@
 ---
 name: run-in-docker
-description: Use this skill when asked to run project commands, tests, linters, type checks, formatters, Python scripts, shell scripts, or development commands inside the repository Docker Compose container. Always route commands through ./docker/run-docker.sh so CPU/GPU switching and UID/GID mapping are handled consistently.
+description: Use this skill when asked to run project commands, tests, linters, type checks, formatters, Python scripts, shell scripts, or development commands inside the repository Docker Compose container. Always route commands through ./docker/run-docker.sh so development-service startup and UID/GID mapping are handled consistently.
 argument-hint: "[command ...]"
 ---
 
@@ -29,7 +29,8 @@ Run project commands through:
 
 Do not run project Python, pytest, ruff, mypy, pre-commit, or shell scripts directly on the host unless the user explicitly asks for host execution or Docker is unavailable.
 
-The wrapper script automatically chooses the GPU container when NVIDIA GPU is available, otherwise it uses the CPU container.
+The wrapper script runs the `app` development service with the host user's UID/GID.
+It pulls the image first and builds locally if the pull fails.
 
 ## Before running commands
 
