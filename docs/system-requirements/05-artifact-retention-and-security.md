@@ -5,10 +5,17 @@
 | 文書状態 | Approved |
 | 文書オーナー | リポジトリ所有者 |
 | 承認者 | リポジトリ所有者 |
-| 版 | 1.0 |
+| 版 | 1.1 |
 | 作成日 | 2026-08-18 |
-| 承認日 | 2026-08-28 |
-| 発効日 | 2026-08-28 |
+| 承認日 | 2026-09-20 |
+| 発効日 | 2026-09-20 |
+
+### 変更記録
+
+| 版 | 日付 | 変更内容 | 承認者 |
+| --- | --- | --- | --- |
+| 1.1 | 2026-09-20 | 開発operatorのcredential accessに関するMVP脅威modelを明確化 | リポジトリ所有者 |
+| 1.0 | 2026-08-28 | 初版 | リポジトリ所有者 |
 
 ## 1. 目的
 
@@ -74,7 +81,7 @@ flowchart LR
 | --- | --- |
 | オーケストレーター | 当該タスクの状態・成果物作成。業務ロジック、プロンプト、モデルコンテキストから秘密情報値を読み取ることは禁止 |
 | `RequestCoordinator` | source承認、cache、queue、rate gate、利用量、cooldown、外部接続の調整。資格情報値ではなく非秘密aliasだけを制御状態とログへ使用 |
-| 外部接続ランナー | 承認されたソースまたはCLIの資格情報を対象プロセスへ直接注入。秘密値のログ・成果物・Agent入力への転送は禁止 |
+| 外部接続transport | 承認されたソースまたはCLIの資格情報を物理送信の直前だけ読み取る。秘密値の制御状態、ログ、成果物、Agent入力への転送は禁止 |
 | 通常作業者 | 当該銘柄の読み取り専用証拠と、自身の出力先だけ |
 | 一次レビューワー | 統合結果、参照証拠、レビュー出力先だけ |
 | Antigravity | 匿名化済み争点パケットと参照証拠の読み取りだけ |
@@ -86,12 +93,26 @@ flowchart LR
 source adapterやAgentが`RequestCoordinator`を迂回して直接外部送信できる権限を
 与えない。Coordinatorまたは永続状態の障害時も直接接続へfallbackしない。
 
+開発/MVP環境では、リポジトリ所有者の指示に基づきDocker取得処理を起動するrepository開発用
+coding agentを、リポジトリ所有者と同じ信頼済みoperator境界に含める。このoperatorは、明示的な
+online実行時にmountされたcredential fileへ技術的に到達し得る。MVPは、このoperatorからcredentialを
+技術的に隔離したとは主張しない。
+
+この例外は、通常作業者、一次レビューワー、Antigravity、screening用Agent、prompt、タスク入力、
+成果物生成処理へcredential値を配布する許可ではない。通常のoffline開発とCIではcredentialをmountせず、
+online実行時も単一fileをread-onlyでmountする。application codeによる読取りは、承認済み物理送信境界の
+送信直前だけに限定する。より強い隔離が必要な運用では、coding agentの管理外にあるsecret brokerまたは
+operator管理runnerを別途採用する。
+
 ## 7. 秘密情報と個人情報
 
 - APIキー、トークン、Cookie、CLI認証状態、秘密鍵、証券口座情報を入力・証拠・
   プロンプト・ログ・レポートへ含めない。
-- 資格情報は外部接続ランナーの対象プロセスへ直接注入し、オーケストレーター、Agent、
-  タスク入力、成果物生成処理から値を参照できない構成にする。
+- 資格情報値をオーケストレーターの制御状態、screening用Agent、prompt、タスク入力、成果物生成処理へ
+  渡さない。開発/MVPの信頼済みoperatorに関する技術的accessの例外は前節に従う。
+- credential fileはrepository外に置き、明示的なonline実行時だけ単一fileをread-onlyでmountする。
+  environmentと設定にはcredential値ではなく固定container pathだけを渡す。
+- application codeは、承認済み外部接続transportが物理送信する直前以外にcredential fileを開かない。
 - 標準出力、標準エラー、外部応答、Agent出力を含む保存候補を、外部送信前と
   保存確定前の両方で検査する。
 - 認証情報らしい値を検出した保存候補は成果物へ確定せず、Agent入力にも使用しない。
