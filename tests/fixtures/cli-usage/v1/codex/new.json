@@ -1,0 +1,83 @@
+{
+  "fixture_format_version": 1,
+  "observation_id": "codex-0-155-1-new",
+  "pair_id": "codex-0-155-1-pair-1",
+  "provider": "codex",
+  "cli_version": "codex-cli 0.155.1",
+  "acquired_at": "2026-09-20T12:17:36+09:00",
+  "platform": "linux-x86_64-container",
+  "mode": "new",
+  "parent_observation_id": null,
+  "measurement_status": "verified",
+  "command_shape": [
+    "codex",
+    "exec",
+    "--json",
+    "--sandbox",
+    "read-only",
+    "--skip-git-repo-check",
+    "--ignore-rules",
+    "--cd",
+    "<empty-temporary-workspace>",
+    "<fixed-harmless-prompt>"
+  ],
+  "exit_code": 0,
+  "session_id_observed": true,
+  "same_session_confirmed": null,
+  "provider_observation": {
+    "event_types": ["thread.started", "turn.started", "item.completed", "turn.completed"],
+    "usage": {
+      "input_tokens": 14165,
+      "cached_input_tokens": 12160,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 5,
+      "reasoning_output_tokens": 0
+    }
+  },
+  "local_wall_seconds": 4.626448747,
+  "expected_usage": [
+    {
+      "metric": "input_tokens",
+      "unit": "tokens",
+      "availability": "unknown",
+      "origin": "not_available",
+      "scope": "unknown",
+      "meaning_confirmed": false,
+      "value": null
+    },
+    {
+      "metric": "cost",
+      "unit": "currency_units",
+      "availability": "not_retrieved",
+      "origin": "not_available",
+      "scope": "unknown",
+      "meaning_confirmed": false,
+      "value": null
+    },
+    {
+      "metric": "local_wall_time",
+      "unit": "seconds",
+      "availability": "retrieved",
+      "origin": "derived",
+      "scope": "run",
+      "meaning_confirmed": true,
+      "value": 4.626448747
+    },
+    {
+      "metric": "turn_count",
+      "unit": "turns",
+      "availability": "not_retrieved",
+      "origin": "not_available",
+      "scope": "unknown",
+      "meaning_confirmed": false,
+      "value": null
+    }
+  ],
+  "sanitization": {
+    "allowlist_extraction": true,
+    "provider_session_id_removed": true,
+    "prompt_and_response_removed": true,
+    "paths_and_account_data_removed": true,
+    "raw_transcript_retained": false
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "fixture_format_version": 1,
+  "providers": [
+    {
+      "provider": "codex",
+      "status": "verified",
+      "fixtures": ["codex/new.json", "codex/resume.json"]
+    },
+    {
+      "provider": "antigravity",
+      "status": "verified",
+      "fixtures": ["antigravity/new.json", "antigravity/resume.json"]
+    },
+    {
+      "provider": "claude-code",
+      "status": "blocked_subscription",
+      "fixtures": []
+    }
+  ]
+}

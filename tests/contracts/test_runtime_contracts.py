@@ -67,6 +67,41 @@ def test_unretrieved_agent_usage_cannot_be_zero() -> None:
         AgentExecutionV1.model_validate(payload)
 
 
+def test_retrieved_agent_usage_can_be_zero() -> None:
+    """Preserve a provider-reported or derived zero when its meaning is confirmed."""
+    payload = _payload("agent-execution", "succeeded-worker.json")
+    payload["usage"][0].update(  # type: ignore[index]
+        {
+            "availability": "retrieved",
+            "origin": "provider_reported",
+            "scope": "run",
+            "meaning_confirmed": True,
+            "value": 0,
+        }
+    )
+
+    result = AgentExecutionV1.model_validate(payload)
+
+    assert result.usage[0].value == 0
+
+
+def test_meaning_unconfirmed_agent_usage_cannot_be_numeric() -> None:
+    """Keep observed but semantically ambiguous usage out of common numeric fields."""
+    payload = _payload("agent-execution", "succeeded-worker.json")
+    payload["usage"][0].update(  # type: ignore[index]
+        {
+            "availability": "retrieved",
+            "origin": "provider_reported",
+            "scope": "unknown",
+            "meaning_confirmed": False,
+            "value": 1,
+        }
+    )
+
+    with pytest.raises(ValidationError, match="meaning-unconfirmed Agent usage must not contain a numeric value"):
+        AgentExecutionV1.model_validate(payload)
+
+
 def test_logical_session_allows_only_one_active_run() -> None:
     """Reject concurrent Agent runs inside one logical session."""
     first_payload = _payload("agent-execution", "succeeded-worker.json")
