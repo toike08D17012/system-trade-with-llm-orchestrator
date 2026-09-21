@@ -5,7 +5,7 @@
     ],
     "initializeCommand": "bash .devcontainer/init-env.sh",
     "service": "app",
-    "workspaceFolder": "/home/kujira/workspace/${localEnv:REPO_NAME}",
+    "workspaceFolder": "/home/kujira/workspace/${localWorkspaceFolderBasename}",
     "shutdownAction": "stopCompose",
     "remoteUser": "kujira",
     "updateRemoteUserUID": true,

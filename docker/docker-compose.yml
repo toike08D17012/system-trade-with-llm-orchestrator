@@ -16,7 +16,7 @@ services:
       CODEX_HOME: /home/${USER_NAME:-kujira}/.codex
     volumes:
       - .bash_history:/home/${USER_NAME:-kujira}/.bash_history
-      - ../:/home/${USER_NAME:-kujira}/workspace/${REPO_NAME:?REPO_NAME is required}
+      - ../:/home/${USER_NAME:-kujira}/workspace/${REPO_ROOT_BASENAME:?REPO_ROOT_BASENAME is required}
       - type: bind
         source: ${HOST_CODEX_HOME:-${CODEX_HOME:-${HOME}/.codex}}
         target: /home/${USER_NAME:-kujira}/.codex
@@ -40,5 +40,5 @@ services:
     tty: true
     stdin_open: true
     network_mode: "host"
-    working_dir: /home/${USER_NAME:-kujira}/workspace/${REPO_NAME:?REPO_NAME is required}
+    working_dir: /home/${USER_NAME:-kujira}/workspace/${REPO_ROOT_BASENAME:?REPO_ROOT_BASENAME is required}
     command: ["bash"]
