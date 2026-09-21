@@ -11,14 +11,14 @@ Usage:
 Description:
   Runs the app development service with the host user's UID/GID.
   Pulls the image first and builds locally if the pull fails.
-  Set ENABLE_EDINET_CREDENTIAL=1 and HOST_EDINET_API_KEY_FILE to opt in
-  to the single-file, read-only EDINET credential mount.
+  Mounts the EDINET API key read-only from
+  $HOME/.config/system-trade-with-llm-orchestrator/edinet-api-key.
+  Set HOST_EDINET_API_KEY_FILE to override the host path.
 
 Examples:
   ./docker/run-docker.sh
   ./docker/run-docker.sh pytest -q
-  ENABLE_EDINET_CREDENTIAL=1 \
-    HOST_EDINET_API_KEY_FILE=/path/outside/repository/edinet-api-key \
+  HOST_EDINET_API_KEY_FILE=/path/outside/repository/edinet-api-key \
     ./docker/run-docker.sh COMMAND
 EOF
 }
@@ -31,7 +31,7 @@ main() {
         exit 0
     fi
 
-    # shellcheck source=docker/common.sh
+    # shellcheck disable=SC1091
     source common.sh
 
     local service_name="app"
@@ -58,22 +58,15 @@ main() {
         command=(bash)
     fi
 
-    local -a docker_compose_cmd=(docker compose -f docker-compose.yml)
+    local credential_file="${HOST_EDINET_API_KEY_FILE:-${HOME}/.config/system-trade-with-llm-orchestrator/edinet-api-key}"
+    if [[ ! -f "${credential_file}" ]]; then
+        echo "EDINET API key file is required at HOST_EDINET_API_KEY_FILE or the default host path." >&2
+        return 2
+    fi
+    HOST_EDINET_API_KEY_FILE="${credential_file}"
+    export HOST_EDINET_API_KEY_FILE
 
-    case "${ENABLE_EDINET_CREDENTIAL:-0}" in
-        0) ;;
-        1)
-            if [[ -z "${HOST_EDINET_API_KEY_FILE:-}" ]]; then
-                echo "HOST_EDINET_API_KEY_FILE is required when ENABLE_EDINET_CREDENTIAL=1." >&2
-                return 2
-            fi
-            docker_compose_cmd+=(-f docker-compose.edinet.yml)
-            ;;
-        *)
-            echo "ENABLE_EDINET_CREDENTIAL must be 0 or 1." >&2
-            return 2
-            ;;
-    esac
+    local -a docker_compose_cmd=(docker compose -f docker-compose.yml)
 
     if ! "${docker_compose_cmd[@]}" pull; then
         echo "Remote image pull failed; building locally." >&2

@@ -14,6 +14,7 @@ services:
     image: ghcr.io/${GITHUB_REPOSITORY}:latest
     environment:
       CODEX_HOME: /home/${USER_NAME:-kujira}/.codex
+      EDINET_API_KEY_FILE: /run/secrets/edinet_api_key
     volumes:
       - .bash_history:/home/${USER_NAME:-kujira}/.bash_history
       - ../:/home/${USER_NAME:-kujira}/workspace/${REPO_ROOT_BASENAME:?REPO_ROOT_BASENAME is required}
@@ -35,6 +36,12 @@ services:
       - type: bind
         source: ${HOST_ANTIGRAVITY_HOME:-${HOME}/.gemini}
         target: /home/${USER_NAME:-kujira}/.gemini
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${HOST_EDINET_API_KEY_FILE:-${HOME}/.config/system-trade-with-llm-orchestrator/edinet-api-key}
+        target: /run/secrets/edinet_api_key
+        read_only: true
         bind:
           create_host_path: false
     tty: true

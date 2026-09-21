@@ -1,4 +1,4 @@
-"""Validate the opt-in credential mount contract in Compose files."""
+"""Validate the default credential mount contract in Compose files."""
 
 import typing
 from pathlib import Path
@@ -9,15 +9,22 @@ import yaml
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_development_app_has_no_credential_mount() -> None:
-    """Keep ordinary development and CI credential-free."""
+def test_development_app_mounts_edinet_credential_read_only() -> None:
+    """Mount only the path-valued EDINET credential by default."""
     compose = _load_compose("docker-compose.yml")
     app = compose["services"]["app"]
     rendered = yaml.safe_dump(app)
 
     assert "HOST_CREDENTIAL_DIR" not in rendered
     assert "/.credentials" not in rendered
-    assert "EDINET_API_KEY_FILE" not in rendered
+    assert app["environment"]["EDINET_API_KEY_FILE"] == "/run/secrets/edinet_api_key"
+    assert {
+        "type": "bind",
+        "source": "${HOST_EDINET_API_KEY_FILE:-${HOME}/.config/system-trade-with-llm-orchestrator/edinet-api-key}",
+        "target": "/run/secrets/edinet_api_key",
+        "read_only": True,
+        "bind": {"create_host_path": False},
+    } in app["volumes"]
 
 
 def test_development_app_exposes_codex_home_and_preserves_custom_host_state() -> None:
@@ -25,7 +32,10 @@ def test_development_app_exposes_codex_home_and_preserves_custom_host_state() ->
     compose = _load_compose("docker-compose.yml")
     app = compose["services"]["app"]
 
-    assert app["environment"] == {"CODEX_HOME": "/home/${USER_NAME:-kujira}/.codex"}
+    assert app["environment"] == {
+        "CODEX_HOME": "/home/${USER_NAME:-kujira}/.codex",
+        "EDINET_API_KEY_FILE": "/run/secrets/edinet_api_key",
+    }
     assert {
         "type": "bind",
         "source": "${HOST_CODEX_HOME:-${CODEX_HOME:-${HOME}/.codex}}",
@@ -34,31 +44,22 @@ def test_development_app_exposes_codex_home_and_preserves_custom_host_state() ->
     } in app["volumes"]
 
 
-def test_edinet_overlay_adds_one_read_only_file_to_the_same_app() -> None:
-    """Add only the path-valued EDINET credential contract when opted in."""
-    compose = _load_compose("docker-compose.edinet.yml")
-
-    assert set(compose["services"]) == {"app"}
-    app = compose["services"]["app"]
-    assert app["environment"] == {"EDINET_API_KEY_FILE": "/run/secrets/edinet_api_key"}
-    assert app["volumes"] == [
-        {
-            "type": "bind",
-            "source": "${HOST_EDINET_API_KEY_FILE:?HOST_EDINET_API_KEY_FILE is required}",
-            "target": "/run/secrets/edinet_api_key",
-            "read_only": True,
-            "bind": {"create_host_path": False},
-        }
-    ]
-
-
-def test_run_wrapper_requires_explicit_edinet_opt_in() -> None:
-    """Keep the overlay out of ordinary wrapper execution."""
+def test_run_wrapper_requires_the_default_edinet_key_file() -> None:
+    """Require the default mount source before invoking Compose."""
     script = (REPOSITORY_ROOT / "docker" / "run-docker.sh").read_text(encoding="utf-8")
 
-    assert 'case "${ENABLE_EDINET_CREDENTIAL:-0}"' in script
-    assert "docker_compose_cmd+=(-f docker-compose.edinet.yml)" in script
-    assert "HOST_EDINET_API_KEY_FILE is required when ENABLE_EDINET_CREDENTIAL=1." in script
+    assert "ENABLE_EDINET_CREDENTIAL" not in script
+    assert "docker-compose.edinet.yml" not in script
+    assert "HOST_EDINET_API_KEY_FILE:-${HOME}/.config/system-trade-with-llm-orchestrator/edinet-api-key" in script
+    assert "EDINET API key file is required at HOST_EDINET_API_KEY_FILE or the default host path." in script
+
+
+def test_devcontainer_uses_compose_with_the_default_edinet_mount() -> None:
+    """Keep the devcontainer on the base Compose credential contract."""
+    devcontainer = (REPOSITORY_ROOT / ".devcontainer" / "devcontainer.json").read_text(encoding="utf-8")
+
+    assert '"../docker/docker-compose.yml"' in devcontainer
+    assert "docker-compose.edinet.yml" not in devcontainer
 
 
 def _load_compose(filename: str) -> dict[str, typing.Any]:
