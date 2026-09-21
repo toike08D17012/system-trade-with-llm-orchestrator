@@ -6,7 +6,7 @@
 | 決定日 | 2026-08-23 |
 | 要件との整合確認日 | 2026-08-28 |
 | 適用範囲 | 詳細解析MVPと将来の一次スクリーニングにおける外部データ取得・Web検索 |
-| 実装状態 | 未実装 |
+| 実装状態 | offline fake Coordinatorあり。production Coordinatorは未実装 |
 
 ## コンテキスト
 
@@ -122,6 +122,10 @@ fairnessおよび各providerとの互換性を検証する必要がある。
 - runtime stateの正確な保存先と破損時の照合方式
 - 採用する固定`yfinance`版とsession互換性
 - Agent CLIごとの検索利用量取得方法
+
+runtime ownership、SQLite、lease・fencing・回復、request cardinality、queue bound、gate順序、
+raw artifact publicationは[ADR-0005](0005-own-production-request-runtime-and-artifact-publication.md)と
+対応する要件04版1.1・要件05版1.3で確定した。
 
 ## 参照
 

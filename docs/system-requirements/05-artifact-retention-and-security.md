@@ -5,15 +5,17 @@
 | 文書状態 | Approved |
 | 文書オーナー | リポジトリ所有者 |
 | 承認者 | リポジトリ所有者 |
-| 版 | 1.1 |
+| 版 | 1.3 |
 | 作成日 | 2026-08-18 |
-| 承認日 | 2026-09-20 |
-| 発効日 | 2026-09-20 |
+| 承認日 | 2026-09-21 |
+| 発効日 | 2026-09-21 |
 
 ### 変更記録
 
 | 版 | 日付 | 変更内容 | 承認者 |
 | --- | --- | --- | --- |
+| 1.3 | 2026-09-21 | ADR-0005に基づくraw candidate、commit、reconciliation、evidence publicationの具体化 | リポジトリ所有者 |
+| 1.2 | 2026-09-21 | 開発containerでEDINET credentialを既定read-only mountする方針へ変更 | リポジトリ所有者 |
 | 1.1 | 2026-09-20 | 開発operatorのcredential accessに関するMVP脅威modelを明確化 | リポジトリ所有者 |
 | 1.0 | 2026-08-28 | 初版 | リポジトリ所有者 |
 
@@ -61,6 +63,30 @@ flowchart LR
   `reports/`もローカル保存を既定とし、Git追跡しない。最終Markdownを個別にGitへ追加する場合は、
   利用者が秘密情報と公開不可データを含まないことを確認する。
 
+### 3.1 Raw acquisition publication
+
+- candidateを同一filesystemの
+  `runs/<task-id>/.staging/acquisitions/<physical-attempt-id>/`へ保存する。
+- committed raw bundleを
+  `runs/<task-id>/acquisitions/<logical-request-id>/<physical-attempt-id>/`へ保存する。
+- path componentはsystem-generated IDだけを使用し、URL、ticker、credential aliasを含めない。
+- transportはsize limitを適用しながらexact bytesをstageし、同時にSHA-256を計算する。
+- status、content type、encoding、compression、size、request・attempt referenceを検証し、
+  source-native parseが成功したcandidateだけをcommit候補にする。
+- staging bytesを読み直してreceiptとmetadataを検証し、同一filesystemのatomic renameで公開する。
+- SQLiteにはcommitted path、hash、size、schema identity、publication generationだけを記録する。
+- rename後・SQLite commit前の中断はdirectory receiptとDBを照合し、完全一致時だけforward-repairする。
+- DBだけがcommitを示す、directoryが欠損する、hash・generation・IDが不一致の場合は安全停止する。
+- committed raw bundleを上書き、部分更新、in-place修正しない。
+
+### 3.2 Normalized evidenceとmanifest
+
+- normalized evidenceは検証済みcommitted raw referenceだけを入力にする。
+- schema、provenance、freshness、missing、source approvalをstagingで検証する。
+- frozen evidence bundleとmanifestは全referenceとhashが解決した場合だけatomicに確定する。
+- raw、normalized、manifestのpublication generationを記録し、異なるgenerationの混在を拒否する。
+- parseまたはvalidationに失敗したcandidate本文を正本artifactへ昇格させず、sanitized auditとhash・sizeだけを残す。
+
 ## 4. MVPの保持方針
 
 成果物はローカルへ保存し、システムが固定の保存期限や無期限保持を強制しない。実行中のtaskと、
@@ -94,13 +120,14 @@ source adapterやAgentが`RequestCoordinator`を迂回して直接外部送信�
 与えない。Coordinatorまたは永続状態の障害時も直接接続へfallbackしない。
 
 開発/MVP環境では、リポジトリ所有者の指示に基づきDocker取得処理を起動するrepository開発用
-coding agentを、リポジトリ所有者と同じ信頼済みoperator境界に含める。このoperatorは、明示的な
-online実行時にmountされたcredential fileへ技術的に到達し得る。MVPは、このoperatorからcredentialを
+coding agentを、リポジトリ所有者と同じ信頼済みoperator境界に含める。このoperatorは、開発containerへ
+既定でmountされたcredential fileへ技術的に到達し得る。MVPは、このoperatorからcredentialを
 技術的に隔離したとは主張しない。
 
 この例外は、通常作業者、一次レビューワー、Antigravity、screening用Agent、prompt、タスク入力、
-成果物生成処理へcredential値を配布する許可ではない。通常のoffline開発とCIではcredentialをmountせず、
-online実行時も単一fileをread-onlyでmountする。application codeによる読取りは、承認済み物理送信境界の
+成果物生成処理へcredential値を配布する許可ではない。開発containerではEDINET credentialをrepository外の
+既定pathまたは明示pathから単一fileとしてread-only mountする。CIには実credentialを提供しない。
+application codeによる読取りは、承認済み物理送信境界の
 送信直前だけに限定する。より強い隔離が必要な運用では、coding agentの管理外にあるsecret brokerまたは
 operator管理runnerを別途採用する。
 
@@ -110,7 +137,8 @@ operator管理runnerを別途採用する。
   プロンプト・ログ・レポートへ含めない。
 - 資格情報値をオーケストレーターの制御状態、screening用Agent、prompt、タスク入力、成果物生成処理へ
   渡さない。開発/MVPの信頼済みoperatorに関する技術的accessの例外は前節に従う。
-- credential fileはrepository外に置き、明示的なonline実行時だけ単一fileをread-onlyでmountする。
+- credential fileはrepository外に置き、開発containerへ単一fileとしてread-onlyでmountする。
+  既定host pathにfileがない場合はcontainer起動を拒否し、空fileやdirectoryを自動作成しない。
   environmentと設定にはcredential値ではなく固定container pathだけを渡す。
 - application codeは、承認済み外部接続transportが物理送信する直前以外にcredential fileを開かない。
 - 標準出力、標準エラー、外部応答、Agent出力を含む保存候補を、外部送信前と

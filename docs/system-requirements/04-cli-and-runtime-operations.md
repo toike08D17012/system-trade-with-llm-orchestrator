@@ -5,10 +5,17 @@
 | 文書状態 | Approved |
 | 文書オーナー | リポジトリ所有者 |
 | 承認者 | リポジトリ所有者 |
-| 版 | 1.0 |
+| 版 | 1.1 |
 | 作成日 | 2026-08-18 |
-| 承認日 | 2026-08-28 |
-| 発効日 | 2026-08-28 |
+| 承認日 | 2026-09-21 |
+| 発効日 | 2026-09-21 |
+
+### 変更記録
+
+| 版 | 日付 | 変更内容 | 承認者 |
+| --- | --- | --- | --- |
+| 1.1 | 2026-09-21 | ADR-0005に基づくproduction runtime、lease、request、queue、gateの具体化 | リポジトリ所有者 |
+| 1.0 | 2026-08-28 | 初版 | リポジトリ所有者 |
 
 ## 1. 目的
 
@@ -102,6 +109,37 @@ Coordinator配下へ戻す。
 Coordinator、SQLite state、source profileの検証に失敗した場合は外部接続を停止し、adapterや
 Agentが直接接続へfallbackしてはならない。rate limitまたはprovider障害時はproviderの
 cooldownを記録して停止し、必要な再実行は人間が開始する。
+
+### 5.1 Production runtimeとSQLite
+
+- 1つのorchestrator processが1つのproduction Coordinator worker loopを所有し、独立daemonを設けない。
+- runtime rootをGit非追跡の`runs/.runtime/`、SQLiteを
+  `runs/.runtime/request-coordinator.sqlite3`とする。
+- runtime rootは非symlink directory、owner一致、mode `0700`、SQLiteとsidecarはmode `0600`を要求する。
+- schema ownerをproduction Coordinator packageとし、`PRAGMA user_version`とmetadata tableを一致させる。
+- migrationは明示的、一方向、transactionalとする。unknown version、破損、migration失敗はfail-closedする。
+- response body、raw bytes、credential値をSQLiteへ保存しない。runtime stateとauditを自動削除しない。
+
+### 5.2 Lease、fencing、回復、取消
+
+- leaseはowner token、generation、acquired、heartbeat、expiresを持ち、初期leaseを30秒、heartbeatを10秒とする。
+- heartbeatはlease durationの3分の1以下とし、wall-clock異常時は送信を停止する。
+- takeoverごとにgenerationを増やし、permit発行前とresult確定時にowner tokenとgenerationを再検証する。
+- 送信開始後に結果を確定できないattemptは`unknown`とし、同じtask内で自動再送しない。
+- queued取消は送信前に終端化する。single-flight follower取消はleaderへ影響させない。
+- 未送信leader取消時は残るconsumerから新leaderをtransactionally選ぶ。in-flight取消の結果不明は`unknown`とする。
+
+### 5.3 Request、queue、gate
+
+- production APIはenqueue、status、cancel、physical attempt claim、physical result記録を分離する。
+- 1 logical requestは1 logical resultと0件以上のphysical attemptを参照する。
+- cache hitとsingle-flight followerはphysical attemptを作らない。通常送信は最大1 attemptとする。
+- library内のredirect、cookie、crumb、paginationなどは個別physical attemptとしてpermit・監査する。
+- fingerprintは非秘密のcanonical parameter、source・Policy版、期間、scope aliasからSHA-256で生成する。
+- queueはproviderごとのtask内FIFOとactive task間round-robinを使用する。
+- 初期queue boundはglobal 1024、provider 256、task/provider 64とし、超過時は`queue_full`で拒否する。
+- 処理順はapproval・request・lease検証、cache、single-flight、queue、全gate、permit、result確定とする。
+- gate、policy、leaseが欠損または矛盾する場合はpermitを発行しない。
 
 ## 6. 中断と再開
 

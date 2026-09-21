@@ -216,6 +216,9 @@ P0承認の阻害課題へ混在させない。
   - [x] P3-3としてfake transport専用の内部Coordinatorを追加し、検証済みsource設定から
     `rate_domain`単位の同時数、最小間隔、rolling window、cooldownをメモリ上で共有する。
     1呼出しで最大1回だけ送信し、制限中は待機せず返す。既存契約のevent列を返す。
+  - [x] ADR-0005 Phase 3Aとして、offline APIと分離したproduction logical request、physical attempt、
+    logical result model、versioned SQLite schema、private runtime root検証、transaction repositoryを追加する。
+    外部送信、lease、queue、gate、transport、raw publicationはまだ接続しない。
   - [ ] 本番transport、永続leaseと復旧、公平queue、cache、single-flight、全scopeのgate、
     永続cooldown、監査保存を実装する。P3-3のfake-only実装は本番Coordinatorの完成を意味しない。
 - [ ] 重要な数値と資料を共通の `evidence_id` で参照できる証拠集合を生成する。

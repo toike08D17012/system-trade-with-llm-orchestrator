@@ -103,8 +103,10 @@ VS Codeではリポジトリをdevcontainerで開けます。初期化時に`doc
 現在のCompose構成は、複数のCoding Agent CLI、認証状態、リポジトリを共有する
 開発環境です。Codex、Claude Code、Antigravityの状態は、
 ホスト側の既定pathまたは明示したpathからbind mountします。EDINET credentialは
-通常の開発環境へmountせず、専用Compose overlayを明示した場合だけ読み取り専用で
-追加します。将来の株式調査ランタイムで求める役割別の資格情報分離、読み取り専用化、
+`$HOME/.config/system-trade-with-llm-orchestrator/edinet-api-key`から単一fileとして
+読み取り専用で既定mountします。`HOST_EDINET_API_KEY_FILE`でホストpathを変更できます。
+このfileが存在しない場合、Docker wrapperとdevcontainerは起動しません。将来の株式調査ランタイムで
+求める役割別の資格情報分離、読み取り専用化、
 ネットワーク制限を満たす実行サンドボックスではありません。
 
 `docker/run-docker.sh` は最初に `ghcr.io` の `:latest` imageをpullし、

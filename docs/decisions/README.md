@@ -38,5 +38,6 @@ system requirementsは「何を満たすか」、ADRは「なぜその方式を�
 | [ADR-0002](0002-use-pydantic-contracts-and-json-interchange.md) | `Accepted` | Pydanticを契約定義の正本としJSONで交換する | [機械可読契約と人間向け成果物](../system-requirements/07-machine-readable-contracts.md) |
 | [ADR-0003](0003-standardize-agent-adapters-and-session-continuation.md) | `Accepted` | AgentAdapterとsession継続境界を標準化する | [AgentAdapterとsession継続](../system-requirements/08-agent-adapter-and-session-continuation.md) |
 | [ADR-0004](0004-structure-disputes-and-single-issue-audits.md) | `Accepted` | 争点を構造化し1セッション1争点で追加監査する | [Agent・レビュー・監査](../system-requirements/03-agent-review-and-audit-policy.md) |
+| [ADR-0005](0005-own-production-request-runtime-and-artifact-publication.md) | `Accepted` | 本番外部request runtimeとraw artifact公開境界を確定する | [CLI・実行運用 1.1](../system-requirements/04-cli-and-runtime-operations.md)、[成果物・保持・セキュリティ 1.3](../system-requirements/05-artifact-retention-and-security.md) |
 
 <!-- markdownlint-enable MD013 -->
