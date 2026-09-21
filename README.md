@@ -76,12 +76,12 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | --- | --- |
 | 構想・アーキテクチャ | 設計資料あり |
 | 詳細解析MVP要件 | P0要件6文書とP1契約基盤文書を承認済み |
-| Pythonパッケージ・アプリケーション | 契約基盤とtask・証拠・調査・外部request契約を実装済み。個別株調査アプリケーションは未実装 |
+| Pythonパッケージ・アプリケーション | 契約基盤、task入力準備、credential preflight、原子的なstaging・publish、fake transport用request coordinatorを実装済み。個別株調査アプリケーションは未実装 |
 | 実行用CLI | `config validate`によるoffline設定検証を実装済み。調査・運用commandは未実装 |
 | データソース・評価指標・閾値 | source方針承認済み。`yfinance`は許可確認済み・有効。adapterと実取得は未実装 |
 | Pythonバージョン・依存関係 | Python 3.14、runtime・開発依存関係、品質ツール、ロックファイルを定義済み |
-| テスト・lint・型チェック | 契約、版付きYAML設定、CLI、loggingの追跡対象テストあり |
-| CI・Docker・devcontainer | Docker標準開発環境とGitHub Actions CIあり。devcontainerは未作成 |
+| テスト・lint・型チェック | 契約、設定、CLI、logging、task準備、credential、request coordinatorの追跡対象テストあり |
+| CI・Docker・devcontainer | Docker標準開発環境、GitHub Actions CI、VS Code devcontainerあり |
 | ライセンス | MIT License |
 
 ## セットアップ
@@ -96,8 +96,15 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 コンテナ起動時に開発依存関係を同期します。offline設定検証以外の
 個別株調査ランタイムと実行commandはまだ実装されていません。
 
+VS Codeではリポジトリをdevcontainerで開けます。初期化時に`docker/.env`と
+共有するCoding Agent状態のpathを準備し、作成後に`uv sync --frozen`とGit hookの
+登録を実行します。workspaceはホスト側リポジトリのbasenameを使って配置します。
+
 現在のCompose構成は、複数のCoding Agent CLI、認証状態、リポジトリを共有する
-開発環境です。将来の株式調査ランタイムで求める役割別の資格情報分離、読み取り専用化、
+開発環境です。Codex、Claude Code、Antigravityの状態は、
+ホスト側の既定pathまたは明示したpathからbind mountします。EDINET credentialは
+通常の開発環境へmountせず、専用Compose overlayを明示した場合だけ読み取り専用で
+追加します。将来の株式調査ランタイムで求める役割別の資格情報分離、読み取り専用化、
 ネットワーク制限を満たす実行サンドボックスではありません。
 
 `docker/run-docker.sh` は最初に `ghcr.io` の `:latest` imageをpullし、
@@ -179,8 +186,8 @@ stderrへ出力し、設定内容の不正は終了code 3、pathまたはfileの
 | `docker/` | 標準開発環境のDockerfile、Compose設定、実行ラッパー | 構成あり |
 | `scripts/` | Coding Agent CLIの導入補助、pre-commit・CI検証ラッパー | 構成あり |
 | `schemas/` | 生成JSON Schema | P1フェーズ3までの28公開Schemaあり |
-| `src/` | PythonアプリケーションとPython開発指示 | 契約基盤とoffline設定検証CLIあり |
-| `tests/` | Python実装の追跡対象テスト | 契約、生成Schema、版付き設定、CLI、loggingのテストあり |
+| `src/` | PythonアプリケーションとPython開発指示 | 契約基盤、offline設定検証CLI、task準備、credential preflight、保存・request coordinator基盤あり |
+| `tests/` | Python実装の追跡対象テスト | 契約、生成Schema、設定、CLI、logging、task準備、credential、request coordinatorのテストあり |
 | `AGENTS.md` | スクリーニング実行時の共通原則、安全境界、成果物配置、最小限のリポジトリ構成 | 定義済み |
 | `pyproject.toml` / `uv.lock` | Python、依存関係、品質ツール | 設定、ロックファイル、CLI entrypointあり |
 | `LICENSE` | リポジトリと将来の配布物に適用するライセンス | MIT License |
@@ -198,7 +205,8 @@ stderrへ出力し、設定内容の不正は終了code 3、pathまたはfileの
 設計上は、1回の実行に関する入力、元データ、分析、レビュー、争点、最終成果物を
 `runs/<task-id>/` 配下へまとめる構成も想定しています。正本、移送、保持のP0案は
 [成果物・保持・セキュリティの要件](docs/system-requirements/05-artifact-retention-and-security.md)
-で承認済みですが、保存処理と実行ディレクトリは未実装です。
+で承認済みです。検証済みbytesを内部準備directoryへ原子的にpublishするprimitiveはありますが、
+manifest確定と完全な証拠一式を含む実行ディレクトリへの保存は未実装です。
 
 ## 開発への参加
 
