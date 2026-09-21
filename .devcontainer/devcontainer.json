@@ -22,18 +22,18 @@
     "customizations": {
         "vscode": {
             "extensions": [
+                "anthropic.claude-code",
+                "openai.chatgpt",
+                "github.copilot-chat",
                 "charliermarsh.ruff",
                 "codezombiech.gitignore",
-                "openai.chatgpt",
                 "DavidAnson.vscode-markdownlint",
                 "donjayamanne.githistory",
                 "donjayamanne.vscode-default-python-kernel",
                 "eamodio.gitlens",
-                "github.copilot-chat",
                 "grapecity.gc-excelviewer",
                 "Gruntfuggly.todo-tree",
                 "ionutvmi.path-autocomplete",
-                "ise-hve-essentials.hve-core-all",
                 "mecatroner.rainbow-csv",
                 "ms-python.mypy-type-checker",
                 "ms-python.python",
