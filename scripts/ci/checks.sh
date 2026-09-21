@@ -10,7 +10,7 @@ main() {
 
     ruff format --check .
     ruff check .
-    mypy src
+    mypy
     pytest
     python -m stock_research_llm_orchestrator.contracts.schema_generation --check
     ./scripts/pre-commit/shell-check.sh

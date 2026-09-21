@@ -26,6 +26,7 @@ dev = [
     "pre-commit>=4.5.1",
     "pytest>=9.0.2",
     "ruff>=0.15.6",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 
 # === Ruff Configuration ===
@@ -77,9 +78,9 @@ explicit_package_bases = true
 
 files = [
     "src",
+    "tests",
 ]
 exclude = [
-    "tests/",
     "scripts/"
 ]
 
