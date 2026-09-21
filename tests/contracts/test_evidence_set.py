@@ -1,6 +1,7 @@
 """Tests for version 1 evidence provenance and lifecycle contracts."""
 
 import json
+import typing
 from pathlib import Path
 
 import pytest
@@ -25,8 +26,11 @@ FIXTURE_PATH = (
 )
 
 
-def _payload() -> dict[str, object]:
-    return json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+def _payload() -> dict[str, typing.Any]:
+    parsed = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    assert isinstance(parsed, dict)
+    assert all(isinstance(key, str) for key in parsed)
+    return typing.cast("dict[str, typing.Any]", parsed)
 
 
 def test_frozen_evidence_set_preserves_four_layers_and_provenance() -> None:

@@ -1,5 +1,6 @@
 """Validate the opt-in credential mount contract in Compose files."""
 
+import typing
 from pathlib import Path
 
 import yaml
@@ -60,8 +61,9 @@ def test_run_wrapper_requires_explicit_edinet_opt_in() -> None:
     assert "HOST_EDINET_API_KEY_FILE is required when ENABLE_EDINET_CREDENTIAL=1." in script
 
 
-def _load_compose(filename: str) -> dict[str, object]:
+def _load_compose(filename: str) -> dict[str, typing.Any]:
     content = (REPOSITORY_ROOT / "docker" / filename).read_text(encoding="utf-8")
     loaded = yaml.safe_load(content)
     assert isinstance(loaded, dict)
-    return loaded
+    assert all(isinstance(key, str) for key in loaded)
+    return typing.cast("dict[str, typing.Any]", loaded)

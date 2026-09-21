@@ -6,7 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from stock_research_llm_orchestrator.credentials import CredentialFilePolicy, preflight_credential_file
+from stock_research_llm_orchestrator.credentials import (
+    CredentialFilePolicy,
+    CredentialPreflightResult,
+    preflight_credential_file,
+)
 
 
 CANARY = "dummy-edinet-key-do-not-log"
@@ -104,6 +108,6 @@ def test_rejects_invalid_permission_policy(field: str, value: int) -> None:
         CredentialFilePolicy(**{field: value})
 
 
-def _assert_canary_absent(result: object) -> None:
+def _assert_canary_absent(result: CredentialPreflightResult) -> None:
     rendered = (repr(result), json.dumps(asdict(result)))
     assert all(CANARY not in item for item in rendered)

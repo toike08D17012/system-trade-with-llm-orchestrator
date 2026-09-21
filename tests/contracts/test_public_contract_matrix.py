@@ -1,6 +1,7 @@
 """Matrix tests covering generic validation failures for every public contract."""
 
 import json
+import typing
 from pathlib import Path
 
 import pytest
@@ -20,8 +21,11 @@ FIXTURE_INDEX: dict[str, str] = json.loads((FIXTURE_ROOT / "fixture-index.json")
 PUBLIC_CASES = tuple(sorted(FIXTURE_INDEX.items()))
 
 
-def _payload(relative_path: str) -> dict[str, object]:
-    return json.loads((FIXTURE_ROOT / relative_path).read_text(encoding="utf-8"))
+def _payload(relative_path: str) -> dict[str, typing.Any]:
+    parsed = json.loads((FIXTURE_ROOT / relative_path).read_text(encoding="utf-8"))
+    assert isinstance(parsed, dict)
+    assert all(isinstance(key, str) for key in parsed)
+    return typing.cast("dict[str, typing.Any]", parsed)
 
 
 def _assert_error(payload: dict[str, object], expected_code: ErrorCode) -> None:

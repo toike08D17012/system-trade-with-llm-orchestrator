@@ -1,6 +1,7 @@
 """Tests for the external request coordination audit contract."""
 
 import json
+import typing
 from pathlib import Path
 
 import pytest
@@ -26,8 +27,11 @@ FIXTURE_PATH = (
 )
 
 
-def _payload() -> dict[str, object]:
-    return json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+def _payload() -> dict[str, typing.Any]:
+    parsed = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    assert isinstance(parsed, dict)
+    assert all(isinstance(key, str) for key in parsed)
+    return typing.cast("dict[str, typing.Any]", parsed)
 
 
 def test_provider_failure_records_cooldown_without_automatic_retry() -> None:

@@ -1,6 +1,7 @@
 """Tests for fixed security-boundary rejection fixtures."""
 
 import json
+import typing
 from pathlib import Path
 
 import pytest
@@ -19,8 +20,11 @@ FIXTURE_ROOT = (
 )
 
 
-def _payload(filename: str) -> dict[str, object]:
-    return json.loads((FIXTURE_ROOT / filename).read_text(encoding="utf-8"))
+def _payload(filename: str) -> dict[str, typing.Any]:
+    parsed = json.loads((FIXTURE_ROOT / filename).read_text(encoding="utf-8"))
+    assert isinstance(parsed, dict)
+    assert all(isinstance(key, str) for key in parsed)
+    return typing.cast("dict[str, typing.Any]", parsed)
 
 
 def test_secret_material_fixture_is_rejected_without_value_disclosure() -> None:

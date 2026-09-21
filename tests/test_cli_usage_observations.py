@@ -2,6 +2,7 @@
 
 import json
 import re
+import typing
 from pathlib import Path
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.agent_execution import (
@@ -73,8 +74,11 @@ PROVIDER_USAGE_KEYS = {
 }
 
 
-def _load(path: Path) -> dict[str, object]:
-    return json.loads(path.read_text(encoding="utf-8"))
+def _load(path: Path) -> dict[str, typing.Any]:
+    parsed = json.loads(path.read_text(encoding="utf-8"))
+    assert isinstance(parsed, dict)
+    assert all(isinstance(key, str) for key in parsed)
+    return typing.cast("dict[str, typing.Any]", parsed)
 
 
 def _walk_keys(value: object) -> set[str]:
@@ -84,10 +88,10 @@ def _walk_keys(value: object) -> set[str]:
             keys.update(_walk_keys(nested))
         return keys
     if isinstance(value, list):
-        keys: set[str] = set()
+        list_keys: set[str] = set()
         for nested in value:
-            keys.update(_walk_keys(nested))
-        return keys
+            list_keys.update(_walk_keys(nested))
+        return list_keys
     return set()
 
 

@@ -1,6 +1,7 @@
 """Tests for deterministic human-facing Markdown rendering."""
 
 import json
+import typing
 from pathlib import Path
 
 import pytest
@@ -26,9 +27,12 @@ FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "fixtures" / "contracts" / "detailed-
 TEMPLATE_ROOT = REPOSITORY_ROOT / "templates" / "detailed-analysis" / "v1"
 
 
-def _artifact(artifact: str, filename: str) -> dict[str, object]:
+def _artifact(artifact: str, filename: str) -> dict[str, typing.Any]:
     path = FIXTURE_ROOT / artifact / "valid" / filename
-    return json.loads(path.read_text(encoding="utf-8"))
+    parsed = json.loads(path.read_text(encoding="utf-8"))
+    assert isinstance(parsed, dict)
+    assert all(isinstance(key, str) for key in parsed)
+    return typing.cast("dict[str, typing.Any]", parsed)
 
 
 def _template(filename: str) -> str:
