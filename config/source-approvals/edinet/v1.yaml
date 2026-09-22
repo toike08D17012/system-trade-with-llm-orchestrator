@@ -1,0 +1,84 @@
+schema_id: detailed-analysis.source-approval
+schema_version: 1
+artifact_id: edinet-source-approval-v1
+approval_id: edinet-source-approval
+approval_version: 1
+source_id: edinet
+status: approved
+provider: Financial Services Agency of Japan
+service: EDINET API version 2
+dataset: Filing list metadata and disclosed filing documents
+reviewer: repository-owner
+reviewed_on: "2026-09-22"
+approved_by: repository-owner
+effective_on: "2026-09-22"
+recheck_due_on: "2026-12-22"
+status_reason: Offline implementation is approved; online use remains disabled until source-specific live acceptance is completed.
+usage_entity: private_individual_internal_analysis
+usage_purposes:
+  - Local deterministic acquisition of statutory disclosure evidence for internal analysis
+contract_plan: Review quarterly and suspend on terms, API, document-rights, credential, or provider-condition changes.
+credential_scope_alias: edinet-api-key
+secret_value_storage_allowed: false
+online_use_allowed: false
+external_agent_transfer_allowed: false
+official_references:
+  - reference_id: edinet-api-specification-v2
+    document_type: api_specification
+    url: https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf
+    document_version_or_sha256: version-2-reviewed-2026-09-22
+    reviewed_on: "2026-09-22"
+  - reference_id: edinet-api-guide
+    document_type: service_guide
+    url: https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0110.html
+    document_version_or_sha256: reviewed-2026-09-22
+    reviewed_on: "2026-09-22"
+conditions:
+  - category: terms
+    knowledge_status: known
+    summary: Use is restricted to local internal analysis under the reviewed EDINET API guidance; material condition changes require reapproval.
+    official_reference_ids: [edinet-api-guide]
+  - category: pricing
+    knowledge_status: known
+    summary: The reviewed API guidance does not identify a paid plan for this approved path; no paid entitlement is represented.
+    official_reference_ids: [edinet-api-guide]
+  - category: authentication
+    knowledge_status: known
+    summary: API version 2 requires a subscription key, which must be loaded from the owner-only credential file only immediately before send.
+    official_reference_ids: [edinet-api-specification-v2, edinet-api-guide]
+  - category: redistribution
+    knowledge_status: known
+    summary: Provider raw is retained only as a local protected artifact and is not committed to Git or redistributed.
+    official_reference_ids: [edinet-api-guide]
+  - category: derived_output
+    knowledge_status: known
+    summary: Derived internal analysis must preserve filing provenance and remains subject to review before any publication.
+    official_reference_ids: [edinet-api-guide]
+  - category: external_processing
+    knowledge_status: known
+    summary: Provider raw and bulk filing content must not be transferred to an external Agent under this approval.
+    official_reference_ids: [edinet-api-guide]
+  - category: provider_retention
+    knowledge_status: unsupported
+    summary: No private analytical input is submitted and the reviewed API path exposes no configurable provider-retention control.
+    official_reference_ids: [edinet-api-specification-v2]
+  - category: provider_training
+    knowledge_status: unsupported
+    summary: No private analytical input is submitted and the reviewed API path exposes no provider-training control.
+    official_reference_ids: [edinet-api-specification-v2]
+  - category: freshness
+    knowledge_status: known
+    summary: Filing-list metadata is updated during service operation; each acquisition must record retrieval time and content identity.
+    official_reference_ids: [edinet-api-specification-v2, edinet-api-guide]
+  - category: available_period
+    knowledge_status: known
+    summary: Availability depends on the EDINET service and requested filing date; the adapter must retain the requested date and returned metadata.
+    official_reference_ids: [edinet-api-specification-v2]
+  - category: rate_limit
+    knowledge_status: known
+    summary: The local profile is conservatively restricted to one serialized request per sixty seconds.
+    official_reference_ids: [edinet-api-guide]
+  - category: failure_behavior
+    knowledge_status: known
+    summary: Transport, provider, limit, and parse failures stop safely without automatic retry, cache, or source fallback.
+    official_reference_ids: [edinet-api-specification-v2]

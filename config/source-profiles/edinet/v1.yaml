@@ -1,0 +1,60 @@
+schema_id: detailed-analysis.source-profile
+schema_version: 1
+artifact_id: edinet-source-profile-v1
+source_id: edinet
+profile_version: 1
+policy_version: 1
+source_approval_reference:
+  artifact_type: source_approval
+  artifact_id: edinet-source-approval-v1
+  schema_id: detailed-analysis.source-approval
+  schema_version: 1
+  sha256: 88b865360e77faf627fd19bbe7f0a425c32aaeb34a5b59f59e15db7c4ba930f1
+source_approval_status: approved
+enabled: false
+rate_domain: edinet-api
+credential_scope_alias: edinet-api-key
+egress_scope: default-egress
+max_concurrency: 1
+min_interval_seconds:
+  knowledge_status: known
+  value: 60
+  unit: second
+  evidence_reference_ids: [edinet-api-guide]
+rate_requests:
+  knowledge_status: known
+  value: 1
+  unit: request
+  evidence_reference_ids: [edinet-api-guide]
+rate_window_seconds:
+  knowledge_status: known
+  value: 60
+  unit: second
+  evidence_reference_ids: [edinet-api-guide]
+burst: 1
+cache_policy:
+  enabled: false
+  ttl_seconds:
+    knowledge_status: unsupported
+    value: null
+    unit: second
+    evidence_reference_ids: []
+  varies_by_credential_scope: true
+  varies_by_freshness_and_period: true
+  varies_by_source_policy_version: true
+batch_policy:
+  support_status: unsupported
+  max_batch_size:
+    knowledge_status: unsupported
+    value: null
+    unit: item
+    evidence_reference_ids: []
+cooldown_policy:
+  honor_provider_retry_after: true
+  default_cooldown_seconds:
+    knowledge_status: unsupported
+    value: null
+    unit: second
+    evidence_reference_ids: []
+  automatic_retry_allowed: false
+direct_connection_fallback_allowed: false

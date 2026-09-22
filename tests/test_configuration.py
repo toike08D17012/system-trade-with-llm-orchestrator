@@ -19,11 +19,13 @@ def _copy_config(tmp_path: Path) -> Path:
 
 
 def test_validate_configuration_accepts_repository_config_in_path_order(tmp_path: Path) -> None:
-    """Validate the P1 configuration tree in deterministic relative-path order."""
+    """Validate the repository configuration tree in deterministic path order."""
     root = _copy_config(tmp_path)
     artifacts = validate_configuration(root)
     paths = [artifact.path.as_posix() for artifact in artifacts]
-    assert len(paths) == 7
+    assert len(paths) == 9
+    assert "source-approvals/edinet/v1.yaml" in paths
+    assert "source-profiles/edinet/v1.yaml" in paths
     assert paths == sorted(paths)
 
 
