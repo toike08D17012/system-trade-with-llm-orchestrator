@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,7 @@ from stock_research_llm_orchestrator.requests.production import (
     ProductionLogicalRequest,
     ProductionLogicalResult,
     ProductionPhysicalAttempt,
+    RuntimeLeasePolicy,
 )
 from stock_research_llm_orchestrator.requests.storage import (
     DATABASE_FILENAME,
@@ -49,10 +51,10 @@ def test_initialize_runtime_storage_creates_versioned_private_database(tmp_path:
     database = root / DATABASE_FILENAME
     assert database.stat().st_mode & 0o777 == 0o600
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (1,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (2,)
         assert connection.execute("SELECT schema_owner, schema_version FROM schema_metadata").fetchone() == (
             "production-request-coordinator",
-            1,
+            2,
         )
         columns = {
             row[1]
@@ -105,6 +107,26 @@ def test_initialize_runtime_storage_reopens_current_schema(tmp_path: Path) -> No
     reopened = initialize_runtime_storage(root)
 
     assert reopened.logical_request_state("logical-1") == "queued"
+
+
+def test_initialize_runtime_storage_migrates_phase_3a_schema(tmp_path: Path) -> None:
+    """Migrate the committed Phase 3A schema without discarding runtime state."""
+    root = _runtime_root(tmp_path)
+    repository = initialize_runtime_storage(root)
+    repository.add_logical_request(_logical_request())
+    database = root / DATABASE_FILENAME
+    with sqlite3.connect(database) as connection:
+        connection.execute("ALTER TABLE runtime_lease DROP COLUMN active")
+        connection.execute("UPDATE schema_metadata SET schema_version = 1")
+        connection.execute("PRAGMA user_version = 1")
+
+    migrated = initialize_runtime_storage(root)
+
+    assert migrated.logical_request_state("logical-1") == "queued"
+    with sqlite3.connect(database) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone() == (2,)
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(runtime_lease)")}
+    assert "active" in columns
 
 
 def test_initialize_runtime_storage_rejects_schema_metadata_mismatch(tmp_path: Path) -> None:
@@ -174,6 +196,8 @@ def test_repository_completes_logical_request_atomically(tmp_path: Path) -> None
     """Persist the sanitized result and terminal state in one transaction."""
     repository = initialize_runtime_storage(_runtime_root(tmp_path))
     repository.add_logical_request(_logical_request())
+    now = datetime(2026, 9, 21, tzinfo=UTC)
+    lease = repository.acquire_lease("owner-a", now, RuntimeLeasePolicy())
     result = ProductionLogicalResult(
         logical_request_id="logical-1",
         outcome=LogicalResultOutcome.SUCCEEDED,
@@ -181,7 +205,7 @@ def test_repository_completes_logical_request_atomically(tmp_path: Path) -> None
         error_code=None,
     )
 
-    repository.complete_logical_request(result)
+    repository.complete_logical_request(result, lease, now)
 
     assert repository.logical_request_state("logical-1") == "succeeded"
 
@@ -191,6 +215,8 @@ def test_repository_rolls_back_state_when_result_insert_fails(tmp_path: Path) ->
     root = _runtime_root(tmp_path)
     repository = initialize_runtime_storage(root)
     repository.add_logical_request(_logical_request())
+    now = datetime(2026, 9, 21, tzinfo=UTC)
+    lease = repository.acquire_lease("owner-a", now, RuntimeLeasePolicy())
     with sqlite3.connect(root / DATABASE_FILENAME) as connection:
         connection.execute(
             """
@@ -209,7 +235,7 @@ def test_repository_rolls_back_state_when_result_insert_fails(tmp_path: Path) ->
     )
 
     with pytest.raises(RuntimeStorageError, match="logical_result_persistence_failed"):
-        repository.complete_logical_request(result)
+        repository.complete_logical_request(result, lease, now)
 
     assert repository.logical_request_state("logical-1") == "queued"
 

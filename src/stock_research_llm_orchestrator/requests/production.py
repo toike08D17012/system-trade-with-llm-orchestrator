@@ -3,7 +3,7 @@
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from stock_research_llm_orchestrator.contracts.base import Identifier, Sha256Hex, StrictContractModel, Timestamp
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence import _parse_rfc3339
@@ -114,3 +114,35 @@ class ProductionLogicalResult(StrictContractModel):
         elif self.error_code is not None:
             raise ValueError("only failed or unknown results may contain error_code")
         return self
+
+
+class RuntimeLeasePolicy(StrictContractModel):
+    """Versioned timing policy for one production runtime owner."""
+
+    lease_duration_seconds: int = Field(default=30, ge=3)
+    heartbeat_interval_seconds: int = Field(default=10, ge=1)
+
+    @model_validator(mode="after")
+    def validate_heartbeat_interval(self) -> RuntimeLeasePolicy:
+        """Require heartbeat at least three times within one lease."""
+        if self.heartbeat_interval_seconds * 3 > self.lease_duration_seconds:
+            raise ValueError("heartbeat interval must not exceed one third of lease duration")
+        return self
+
+
+class RuntimeLease(StrictContractModel):
+    """Current fenced ownership of the production request runtime."""
+
+    owner_token: Identifier
+    generation: int = Field(ge=1)
+    acquired_at: Timestamp
+    heartbeat_at: Timestamp
+    expires_at: Timestamp
+
+    @field_validator("acquired_at", "heartbeat_at", "expires_at")
+    @classmethod
+    def validate_timestamp(cls, value: str, info: ValidationInfo) -> str:
+        """Require semantic RFC 3339 timestamps for lease state."""
+        field_name = info.field_name or "lease_timestamp"
+        _parse_rfc3339(value, field_name)
+        return value
