@@ -645,6 +645,10 @@ class ProductionRequestRepository:
             raise RuntimeStorageError("invalid_retry_after")
         self._finish_gate_reservation(reservation, "failed", retry_after_seconds, lease, now)
 
+    def record_unknown_outcome(self, reservation: GateReservation, lease: RuntimeLease, now: datetime) -> None:
+        """Release gates while preserving an indeterminate physical outcome."""
+        self._finish_gate_reservation(reservation, "unknown", None, lease, now)
+
     def _finish_gate_reservation(
         self,
         reservation: GateReservation,
