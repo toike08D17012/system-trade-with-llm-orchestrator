@@ -9,7 +9,7 @@
 | 適用範囲 | 詳細解析MVPの決定論的な外部データ取得 |
 | 要件との整合確認日 | 2026-09-21 |
 | 対応仕様 | 要件04版1.1・要件05版1.3 |
-| 実装状態 | Phase 3Aのproduction storage、schema v2 migration、Phase 3Bのlease・fencingを実装。restart recovery以降は未実装 |
+| 実装状態 | Phase 3A・3BとPhase 3Cのattempt recoveryを実装。queue・cooldown recovery以降は未実装 |
 
 ## コンテキスト
 
