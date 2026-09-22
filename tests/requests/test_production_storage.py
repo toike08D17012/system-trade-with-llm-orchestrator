@@ -51,10 +51,10 @@ def test_initialize_runtime_storage_creates_versioned_private_database(tmp_path:
     database = root / DATABASE_FILENAME
     assert database.stat().st_mode & 0o777 == 0o600
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (2,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (3,)
         assert connection.execute("SELECT schema_owner, schema_version FROM schema_metadata").fetchone() == (
             "production-request-coordinator",
-            2,
+            3,
         )
         columns = {
             row[1]
@@ -116,6 +116,9 @@ def test_initialize_runtime_storage_migrates_phase_3a_schema(tmp_path: Path) -> 
     repository.add_logical_request(_logical_request())
     database = root / DATABASE_FILENAME
     with sqlite3.connect(database) as connection:
+        connection.execute("DROP TABLE queue_events")
+        connection.execute("DROP TABLE provider_queue_cursors")
+        connection.execute("DROP TABLE queue_entries")
         connection.execute("ALTER TABLE runtime_lease DROP COLUMN active")
         connection.execute("UPDATE schema_metadata SET schema_version = 1")
         connection.execute("PRAGMA user_version = 1")
@@ -124,9 +127,34 @@ def test_initialize_runtime_storage_migrates_phase_3a_schema(tmp_path: Path) -> 
 
     assert migrated.logical_request_state("logical-1") == "queued"
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (2,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (3,)
         columns = {row[1] for row in connection.execute("PRAGMA table_info(runtime_lease)")}
     assert "active" in columns
+
+
+def test_initialize_runtime_storage_migrates_phase_3b_schema(tmp_path: Path) -> None:
+    """Add durable queue state to an existing Phase 3B database."""
+    root = _runtime_root(tmp_path)
+    repository = initialize_runtime_storage(root)
+    repository.add_logical_request(_logical_request())
+    database = root / DATABASE_FILENAME
+    with sqlite3.connect(database) as connection:
+        connection.execute("DROP TABLE queue_events")
+        connection.execute("DROP TABLE provider_queue_cursors")
+        connection.execute("DROP TABLE queue_entries")
+        connection.execute("UPDATE schema_metadata SET schema_version = 2")
+        connection.execute("PRAGMA user_version = 2")
+
+    migrated = initialize_runtime_storage(root)
+
+    assert migrated.logical_request_state("logical-1") == "queued"
+    with sqlite3.connect(database) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone() == (3,)
+        tables = {
+            str(row[0])
+            for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'queue_%'")
+        }
+    assert tables == {"queue_entries", "queue_events"}
 
 
 def test_initialize_runtime_storage_rejects_schema_metadata_mismatch(tmp_path: Path) -> None:

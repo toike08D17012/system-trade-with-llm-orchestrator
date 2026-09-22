@@ -15,6 +15,8 @@ from stock_research_llm_orchestrator.requests.production import (
     ProductionLogicalRequest,
     ProductionLogicalResult,
     ProductionPhysicalAttempt,
+    QueueClaim,
+    QueuePolicy,
     RuntimeLease,
     RuntimeLeasePolicy,
 )

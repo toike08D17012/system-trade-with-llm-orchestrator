@@ -14,12 +14,14 @@ from stock_research_llm_orchestrator.requests.production import (
     ProductionLogicalRequest,
     ProductionLogicalResult,
     ProductionPhysicalAttempt,
+    QueueClaim,
+    QueuePolicy,
     RuntimeLease,
     RuntimeLeasePolicy,
 )
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 DATABASE_FILENAME = "request-coordinator.sqlite3"
 _SCHEMA_OWNER = "production-request-coordinator"
 _OWNER_TOKEN_ADAPTER = TypeAdapter(Identifier)
@@ -67,6 +69,161 @@ class ProductionRequestRepository:
                 )
         except (sqlite3.Error, OSError) as error:
             raise RuntimeStorageError("logical_request_persistence_failed") from error
+
+    def enqueue_logical_request(
+        self,
+        request: ProductionLogicalRequest,
+        rate_domain: str,
+        lease: RuntimeLease,
+        now: datetime,
+        policy: QueuePolicy,
+    ) -> None:
+        """Persist one request, enforce bounds, and append queue lifecycle events."""
+        request = ProductionLogicalRequest.model_validate(request.model_dump(warnings=False))
+        rate_domain = _OWNER_TOKEN_ADAPTER.validate_python(rate_domain, strict=True)
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        policy = QueuePolicy.model_validate(policy.model_dump(warnings=False))
+        rejected = False
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                _insert_logical_request(connection, request)
+                _append_queue_event(connection, request.logical_request_id, "requested", now, None)
+                counts = connection.execute(
+                    """
+                    SELECT
+                        COUNT(*),
+                        SUM(CASE WHEN rate_domain = ? THEN 1 ELSE 0 END),
+                        SUM(CASE WHEN rate_domain = ? AND task_id = ? THEN 1 ELSE 0 END)
+                    FROM queue_entries WHERE state = 'queued'
+                    """,
+                    (rate_domain, rate_domain, request.task_id),
+                ).fetchone()
+                global_count, domain_count, task_count = (int(value or 0) for value in counts)
+                rejected = (
+                    global_count >= policy.global_limit
+                    or domain_count >= policy.rate_domain_limit
+                    or task_count >= policy.task_rate_domain_limit
+                )
+                state = "rejected" if rejected else "queued"
+                connection.execute(
+                    """
+                    INSERT INTO queue_entries (
+                        logical_request_id, rate_domain, task_id, enqueued_at, state, dequeued_at
+                    ) VALUES (?, ?, ?, ?, ?, NULL)
+                    """,
+                    (request.logical_request_id, rate_domain, request.task_id, _timestamp(now), state),
+                )
+                if rejected:
+                    connection.execute(
+                        "UPDATE logical_requests SET state = 'failed' WHERE logical_request_id = ?",
+                        (request.logical_request_id,),
+                    )
+                    connection.execute(
+                        """
+                        INSERT INTO logical_results (logical_request_id, outcome, completed_at, error_code)
+                        VALUES (?, 'failed', ?, 'queue_full')
+                        """,
+                        (request.logical_request_id, _timestamp(now)),
+                    )
+                    _append_queue_event(connection, request.logical_request_id, "rejected", now, "queue_full")
+                else:
+                    _append_queue_event(connection, request.logical_request_id, "queued", now, None)
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("queue_enqueue_failed") from error
+        if rejected:
+            raise RuntimeStorageError("queue_full")
+
+    def claim_next_queued(self, rate_domain: str, lease: RuntimeLease, now: datetime) -> QueueClaim | None:
+        """Dequeue one request using task FIFO and active-task round-robin."""
+        rate_domain = _OWNER_TOKEN_ADAPTER.validate_python(rate_domain, strict=True)
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                tasks = [
+                    str(row[0])
+                    for row in connection.execute(
+                        """
+                        SELECT task_id FROM queue_entries
+                        WHERE rate_domain = ? AND state = 'queued'
+                        GROUP BY task_id ORDER BY task_id
+                        """,
+                        (rate_domain,),
+                    )
+                ]
+                if not tasks:
+                    return None
+                cursor = connection.execute(
+                    "SELECT last_task_id FROM provider_queue_cursors WHERE rate_domain = ?",
+                    (rate_domain,),
+                ).fetchone()
+                last_task = None if cursor is None else str(cursor[0])
+                task_id = next(
+                    (candidate for candidate in tasks if last_task is None or candidate > last_task), tasks[0]
+                )
+                row = connection.execute(
+                    """
+                    SELECT logical_request_id, enqueued_at FROM queue_entries
+                    WHERE rate_domain = ? AND task_id = ? AND state = 'queued'
+                    ORDER BY enqueued_at, logical_request_id LIMIT 1
+                    """,
+                    (rate_domain, task_id),
+                ).fetchone()
+                if row is None:
+                    raise RuntimeStorageError("queue_scheduler_inconsistent")
+                logical_request_id, enqueued_at = (str(value) for value in row)
+                updated = connection.execute(
+                    """
+                    UPDATE queue_entries SET state = 'dequeued', dequeued_at = ?
+                    WHERE logical_request_id = ? AND state = 'queued'
+                    """,
+                    (_timestamp(now), logical_request_id),
+                )
+                if updated.rowcount != 1:
+                    raise RuntimeStorageError("queue_claim_race")
+                connection.execute(
+                    """
+                    INSERT INTO provider_queue_cursors (rate_domain, last_task_id)
+                    VALUES (?, ?) ON CONFLICT(rate_domain) DO UPDATE SET last_task_id = excluded.last_task_id
+                    """,
+                    (rate_domain, task_id),
+                )
+                _append_queue_event(connection, logical_request_id, "dequeued", now, None)
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("queue_claim_failed") from error
+        return QueueClaim(
+            logical_request_id=logical_request_id,
+            task_id=task_id,
+            rate_domain=rate_domain,
+            enqueued_at=enqueued_at,
+        )
+
+    def queue_events(self, logical_request_id: str) -> tuple[tuple[str, str | None], ...]:
+        """Return sanitized lifecycle events for one logical request."""
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                rows = connection.execute(
+                    """
+                    SELECT event_type, reason FROM queue_events
+                    WHERE logical_request_id = ? ORDER BY event_id
+                    """,
+                    (logical_request_id,),
+                ).fetchall()
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("queue_event_read_failed") from error
+        return tuple((str(event), None if reason is None else str(reason)) for event, reason in rows)
 
     def add_physical_attempt(self, attempt: ProductionPhysicalAttempt) -> None:
         """Reserve one attempt after its logical request is durable."""
@@ -253,6 +410,29 @@ class ProductionRequestRepository:
                     raise RuntimeStorageError("runtime_lease_held")
                 _validate_recovery_state(connection, previous_generation)
                 generation = previous_generation + 1
+                connection.execute(
+                    """
+                    INSERT INTO queue_events (logical_request_id, event_type, occurred_at, reason)
+                    SELECT entry.logical_request_id, 'queued', ?, 'owner_interrupted'
+                    FROM queue_entries AS entry
+                    WHERE entry.state = 'dequeued'
+                      AND NOT EXISTS (
+                          SELECT 1 FROM physical_attempts AS attempt
+                          WHERE attempt.logical_request_id = entry.logical_request_id
+                      )
+                    """,
+                    (_timestamp(now),),
+                )
+                connection.execute(
+                    """
+                    UPDATE queue_entries SET state = 'queued', dequeued_at = NULL
+                    WHERE state = 'dequeued'
+                      AND NOT EXISTS (
+                          SELECT 1 FROM physical_attempts
+                          WHERE physical_attempts.logical_request_id = queue_entries.logical_request_id
+                      )
+                    """
+                )
                 started_requests = connection.execute(
                     """
                     SELECT DISTINCT logical_request_id FROM physical_attempts
@@ -390,6 +570,48 @@ class ProductionRequestRepository:
             raise RuntimeStorageError("runtime_fence_validation_failed") from error
 
 
+def _insert_logical_request(connection: sqlite3.Connection, request: ProductionLogicalRequest) -> None:
+    connection.execute(
+        """
+        INSERT INTO logical_requests (
+            logical_request_id, task_id, source_id, operation,
+            request_fingerprint, source_approval_version,
+            source_profile_version, credential_scope_alias,
+            egress_scope, created_at, state
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            request.logical_request_id,
+            request.task_id,
+            request.source_id,
+            request.operation,
+            request.request_fingerprint,
+            request.source_approval_version,
+            request.source_profile_version,
+            request.credential_scope_alias,
+            request.egress_scope,
+            request.created_at,
+            request.state.value,
+        ),
+    )
+
+
+def _append_queue_event(
+    connection: sqlite3.Connection,
+    logical_request_id: str,
+    event_type: str,
+    now: datetime,
+    reason: str | None,
+) -> None:
+    connection.execute(
+        """
+        INSERT INTO queue_events (logical_request_id, event_type, occurred_at, reason)
+        VALUES (?, ?, ?, ?)
+        """,
+        (logical_request_id, event_type, _timestamp(now), reason),
+    )
+
+
 def _assert_fence(connection: sqlite3.Connection, lease: RuntimeLease, now: datetime) -> None:
     row = connection.execute(
         """
@@ -451,10 +673,14 @@ def initialize_runtime_storage(runtime_root: Path) -> ProductionRequestRepositor
                 current_version = int(connection.execute("PRAGMA user_version").fetchone()[0])
                 if current_version == 0:
                     _create_schema(connection)
-                elif current_version == 1:
-                    _migrate_v1_to_v2(connection)
-                elif current_version != SCHEMA_VERSION:
+                elif current_version > SCHEMA_VERSION:
                     raise RuntimeStorageError("unsupported_runtime_schema")
+                else:
+                    if current_version == 1:
+                        _migrate_v1_to_v2(connection)
+                        current_version = 2
+                    if current_version == 2:
+                        _migrate_v2_to_v3(connection)
                 _verify_schema(connection)
         finally:
             connection.close()
@@ -476,12 +702,14 @@ def _connect(database_path: Path) -> sqlite3.Connection:
 def _create_schema(connection: sqlite3.Connection) -> None:
     connection.executescript(
         """
+        BEGIN IMMEDIATE;
+
         CREATE TABLE schema_metadata (
             singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
             schema_owner TEXT NOT NULL,
             schema_version INTEGER NOT NULL CHECK (schema_version >= 1)
         );
-        INSERT INTO schema_metadata VALUES (1, 'production-request-coordinator', 2);
+        INSERT INTO schema_metadata VALUES (1, 'production-request-coordinator', 3);
 
         CREATE TABLE logical_requests (
             logical_request_id TEXT PRIMARY KEY,
@@ -524,7 +752,30 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             active INTEGER NOT NULL CHECK (active IN (0, 1))
         );
 
-        PRAGMA user_version = 2;
+        CREATE TABLE queue_entries (
+            logical_request_id TEXT PRIMARY KEY REFERENCES logical_requests(logical_request_id),
+            rate_domain TEXT NOT NULL,
+            task_id TEXT NOT NULL,
+            enqueued_at TEXT NOT NULL,
+            state TEXT NOT NULL CHECK (state IN ('queued', 'dequeued', 'rejected', 'cancelled')),
+            dequeued_at TEXT
+        );
+
+        CREATE TABLE provider_queue_cursors (
+            rate_domain TEXT PRIMARY KEY,
+            last_task_id TEXT NOT NULL
+        );
+
+        CREATE TABLE queue_events (
+            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            logical_request_id TEXT NOT NULL REFERENCES logical_requests(logical_request_id),
+            event_type TEXT NOT NULL CHECK (event_type IN ('requested', 'queued', 'dequeued', 'rejected')),
+            occurred_at TEXT NOT NULL,
+            reason TEXT
+        );
+
+        PRAGMA user_version = 3;
+        COMMIT;
         """
     )
 
@@ -540,6 +791,42 @@ def _migrate_v1_to_v2(connection: sqlite3.Connection) -> None:
     )
     connection.execute("UPDATE schema_metadata SET schema_version = 2 WHERE singleton = 1")
     connection.execute("PRAGMA user_version = 2")
+
+
+def _migrate_v2_to_v3(connection: sqlite3.Connection) -> None:
+    metadata = connection.execute(
+        "SELECT schema_owner, schema_version FROM schema_metadata WHERE singleton = 1"
+    ).fetchone()
+    if metadata != (_SCHEMA_OWNER, 2):
+        raise RuntimeStorageError("runtime_schema_metadata_mismatch")
+    connection.executescript(
+        """
+        BEGIN IMMEDIATE;
+
+        CREATE TABLE queue_entries (
+            logical_request_id TEXT PRIMARY KEY REFERENCES logical_requests(logical_request_id),
+            rate_domain TEXT NOT NULL,
+            task_id TEXT NOT NULL,
+            enqueued_at TEXT NOT NULL,
+            state TEXT NOT NULL CHECK (state IN ('queued', 'dequeued', 'rejected', 'cancelled')),
+            dequeued_at TEXT
+        );
+        CREATE TABLE provider_queue_cursors (
+            rate_domain TEXT PRIMARY KEY,
+            last_task_id TEXT NOT NULL
+        );
+        CREATE TABLE queue_events (
+            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            logical_request_id TEXT NOT NULL REFERENCES logical_requests(logical_request_id),
+            event_type TEXT NOT NULL CHECK (event_type IN ('requested', 'queued', 'dequeued', 'rejected')),
+            occurred_at TEXT NOT NULL,
+            reason TEXT
+        );
+        UPDATE schema_metadata SET schema_version = 3 WHERE singleton = 1;
+        PRAGMA user_version = 3;
+        COMMIT;
+        """
+    )
 
 
 def _verify_schema(connection: sqlite3.Connection) -> None:

@@ -146,3 +146,36 @@ class RuntimeLease(StrictContractModel):
         field_name = info.field_name or "lease_timestamp"
         _parse_rfc3339(value, field_name)
         return value
+
+
+class QueuePolicy(StrictContractModel):
+    """Versioned backpressure limits for the production queue."""
+
+    global_limit: int = Field(default=1024, ge=1)
+    rate_domain_limit: int = Field(default=256, ge=1)
+    task_rate_domain_limit: int = Field(default=64, ge=1)
+
+    @model_validator(mode="after")
+    def validate_limit_hierarchy(self) -> QueuePolicy:
+        """Reject internally contradictory queue limits."""
+        if self.task_rate_domain_limit > self.rate_domain_limit:
+            raise ValueError("task rate-domain limit must not exceed rate-domain limit")
+        if self.rate_domain_limit > self.global_limit:
+            raise ValueError("rate-domain limit must not exceed global limit")
+        return self
+
+
+class QueueClaim(StrictContractModel):
+    """One durable queue item selected by the fair scheduler."""
+
+    logical_request_id: Identifier
+    task_id: Identifier
+    rate_domain: Identifier
+    enqueued_at: Timestamp
+
+    @field_validator("enqueued_at")
+    @classmethod
+    def validate_enqueued_at(cls, value: str) -> str:
+        """Require a semantic RFC 3339 queue timestamp."""
+        _parse_rfc3339(value, "enqueued_at")
+        return value

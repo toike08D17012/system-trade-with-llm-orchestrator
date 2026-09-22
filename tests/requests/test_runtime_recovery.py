@@ -7,6 +7,7 @@ import pytest
 from stock_research_llm_orchestrator.requests.production import (
     ProductionLogicalRequest,
     ProductionPhysicalAttempt,
+    QueuePolicy,
     RuntimeLeasePolicy,
 )
 from stock_research_llm_orchestrator.requests.storage import (
@@ -73,6 +74,38 @@ def test_recovery_transfers_unsent_reservation_to_new_generation(tmp_path: Path)
                 created_at=(NOW + timedelta(seconds=30)).isoformat(),
             )
         )
+
+
+def test_recovery_requeues_dequeued_item_before_attempt_creation(tmp_path: Path) -> None:
+    """Recover a scheduler claim that never reached physical reservation."""
+    repository, _ = _repository(tmp_path)
+    lease = repository.acquire_lease("owner-a", NOW, POLICY)
+    request = ProductionLogicalRequest(
+        logical_request_id="logical-1",
+        task_id="task-1",
+        source_id="fixture",
+        operation="history",
+        request_fingerprint="a" * 64,
+        source_approval_version=1,
+        source_profile_version=1,
+        credential_scope_alias=None,
+        egress_scope="default",
+        created_at=NOW.isoformat(),
+    )
+    repository.enqueue_logical_request(request, "provider-a", lease, NOW, QueuePolicy())
+    assert repository.claim_next_queued("provider-a", lease, NOW + timedelta(seconds=1)) is not None
+
+    recovered = repository.recover_expired_lease("owner-b", NOW + timedelta(seconds=30), POLICY)
+    claimed = repository.claim_next_queued("provider-a", recovered, NOW + timedelta(seconds=31))
+
+    assert claimed is not None and claimed.logical_request_id == "logical-1"
+    assert repository.queue_events("logical-1") == (
+        ("requested", None),
+        ("queued", None),
+        ("dequeued", None),
+        ("queued", "owner_interrupted"),
+        ("dequeued", None),
+    )
 
 
 def test_recovery_marks_started_attempt_unknown_without_resend(tmp_path: Path) -> None:
