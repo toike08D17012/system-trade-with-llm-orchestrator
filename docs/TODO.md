@@ -234,6 +234,8 @@ P0承認の阻害課題へ混在させない。
   - [x] ADR-0005 Phase 5として、credential-free physical request、private one-shot permit、controlled synthetic
     transport、共通response検証、temporary raw candidate、送信前failureのnegative testを追加する。
     source profileからproduction policyへのmappingはPhase 7で追加する。
+  - [x] ADR-0005 Phase 6Aとして、raw publication intent、schema v6、exact bytes staging、source-native
+    validation gate、fsync、atomic rename、committed raw referenceを追加する。crash reconciliationはPhase 6Bで追加する。
   - [ ] 本番transport、永続leaseと復旧、公平queue、cache、single-flight、全scopeのgate、
     永続cooldown、監査保存を実装する。P3-3のfake-only実装は本番Coordinatorの完成を意味しない。
 - [ ] 重要な数値と資料を共通の `evidence_id` で参照できる証拠集合を生成する。

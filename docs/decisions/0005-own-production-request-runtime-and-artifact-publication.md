@@ -9,7 +9,7 @@
 | 適用範囲 | 詳細解析MVPの決定論的な外部データ取得 |
 | 要件との整合確認日 | 2026-09-21 |
 | 対応仕様 | 要件04版1.1・要件05版1.3 |
-| 実装状態 | Phase 3A〜4CとPhase 5 synthetic controlled transportを実装。profile wiringとraw publicationは未実装 |
+| 実装状態 | Phase 3A〜5とPhase 6A raw staging/atomic publicationを実装。reconciliationとprofile wiringは未実装 |
 
 ## コンテキスト
 
