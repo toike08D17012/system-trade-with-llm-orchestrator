@@ -223,7 +223,9 @@ P0承認の阻害課題へ混在させない。
     clock rollback時の安全停止、期限切れownerによる遅延結果確定の拒否、2 owner競合テストを追加する。
   - [x] ADR-0005 Phase 3Cのattempt recoveryとして、期限切れlease takeover、未送信reservationの移管、
     in-flight attemptの`unknown`確定、自動再送禁止、clock・generation・audit異常時の安全停止を追加する。
-    永続queue・cooldownのreconciliationは各schemaを導入するPhase 4・5で追加する。
+    永続queueのreconciliationはPhase 4Aで追加済み。cooldownはPhase 4Bで追加する。
+  - [x] ADR-0005 Phase 4Aとして、provider別永続queue、task FIFO、task間round-robin、承認済みqueue上限、
+    `queue_full` rejection、requested・queued・dequeued・rejected auditを追加する。
   - [ ] 本番transport、永続leaseと復旧、公平queue、cache、single-flight、全scopeのgate、
     永続cooldown、監査保存を実装する。P3-3のfake-only実装は本番Coordinatorの完成を意味しない。
 - [ ] 重要な数値と資料を共通の `evidence_id` で参照できる証拠集合を生成する。
