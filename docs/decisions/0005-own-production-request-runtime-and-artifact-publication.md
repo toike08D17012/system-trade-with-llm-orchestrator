@@ -9,7 +9,7 @@
 | 適用範囲 | 詳細解析MVPの決定論的な外部データ取得 |
 | 要件との整合確認日 | 2026-09-21 |
 | 対応仕様 | 要件04版1.1・要件05版1.3 |
-| 実装状態 | Phase 3A〜6のraw staging/atomic publication/reconciliationを実装。profile wiringは未実装 |
+| 実装状態 | Phase 3A〜6とPhase 7共通source protocolを実装。source固有profile wiringは未実装 |
 
 ## コンテキスト
 
