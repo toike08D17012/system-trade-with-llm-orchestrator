@@ -150,6 +150,14 @@ class CommittedRawReference(StrictContractModel):
     publication_generation: int = Field(ge=1)
 
 
+class RawPublicationRecord(StrictContractModel):
+    """Sanitized durable publication state used for reconciliation."""
+
+    intent: RawPublicationIntent
+    relative_path: str | None
+    state: Literal["staging", "committed", "reconciliation_required", "failed"]
+
+
 class RuntimeLeasePolicy(StrictContractModel):
     """Versioned timing policy for one production runtime owner."""
 

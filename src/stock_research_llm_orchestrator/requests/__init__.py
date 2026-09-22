@@ -25,6 +25,7 @@ from stock_research_llm_orchestrator.requests.production import (
     QueueClaim,
     QueuePolicy,
     RawPublicationIntent,
+    RawPublicationRecord,
     RuntimeLease,
     RuntimeLeasePolicy,
 )

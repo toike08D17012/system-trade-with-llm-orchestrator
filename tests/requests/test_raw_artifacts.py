@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from stock_research_llm_orchestrator.requests.production import (
+    CommittedRawReference,
     ProductionLogicalRequest,
     ProductionPhysicalAttempt,
     RawPublicationIntent,
@@ -125,3 +126,149 @@ def test_candidate_mismatch_fails_before_intent_or_filesystem_write(tmp_path: Pa
 
     assert repository.raw_publication_state("publication-1") is None
     assert list(runs.iterdir()) == []
+
+
+def test_reconcile_forward_repairs_rename_after_database_commit_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Adopt an exact renamed bundle after the original DB commit result was unknown."""
+    repository, lease, runs, candidate, intent = _prepared(tmp_path)
+    publisher = RawArtifactPublisher(runs, repository)
+
+    def fail_commit(*args: object, **kwargs: object) -> None:
+        raise RuntimeStorageError("injected_commit_failure")
+
+    monkeypatch.setattr(repository, "commit_raw_publication", fail_commit)
+    with pytest.raises(RuntimeStorageError, match="raw_publication_reconciliation_required"):
+        publisher.publish(
+            candidate,
+            intent,
+            lease,
+            NOW + timedelta(seconds=2),
+            NOW + timedelta(seconds=3),
+            lambda body: None,
+        )
+    assert repository.raw_publication_state("publication-1") == ("reconciliation_required", None)
+
+    monkeypatch.undo()
+    repaired = publisher.reconcile(lease, NOW + timedelta(seconds=4))
+
+    assert len(repaired) == 1
+    assert repository.raw_publication_state("publication-1") == (
+        "committed",
+        "acquisitions/logical-1/attempt-1",
+    )
+
+
+def test_reconcile_accepts_commit_that_succeeded_before_result_became_unknown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify a committed bundle when the caller lost the DB commit acknowledgement."""
+    repository, lease, runs, candidate, intent = _prepared(tmp_path)
+    publisher = RawArtifactPublisher(runs, repository)
+    commit = repository.commit_raw_publication
+
+    def commit_then_fail(reference: CommittedRawReference, active_lease: RuntimeLease, now: datetime) -> None:
+        commit(reference, active_lease, now)
+        raise RuntimeStorageError("injected_lost_acknowledgement")
+
+    monkeypatch.setattr(repository, "commit_raw_publication", commit_then_fail)
+    with pytest.raises(RuntimeStorageError, match="raw_publication_reconciliation_required"):
+        publisher.publish(
+            candidate,
+            intent,
+            lease,
+            NOW + timedelta(seconds=2),
+            NOW + timedelta(seconds=3),
+            lambda body: None,
+        )
+    assert repository.raw_publication_state("publication-1") == (
+        "committed",
+        "acquisitions/logical-1/attempt-1",
+    )
+
+    monkeypatch.undo()
+    assert publisher.reconcile(lease, NOW + timedelta(seconds=4)) == ()
+
+
+def test_committed_replay_is_idempotent_and_resolves_from_logical_result(tmp_path: Path) -> None:
+    """Return the immutable committed reference without rewriting its bundle."""
+    repository, lease, runs, candidate, intent = _prepared(tmp_path)
+    publisher = RawArtifactPublisher(runs, repository)
+    first = publisher.publish(
+        candidate,
+        intent,
+        lease,
+        NOW + timedelta(seconds=2),
+        NOW + timedelta(seconds=3),
+        lambda body: None,
+    )
+
+    replay = publisher.publish(
+        candidate,
+        intent,
+        lease,
+        NOW + timedelta(seconds=4),
+        NOW + timedelta(seconds=5),
+        lambda body: pytest.fail("replay must not parse or rewrite committed bytes"),
+    )
+
+    assert replay == first
+    assert repository.committed_raw_references("logical-1") == (first,)
+
+
+def test_replay_rejects_changed_publication_identity(tmp_path: Path) -> None:
+    """Reject reuse of a publication ID with different immutable metadata."""
+    repository, lease, runs, candidate, intent = _prepared(tmp_path)
+    publisher = RawArtifactPublisher(runs, repository)
+    publisher.publish(
+        candidate,
+        intent,
+        lease,
+        NOW + timedelta(seconds=2),
+        NOW + timedelta(seconds=3),
+        lambda body: None,
+    )
+    changed = intent.model_copy(update={"publication_generation": 2})
+
+    with pytest.raises(RuntimeStorageError, match="raw_publication_replay_mismatch"):
+        publisher.publish(
+            candidate,
+            changed,
+            lease,
+            NOW + timedelta(seconds=4),
+            NOW + timedelta(seconds=5),
+            lambda body: None,
+        )
+
+
+def test_reconcile_rejects_pre_rename_staging_as_non_reusable(tmp_path: Path) -> None:
+    """Delete a pre-rename crash candidate and persist its failed state."""
+    repository, lease, runs, candidate, intent = _prepared(tmp_path)
+    repository.begin_raw_publication(intent, lease, NOW + timedelta(seconds=2))
+    staging = runs / "task-1" / ".staging" / "acquisitions" / "attempt-1"
+    staging.mkdir(mode=0o700, parents=True)
+    (staging / "body.bin").write_bytes(candidate.body)
+
+    repaired = RawArtifactPublisher(runs, repository).reconcile(lease, NOW + timedelta(seconds=3))
+
+    assert repaired == ()
+    assert not staging.exists()
+    assert repository.raw_publication_state("publication-1") == ("failed", None)
+
+
+def test_reconcile_fails_closed_when_committed_body_is_missing(tmp_path: Path) -> None:
+    """Refuse to treat a DB-only committed reference as a valid raw bundle."""
+    repository, lease, runs, candidate, intent = _prepared(tmp_path)
+    reference = RawArtifactPublisher(runs, repository).publish(
+        candidate,
+        intent,
+        lease,
+        NOW + timedelta(seconds=2),
+        NOW + timedelta(seconds=3),
+        lambda body: None,
+    )
+    (runs / "task-1" / reference.relative_path / "body.bin").unlink()
+
+    with pytest.raises(RuntimeStorageError, match="raw_committed_artifact_invalid"):
+        RawArtifactPublisher(runs, repository).reconcile(lease, NOW + timedelta(seconds=4))
