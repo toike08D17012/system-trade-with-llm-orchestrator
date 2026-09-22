@@ -228,6 +228,9 @@ P0承認の阻害課題へ混在させない。
     `queue_full` rejection、requested・queued・dequeued・rejected auditを追加する。
   - [x] ADR-0005 Phase 4Bとして、全8 scopeのatomic gate、concurrency・interval・rolling window、
     永続cooldown、`Retry-After`、no automatic retry、restart recovery、gate auditを追加する。
+  - [x] ADR-0005 Phase 4Cとして、cache disabled/not-applicable decision、single-flight leader/follower、
+    consumer attribution、queued・follower・leader・in-flight cancellationを追加する。
+    committed rawを参照するcache hitはPhase 6で追加する。
   - [ ] 本番transport、永続leaseと復旧、公平queue、cache、single-flight、全scopeのgate、
     永続cooldown、監査保存を実装する。P3-3のfake-only実装は本番Coordinatorの完成を意味しない。
 - [ ] 重要な数値と資料を共通の `evidence_id` で参照できる証拠集合を生成する。
