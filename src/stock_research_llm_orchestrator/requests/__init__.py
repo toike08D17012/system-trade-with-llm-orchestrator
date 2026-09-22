@@ -9,6 +9,7 @@ from stock_research_llm_orchestrator.requests.models import (
     bind_source,
 )
 from stock_research_llm_orchestrator.requests.production import (
+    AdmissionDecision,
     GateKeys,
     GateLimit,
     GateReservation,
@@ -16,6 +17,7 @@ from stock_research_llm_orchestrator.requests.production import (
     LogicalRequestState,
     LogicalResultOutcome,
     PhysicalAttemptState,
+    ProductionCachePolicy,
     ProductionLogicalRequest,
     ProductionLogicalResult,
     ProductionPhysicalAttempt,

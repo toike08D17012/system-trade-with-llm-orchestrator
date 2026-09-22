@@ -38,6 +38,11 @@ def _drop_phase_4b_tables(connection: sqlite3.Connection) -> None:
         connection.execute(f"DROP TABLE {table}")
 
 
+def _drop_phase_4c_tables(connection: sqlite3.Connection) -> None:
+    for table in ("admission_events", "single_flight_consumers", "single_flights"):
+        connection.execute(f"DROP TABLE {table}")
+
+
 def _logical_request() -> ProductionLogicalRequest:
     return ProductionLogicalRequest(
         logical_request_id="logical-1",
@@ -62,10 +67,10 @@ def test_initialize_runtime_storage_creates_versioned_private_database(tmp_path:
     database = root / DATABASE_FILENAME
     assert database.stat().st_mode & 0o777 == 0o600
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (4,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (5,)
         assert connection.execute("SELECT schema_owner, schema_version FROM schema_metadata").fetchone() == (
             "production-request-coordinator",
-            4,
+            5,
         )
         columns = {
             row[1]
@@ -127,6 +132,7 @@ def test_initialize_runtime_storage_migrates_phase_3a_schema(tmp_path: Path) -> 
     repository.add_logical_request(_logical_request())
     database = root / DATABASE_FILENAME
     with sqlite3.connect(database) as connection:
+        _drop_phase_4c_tables(connection)
         _drop_phase_4b_tables(connection)
         connection.execute("DROP TABLE queue_events")
         connection.execute("DROP TABLE provider_queue_cursors")
@@ -139,7 +145,7 @@ def test_initialize_runtime_storage_migrates_phase_3a_schema(tmp_path: Path) -> 
 
     assert migrated.logical_request_state("logical-1") == "queued"
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (4,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (5,)
         columns = {row[1] for row in connection.execute("PRAGMA table_info(runtime_lease)")}
     assert "active" in columns
 
@@ -151,6 +157,7 @@ def test_initialize_runtime_storage_migrates_phase_3b_schema(tmp_path: Path) -> 
     repository.add_logical_request(_logical_request())
     database = root / DATABASE_FILENAME
     with sqlite3.connect(database) as connection:
+        _drop_phase_4c_tables(connection)
         _drop_phase_4b_tables(connection)
         connection.execute("DROP TABLE queue_events")
         connection.execute("DROP TABLE provider_queue_cursors")
@@ -162,7 +169,7 @@ def test_initialize_runtime_storage_migrates_phase_3b_schema(tmp_path: Path) -> 
 
     assert migrated.logical_request_state("logical-1") == "queued"
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (4,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (5,)
         tables = {
             str(row[0])
             for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'queue_%'")
@@ -176,6 +183,7 @@ def test_initialize_runtime_storage_migrates_phase_4a_schema(tmp_path: Path) -> 
     initialize_runtime_storage(root)
     database = root / DATABASE_FILENAME
     with sqlite3.connect(database) as connection:
+        _drop_phase_4c_tables(connection)
         _drop_phase_4b_tables(connection)
         connection.execute("UPDATE schema_metadata SET schema_version = 3")
         connection.execute("PRAGMA user_version = 3")
@@ -183,7 +191,7 @@ def test_initialize_runtime_storage_migrates_phase_4a_schema(tmp_path: Path) -> 
     initialize_runtime_storage(root)
 
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (4,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (5,)
         tables = {
             str(row[0])
             for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'gate_%'")
@@ -195,6 +203,29 @@ def test_initialize_runtime_storage_migrates_phase_4a_schema(tmp_path: Path) -> 
         "gate_starts",
         "gate_state",
     }
+
+
+def test_initialize_runtime_storage_migrates_phase_4b_schema(tmp_path: Path) -> None:
+    """Add single-flight state to an existing Phase 4B database."""
+    root = _runtime_root(tmp_path)
+    initialize_runtime_storage(root)
+    database = root / DATABASE_FILENAME
+    with sqlite3.connect(database) as connection:
+        _drop_phase_4c_tables(connection)
+        connection.execute("UPDATE schema_metadata SET schema_version = 4")
+        connection.execute("PRAGMA user_version = 4")
+
+    initialize_runtime_storage(root)
+
+    with sqlite3.connect(database) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone() == (5,)
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'single_flight%'"
+            )
+        }
+    assert tables == {"single_flight_consumers", "single_flights"}
 
 
 def test_initialize_runtime_storage_rejects_schema_metadata_mismatch(tmp_path: Path) -> None:

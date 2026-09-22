@@ -1,7 +1,7 @@
 """Internal production request state persisted before external transport."""
 
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
@@ -245,3 +245,19 @@ class GateReservation(StrictContractModel):
         """Require a semantic RFC 3339 acquisition timestamp."""
         _parse_rfc3339(value, "acquired_at")
         return value
+
+
+class ProductionCachePolicy(StrictContractModel):
+    """Cache eligibility before committed raw artifact storage exists."""
+
+    enabled: Literal[False] = False
+    applicable: bool
+
+
+class AdmissionDecision(StrictContractModel):
+    """Durable cache and single-flight outcome for one logical consumer."""
+
+    logical_request_id: Identifier
+    cache_decision: Literal["disabled", "not_applicable"]
+    single_flight_decision: Literal["leader", "follower"]
+    leader_logical_request_id: Identifier

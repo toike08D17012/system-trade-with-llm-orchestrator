@@ -6,15 +6,18 @@ import stat
 from datetime import UTC, datetime, timedelta
 from math import isfinite
 from pathlib import Path
+from typing import Literal
 
 from pydantic import TypeAdapter
 
 from stock_research_llm_orchestrator.contracts.base import Identifier
 from stock_research_llm_orchestrator.requests.production import (
+    AdmissionDecision,
     GateKeys,
     GateReservation,
     HierarchicalGatePolicy,
     LogicalResultOutcome,
+    ProductionCachePolicy,
     ProductionLogicalRequest,
     ProductionLogicalResult,
     ProductionPhysicalAttempt,
@@ -25,7 +28,7 @@ from stock_research_llm_orchestrator.requests.production import (
 )
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 DATABASE_FILENAME = "request-coordinator.sqlite3"
 _SCHEMA_OWNER = "production-request-coordinator"
 _OWNER_TOKEN_ADAPTER = TypeAdapter(Identifier)
@@ -142,6 +145,250 @@ class ProductionRequestRepository:
             raise RuntimeStorageError("queue_enqueue_failed") from error
         if rejected:
             raise RuntimeStorageError("queue_full")
+
+    def admit_logical_request(
+        self,
+        request: ProductionLogicalRequest,
+        rate_domain: str,
+        cache_policy: ProductionCachePolicy,
+        lease: RuntimeLease,
+        now: datetime,
+        queue_policy: QueuePolicy,
+    ) -> AdmissionDecision:
+        """Evaluate cache, join single-flight, then queue only its leader."""
+        request = ProductionLogicalRequest.model_validate(request.model_dump(warnings=False))
+        rate_domain = _OWNER_TOKEN_ADAPTER.validate_python(rate_domain, strict=True)
+        cache_policy = ProductionCachePolicy.model_validate(cache_policy.model_dump(warnings=False))
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        queue_policy = QueuePolicy.model_validate(queue_policy.model_dump(warnings=False))
+        cache_decision: Literal["disabled", "not_applicable"] = (
+            "disabled" if cache_policy.applicable else "not_applicable"
+        )
+        decision: Literal["leader", "follower"]
+        rejected = False
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                _insert_logical_request(connection, request)
+                _append_admission_event(connection, request.logical_request_id, f"cache_{cache_decision}", now, None)
+                flight = connection.execute(
+                    """
+                    SELECT flight.leader_logical_request_id, consumer.rate_domain
+                    FROM single_flights AS flight
+                    JOIN single_flight_consumers AS consumer
+                      ON consumer.logical_request_id = flight.leader_logical_request_id
+                    WHERE flight.request_fingerprint = ? AND flight.state = 'active'
+                    """,
+                    (request.request_fingerprint,),
+                ).fetchone()
+                if flight is None:
+                    decision = "leader"
+                    leader_id = request.logical_request_id
+                    connection.execute(
+                        "INSERT INTO single_flights VALUES (?, ?, 'active')",
+                        (request.request_fingerprint, leader_id),
+                    )
+                else:
+                    decision = "follower"
+                    leader_id = str(flight[0])
+                    if str(flight[1]) != rate_domain:
+                        raise RuntimeStorageError("single_flight_scope_mismatch")
+                connection.execute(
+                    """
+                    INSERT INTO single_flight_consumers (
+                        logical_request_id, request_fingerprint, role, state,
+                        cache_decision, rate_domain, joined_at
+                    ) VALUES (?, ?, ?, 'active', ?, ?, ?)
+                    """,
+                    (
+                        request.logical_request_id,
+                        request.request_fingerprint,
+                        decision,
+                        cache_decision,
+                        rate_domain,
+                        _timestamp(now),
+                    ),
+                )
+                _append_admission_event(
+                    connection, request.logical_request_id, f"single_flight_{decision}", now, leader_id
+                )
+                if decision == "leader":
+                    counts = connection.execute(
+                        """
+                        SELECT COUNT(*),
+                            SUM(CASE WHEN rate_domain = ? THEN 1 ELSE 0 END),
+                            SUM(CASE WHEN rate_domain = ? AND task_id = ? THEN 1 ELSE 0 END)
+                        FROM queue_entries WHERE state = 'queued'
+                        """,
+                        (rate_domain, rate_domain, request.task_id),
+                    ).fetchone()
+                    global_count, domain_count, task_count = (int(value or 0) for value in counts)
+                    rejected = (
+                        global_count >= queue_policy.global_limit
+                        or domain_count >= queue_policy.rate_domain_limit
+                        or task_count >= queue_policy.task_rate_domain_limit
+                    )
+                    state = "rejected" if rejected else "queued"
+                    connection.execute(
+                        """
+                        INSERT INTO queue_entries (
+                            logical_request_id, rate_domain, task_id, enqueued_at, state, dequeued_at
+                        ) VALUES (?, ?, ?, ?, ?, NULL)
+                        """,
+                        (request.logical_request_id, rate_domain, request.task_id, _timestamp(now), state),
+                    )
+                    _append_queue_event(connection, request.logical_request_id, "requested", now, None)
+                    if rejected:
+                        _cancel_logical(connection, request.logical_request_id, now, "queue_full", "failed")
+                        connection.execute(
+                            "UPDATE single_flights SET state = 'terminal' WHERE request_fingerprint = ?",
+                            (request.request_fingerprint,),
+                        )
+                        connection.execute(
+                            "UPDATE single_flight_consumers SET state = 'cancelled' WHERE logical_request_id = ?",
+                            (request.logical_request_id,),
+                        )
+                        _append_queue_event(connection, request.logical_request_id, "rejected", now, "queue_full")
+                    else:
+                        _append_queue_event(connection, request.logical_request_id, "queued", now, None)
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("request_admission_failed") from error
+        if rejected:
+            raise RuntimeStorageError("queue_full")
+        return AdmissionDecision(
+            logical_request_id=request.logical_request_id,
+            cache_decision=cache_decision,
+            single_flight_decision=decision,
+            leader_logical_request_id=leader_id,
+        )
+
+    def cancel_admitted_request(
+        self, logical_request_id: str, reason: str, lease: RuntimeLease, now: datetime
+    ) -> str | None:
+        """Cancel a follower or an unsent leader, promoting a remaining consumer."""
+        logical_request_id = _OWNER_TOKEN_ADAPTER.validate_python(logical_request_id, strict=True)
+        reason = _OWNER_TOKEN_ADAPTER.validate_python(reason, strict=True)
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        promoted: str | None = None
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                consumer = connection.execute(
+                    """
+                    SELECT request_fingerprint, role, state FROM single_flight_consumers
+                    WHERE logical_request_id = ?
+                    """,
+                    (logical_request_id,),
+                ).fetchone()
+                if consumer is None or str(consumer[2]) != "active":
+                    raise RuntimeStorageError("single_flight_consumer_not_active")
+                fingerprint, role = str(consumer[0]), str(consumer[1])
+                if role == "follower":
+                    _cancel_logical(connection, logical_request_id, now, reason, "cancelled")
+                    connection.execute(
+                        "UPDATE single_flight_consumers SET state = 'cancelled' WHERE logical_request_id = ?",
+                        (logical_request_id,),
+                    )
+                    _append_admission_event(connection, logical_request_id, "follower_cancelled", now, reason)
+                else:
+                    queue = connection.execute(
+                        "SELECT rate_domain, state FROM queue_entries WHERE logical_request_id = ?",
+                        (logical_request_id,),
+                    ).fetchone()
+                    attempt = connection.execute(
+                        "SELECT physical_attempt_id, state FROM physical_attempts WHERE logical_request_id = ? LIMIT 1",
+                        (logical_request_id,),
+                    ).fetchone()
+                    if attempt is not None and str(attempt[1]) == "started":
+                        _cancel_started_flight(connection, fingerprint, now, reason)
+                        continue_cancellation = False
+                    else:
+                        continue_cancellation = True
+                    if not continue_cancellation:
+                        return None
+                    if queue is None or str(queue[1]) not in {"queued", "dequeued"}:
+                        raise RuntimeStorageError("in_flight_cancellation_requires_transport_result")
+                    if attempt is not None:
+                        if str(attempt[1]) != "reserved":
+                            raise RuntimeStorageError("in_flight_cancellation_requires_transport_result")
+                        _release_gate_occupancy(connection, logical_request_id, now, "leader_cancelled")
+                        connection.execute(
+                            "UPDATE physical_attempts SET state = 'failed' WHERE physical_attempt_id = ?",
+                            (attempt[0],),
+                        )
+                    follower = connection.execute(
+                        """
+                        SELECT consumer.logical_request_id, consumer.rate_domain, request.task_id
+                        FROM single_flight_consumers AS consumer
+                        JOIN logical_requests AS request USING (logical_request_id)
+                        WHERE consumer.request_fingerprint = ? AND consumer.role = 'follower'
+                          AND consumer.state = 'active'
+                        ORDER BY consumer.joined_at, consumer.logical_request_id LIMIT 1
+                        """,
+                        (fingerprint,),
+                    ).fetchone()
+                    _cancel_logical(connection, logical_request_id, now, reason, "cancelled")
+                    connection.execute(
+                        "UPDATE single_flight_consumers SET state = 'cancelled' WHERE logical_request_id = ?",
+                        (logical_request_id,),
+                    )
+                    connection.execute(
+                        "UPDATE queue_entries SET state = 'cancelled' WHERE logical_request_id = ?",
+                        (logical_request_id,),
+                    )
+                    if follower is None:
+                        connection.execute(
+                            "UPDATE single_flights SET state = 'terminal' WHERE request_fingerprint = ?",
+                            (fingerprint,),
+                        )
+                    else:
+                        promoted, promoted_domain, promoted_task = (str(value) for value in follower)
+                        connection.execute(
+                            "UPDATE single_flight_consumers SET role = 'leader' WHERE logical_request_id = ?",
+                            (promoted,),
+                        )
+                        connection.execute(
+                            "UPDATE single_flights SET leader_logical_request_id = ? WHERE request_fingerprint = ?",
+                            (promoted, fingerprint),
+                        )
+                        connection.execute(
+                            """
+                            INSERT INTO queue_entries VALUES (?, ?, ?, ?, 'queued', NULL)
+                            """,
+                            (promoted, promoted_domain, promoted_task, _timestamp(now)),
+                        )
+                        _append_queue_event(connection, promoted, "queued", now, "leader_promoted")
+                        _append_admission_event(connection, promoted, "leader_promoted", now, logical_request_id)
+                    _append_admission_event(connection, logical_request_id, "leader_cancelled", now, reason)
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("request_cancellation_failed") from error
+        return promoted
+
+    def admission_events(self, logical_request_id: str) -> tuple[tuple[str, str | None], ...]:
+        """Return cache, single-flight, and cancellation audit events."""
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                rows = connection.execute(
+                    """
+                    SELECT event_type, reason FROM admission_events
+                    WHERE logical_request_id = ? ORDER BY event_id
+                    """,
+                    (logical_request_id,),
+                ).fetchall()
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("admission_event_read_failed") from error
+        return tuple((str(event), None if reason is None else str(reason)) for event, reason in rows)
 
     def claim_next_queued(self, rate_domain: str, lease: RuntimeLease, now: datetime) -> QueueClaim | None:
         """Dequeue one request using task FIFO and active-task round-robin."""
@@ -925,6 +1172,122 @@ def _append_gate_event(
     )
 
 
+def _append_admission_event(
+    connection: sqlite3.Connection,
+    logical_request_id: str,
+    event_type: str,
+    now: datetime,
+    reason: str | None,
+) -> None:
+    connection.execute(
+        """
+        INSERT INTO admission_events (logical_request_id, event_type, occurred_at, reason)
+        VALUES (?, ?, ?, ?)
+        """,
+        (logical_request_id, event_type, _timestamp(now), reason),
+    )
+
+
+def _cancel_logical(
+    connection: sqlite3.Connection,
+    logical_request_id: str,
+    now: datetime,
+    reason: str,
+    outcome: str,
+) -> None:
+    state = "cancelled" if outcome == "cancelled" else "failed"
+    updated = connection.execute(
+        "UPDATE logical_requests SET state = ? WHERE logical_request_id = ? AND state = 'queued'",
+        (state, logical_request_id),
+    )
+    if updated.rowcount != 1:
+        raise RuntimeStorageError("logical_request_not_cancellable")
+    connection.execute(
+        """
+        INSERT INTO logical_results (logical_request_id, outcome, completed_at, error_code)
+        VALUES (?, ?, ?, ?)
+        """,
+        (logical_request_id, outcome, _timestamp(now), None if outcome == "cancelled" else reason),
+    )
+
+
+def _release_gate_occupancy(
+    connection: sqlite3.Connection, logical_request_id: str, now: datetime, reason: str
+) -> None:
+    reservations = connection.execute(
+        """
+        SELECT reservation_id FROM gate_reservations
+        WHERE logical_request_id = ? AND state = 'active'
+        """,
+        (logical_request_id,),
+    ).fetchall()
+    for (reservation_id,) in reservations:
+        scopes = connection.execute(
+            "SELECT scope, key_alias FROM gate_reservation_scopes WHERE reservation_id = ?",
+            (reservation_id,),
+        ).fetchall()
+        if len(scopes) != 8:
+            raise RuntimeStorageError("gate_state_inconsistent")
+        for scope, key_alias in scopes:
+            updated = connection.execute(
+                """
+                UPDATE gate_state SET active_count = active_count - 1
+                WHERE scope = ? AND key_alias = ? AND active_count > 0
+                """,
+                (scope, key_alias),
+            )
+            if updated.rowcount != 1:
+                raise RuntimeStorageError("gate_state_inconsistent")
+        connection.execute(
+            "UPDATE gate_reservations SET state = 'recovered' WHERE reservation_id = ?",
+            (reservation_id,),
+        )
+        _append_gate_event(
+            connection,
+            logical_request_id,
+            str(reservation_id),
+            None,
+            None,
+            "released",
+            now,
+            reason,
+        )
+
+
+def _cancel_started_flight(connection: sqlite3.Connection, fingerprint: str, now: datetime, reason: str) -> None:
+    consumers = connection.execute(
+        """
+        SELECT logical_request_id FROM single_flight_consumers
+        WHERE request_fingerprint = ? AND state = 'active'
+        """,
+        (fingerprint,),
+    ).fetchall()
+    leader = connection.execute(
+        "SELECT leader_logical_request_id FROM single_flights WHERE request_fingerprint = ? AND state = 'active'",
+        (fingerprint,),
+    ).fetchone()
+    if leader is None:
+        raise RuntimeStorageError("single_flight_state_inconsistent")
+    leader_id = str(leader[0])
+    _release_gate_occupancy(connection, leader_id, now, "in_flight_cancelled")
+    connection.execute(
+        "UPDATE physical_attempts SET state = 'unknown' WHERE logical_request_id = ? AND state = 'started'",
+        (leader_id,),
+    )
+    for (logical_request_id,) in consumers:
+        consumer_id = str(logical_request_id)
+        _cancel_logical(connection, consumer_id, now, reason, "unknown")
+        connection.execute(
+            "UPDATE single_flight_consumers SET state = 'cancelled' WHERE logical_request_id = ?",
+            (consumer_id,),
+        )
+        _append_admission_event(connection, consumer_id, "in_flight_cancelled", now, reason)
+    connection.execute(
+        "UPDATE single_flights SET state = 'terminal' WHERE request_fingerprint = ?",
+        (fingerprint,),
+    )
+
+
 def _recover_gate_reservations(connection: sqlite3.Connection, generation: int, now: datetime) -> None:
     reservations = connection.execute(
         """
@@ -1038,6 +1401,9 @@ def initialize_runtime_storage(runtime_root: Path) -> ProductionRequestRepositor
                         current_version = 3
                     if current_version == 3:
                         _migrate_v3_to_v4(connection)
+                        current_version = 4
+                    if current_version == 4:
+                        _migrate_v4_to_v5(connection)
                 _verify_schema(connection)
         finally:
             connection.close()
@@ -1066,7 +1432,7 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             schema_owner TEXT NOT NULL,
             schema_version INTEGER NOT NULL CHECK (schema_version >= 1)
         );
-        INSERT INTO schema_metadata VALUES (1, 'production-request-coordinator', 4);
+        INSERT INTO schema_metadata VALUES (1, 'production-request-coordinator', 5);
 
         CREATE TABLE logical_requests (
             logical_request_id TEXT PRIMARY KEY,
@@ -1172,7 +1538,29 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             reason TEXT
         );
 
-        PRAGMA user_version = 4;
+        CREATE TABLE single_flights (
+            request_fingerprint TEXT PRIMARY KEY,
+            leader_logical_request_id TEXT NOT NULL REFERENCES logical_requests(logical_request_id),
+            state TEXT NOT NULL CHECK (state IN ('active', 'terminal'))
+        );
+        CREATE TABLE single_flight_consumers (
+            logical_request_id TEXT PRIMARY KEY REFERENCES logical_requests(logical_request_id),
+            request_fingerprint TEXT NOT NULL REFERENCES single_flights(request_fingerprint),
+            role TEXT NOT NULL CHECK (role IN ('leader', 'follower')),
+            state TEXT NOT NULL CHECK (state IN ('active', 'cancelled')),
+            cache_decision TEXT NOT NULL CHECK (cache_decision IN ('disabled', 'not_applicable')),
+            rate_domain TEXT NOT NULL,
+            joined_at TEXT NOT NULL
+        );
+        CREATE TABLE admission_events (
+            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            logical_request_id TEXT NOT NULL REFERENCES logical_requests(logical_request_id),
+            event_type TEXT NOT NULL,
+            occurred_at TEXT NOT NULL,
+            reason TEXT
+        );
+
+        PRAGMA user_version = 5;
         COMMIT;
         """
     )
@@ -1278,6 +1666,43 @@ def _migrate_v3_to_v4(connection: sqlite3.Connection) -> None:
         );
         UPDATE schema_metadata SET schema_version = 4 WHERE singleton = 1;
         PRAGMA user_version = 4;
+        COMMIT;
+        """
+    )
+
+
+def _migrate_v4_to_v5(connection: sqlite3.Connection) -> None:
+    metadata = connection.execute(
+        "SELECT schema_owner, schema_version FROM schema_metadata WHERE singleton = 1"
+    ).fetchone()
+    if metadata != (_SCHEMA_OWNER, 4):
+        raise RuntimeStorageError("runtime_schema_metadata_mismatch")
+    connection.executescript(
+        """
+        BEGIN IMMEDIATE;
+        CREATE TABLE single_flights (
+            request_fingerprint TEXT PRIMARY KEY,
+            leader_logical_request_id TEXT NOT NULL REFERENCES logical_requests(logical_request_id),
+            state TEXT NOT NULL CHECK (state IN ('active', 'terminal'))
+        );
+        CREATE TABLE single_flight_consumers (
+            logical_request_id TEXT PRIMARY KEY REFERENCES logical_requests(logical_request_id),
+            request_fingerprint TEXT NOT NULL REFERENCES single_flights(request_fingerprint),
+            role TEXT NOT NULL CHECK (role IN ('leader', 'follower')),
+            state TEXT NOT NULL CHECK (state IN ('active', 'cancelled')),
+            cache_decision TEXT NOT NULL CHECK (cache_decision IN ('disabled', 'not_applicable')),
+            rate_domain TEXT NOT NULL,
+            joined_at TEXT NOT NULL
+        );
+        CREATE TABLE admission_events (
+            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            logical_request_id TEXT NOT NULL REFERENCES logical_requests(logical_request_id),
+            event_type TEXT NOT NULL,
+            occurred_at TEXT NOT NULL,
+            reason TEXT
+        );
+        UPDATE schema_metadata SET schema_version = 5 WHERE singleton = 1;
+        PRAGMA user_version = 5;
         COMMIT;
         """
     )
