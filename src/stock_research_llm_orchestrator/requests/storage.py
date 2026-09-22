@@ -13,6 +13,7 @@ from pydantic import TypeAdapter
 from stock_research_llm_orchestrator.contracts.base import Identifier
 from stock_research_llm_orchestrator.requests.production import (
     AdmissionDecision,
+    CommittedRawReference,
     GateKeys,
     GateReservation,
     HierarchicalGatePolicy,
@@ -23,12 +24,13 @@ from stock_research_llm_orchestrator.requests.production import (
     ProductionPhysicalAttempt,
     QueueClaim,
     QueuePolicy,
+    RawPublicationIntent,
     RuntimeLease,
     RuntimeLeasePolicy,
 )
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 DATABASE_FILENAME = "request-coordinator.sqlite3"
 _SCHEMA_OWNER = "production-request-coordinator"
 _OWNER_TOKEN_ADAPTER = TypeAdapter(Identifier)
@@ -793,6 +795,139 @@ class ProductionRequestRepository:
         except (sqlite3.Error, OSError) as error:
             raise RuntimeStorageError("physical_attempt_persistence_failed") from error
 
+    def begin_raw_publication(self, intent: RawPublicationIntent, lease: RuntimeLease, now: datetime) -> None:
+        """Persist a fenced publication intent before writing candidate bytes."""
+        intent = RawPublicationIntent.model_validate(intent.model_dump(warnings=False))
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                match = connection.execute(
+                    """
+                    SELECT 1 FROM physical_attempts AS attempt
+                    JOIN logical_requests AS request USING (logical_request_id)
+                    WHERE attempt.physical_attempt_id = ? AND attempt.logical_request_id = ?
+                      AND request.task_id = ? AND request.source_id = ? AND request.operation = ?
+                      AND attempt.state = 'succeeded'
+                    """,
+                    (
+                        intent.physical_attempt_id,
+                        intent.logical_request_id,
+                        intent.task_id,
+                        intent.source_id,
+                        intent.operation,
+                    ),
+                ).fetchone()
+                if match is None:
+                    raise RuntimeStorageError("raw_publication_attempt_mismatch")
+                connection.execute(
+                    """
+                    INSERT INTO raw_publications (
+                        publication_id, task_id, logical_request_id, physical_attempt_id,
+                        source_id, operation, content_sha256, byte_count, media_type,
+                        encoding, raw_schema_id, raw_schema_version, publication_generation,
+                        relative_path, state, created_at, committed_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'staging', ?, NULL)
+                    """,
+                    (
+                        intent.publication_id,
+                        intent.task_id,
+                        intent.logical_request_id,
+                        intent.physical_attempt_id,
+                        intent.source_id,
+                        intent.operation,
+                        intent.content_sha256,
+                        intent.byte_count,
+                        intent.media_type,
+                        intent.encoding,
+                        intent.raw_schema_id,
+                        intent.raw_schema_version,
+                        intent.publication_generation,
+                        _timestamp(now),
+                    ),
+                )
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("raw_publication_intent_failed") from error
+
+    def commit_raw_publication(self, reference: CommittedRawReference, lease: RuntimeLease, now: datetime) -> None:
+        """Fence and commit the reference after atomic filesystem publication."""
+        reference = CommittedRawReference.model_validate(reference.model_dump(warnings=False))
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                updated = connection.execute(
+                    """
+                    UPDATE raw_publications SET relative_path = ?, state = 'committed', committed_at = ?
+                    WHERE publication_id = ? AND task_id = ? AND logical_request_id = ?
+                      AND physical_attempt_id = ? AND content_sha256 = ? AND byte_count = ?
+                      AND raw_schema_id = ? AND raw_schema_version = ?
+                      AND publication_generation = ? AND state = 'staging'
+                    """,
+                    (
+                        reference.relative_path,
+                        _timestamp(now),
+                        reference.publication_id,
+                        reference.task_id,
+                        reference.logical_request_id,
+                        reference.physical_attempt_id,
+                        reference.content_sha256,
+                        reference.byte_count,
+                        reference.raw_schema_id,
+                        reference.raw_schema_version,
+                        reference.publication_generation,
+                    ),
+                )
+                if updated.rowcount != 1:
+                    raise RuntimeStorageError("raw_publication_transition_rejected")
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("raw_publication_commit_failed") from error
+
+    def fail_raw_publication(self, publication_id: str, lease: RuntimeLease, now: datetime) -> None:
+        """Record a known pre-publication rejection without retaining raw bytes."""
+        publication_id = _OWNER_TOKEN_ADAPTER.validate_python(publication_id, strict=True)
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                updated = connection.execute(
+                    "UPDATE raw_publications SET state = 'failed' WHERE publication_id = ? AND state = 'staging'",
+                    (publication_id,),
+                )
+                if updated.rowcount != 1:
+                    raise RuntimeStorageError("raw_publication_transition_rejected")
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("raw_publication_failure_persistence_failed") from error
+
+    def raw_publication_state(self, publication_id: str) -> tuple[str, str | None] | None:
+        """Read sanitized publication state and its committed relative path."""
+        publication_id = _OWNER_TOKEN_ADAPTER.validate_python(publication_id, strict=True)
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                row = connection.execute(
+                    "SELECT state, relative_path FROM raw_publications WHERE publication_id = ?",
+                    (publication_id,),
+                ).fetchone()
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("raw_publication_read_failed") from error
+        return None if row is None else (str(row[0]), None if row[1] is None else str(row[1]))
+
     def logical_request_state(self, logical_request_id: str) -> str | None:
         """Return the persisted state without exposing request contents."""
         try:
@@ -1408,6 +1543,9 @@ def initialize_runtime_storage(runtime_root: Path) -> ProductionRequestRepositor
                         current_version = 4
                     if current_version == 4:
                         _migrate_v4_to_v5(connection)
+                        current_version = 5
+                    if current_version == 5:
+                        _migrate_v5_to_v6(connection)
                 _verify_schema(connection)
         finally:
             connection.close()
@@ -1436,7 +1574,7 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             schema_owner TEXT NOT NULL,
             schema_version INTEGER NOT NULL CHECK (schema_version >= 1)
         );
-        INSERT INTO schema_metadata VALUES (1, 'production-request-coordinator', 5);
+        INSERT INTO schema_metadata VALUES (1, 'production-request-coordinator', 6);
 
         CREATE TABLE logical_requests (
             logical_request_id TEXT PRIMARY KEY,
@@ -1564,7 +1702,27 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             reason TEXT
         );
 
-        PRAGMA user_version = 5;
+        CREATE TABLE raw_publications (
+            publication_id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL,
+            logical_request_id TEXT NOT NULL REFERENCES logical_requests(logical_request_id),
+            physical_attempt_id TEXT NOT NULL UNIQUE REFERENCES physical_attempts(physical_attempt_id),
+            source_id TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            content_sha256 TEXT NOT NULL,
+            byte_count INTEGER NOT NULL CHECK (byte_count >= 0),
+            media_type TEXT NOT NULL,
+            encoding TEXT NOT NULL,
+            raw_schema_id TEXT NOT NULL,
+            raw_schema_version INTEGER NOT NULL CHECK (raw_schema_version >= 1),
+            publication_generation INTEGER NOT NULL CHECK (publication_generation >= 1),
+            relative_path TEXT,
+            state TEXT NOT NULL CHECK (state IN ('staging', 'committed', 'reconciliation_required', 'failed')),
+            created_at TEXT NOT NULL,
+            committed_at TEXT
+        );
+
+        PRAGMA user_version = 6;
         COMMIT;
         """
     )
@@ -1707,6 +1865,41 @@ def _migrate_v4_to_v5(connection: sqlite3.Connection) -> None:
         );
         UPDATE schema_metadata SET schema_version = 5 WHERE singleton = 1;
         PRAGMA user_version = 5;
+        COMMIT;
+        """
+    )
+
+
+def _migrate_v5_to_v6(connection: sqlite3.Connection) -> None:
+    metadata = connection.execute(
+        "SELECT schema_owner, schema_version FROM schema_metadata WHERE singleton = 1"
+    ).fetchone()
+    if metadata != (_SCHEMA_OWNER, 5):
+        raise RuntimeStorageError("runtime_schema_metadata_mismatch")
+    connection.executescript(
+        """
+        BEGIN IMMEDIATE;
+        CREATE TABLE raw_publications (
+            publication_id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL,
+            logical_request_id TEXT NOT NULL REFERENCES logical_requests(logical_request_id),
+            physical_attempt_id TEXT NOT NULL UNIQUE REFERENCES physical_attempts(physical_attempt_id),
+            source_id TEXT NOT NULL,
+            operation TEXT NOT NULL,
+            content_sha256 TEXT NOT NULL,
+            byte_count INTEGER NOT NULL CHECK (byte_count >= 0),
+            media_type TEXT NOT NULL,
+            encoding TEXT NOT NULL,
+            raw_schema_id TEXT NOT NULL,
+            raw_schema_version INTEGER NOT NULL CHECK (raw_schema_version >= 1),
+            publication_generation INTEGER NOT NULL CHECK (publication_generation >= 1),
+            relative_path TEXT,
+            state TEXT NOT NULL CHECK (state IN ('staging', 'committed', 'reconciliation_required', 'failed')),
+            created_at TEXT NOT NULL,
+            committed_at TEXT
+        );
+        UPDATE schema_metadata SET schema_version = 6 WHERE singleton = 1;
+        PRAGMA user_version = 6;
         COMMIT;
         """
     )

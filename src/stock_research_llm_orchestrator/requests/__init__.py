@@ -10,6 +10,7 @@ from stock_research_llm_orchestrator.requests.models import (
 )
 from stock_research_llm_orchestrator.requests.production import (
     AdmissionDecision,
+    CommittedRawReference,
     GateKeys,
     GateLimit,
     GateReservation,
@@ -23,9 +24,11 @@ from stock_research_llm_orchestrator.requests.production import (
     ProductionPhysicalAttempt,
     QueueClaim,
     QueuePolicy,
+    RawPublicationIntent,
     RuntimeLease,
     RuntimeLeasePolicy,
 )
+from stock_research_llm_orchestrator.requests.raw_artifacts import RawArtifactPublisher
 from stock_research_llm_orchestrator.requests.storage import (
     ProductionRequestRepository,
     RuntimeStorageError,

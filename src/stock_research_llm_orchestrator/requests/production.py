@@ -117,6 +117,39 @@ class ProductionLogicalResult(StrictContractModel):
         return self
 
 
+class RawPublicationIntent(StrictContractModel):
+    """Secret-free intent for publishing one exact physical response."""
+
+    publication_id: Identifier
+    task_id: Identifier
+    logical_request_id: Identifier
+    physical_attempt_id: Identifier
+    source_id: Identifier
+    operation: Identifier
+    content_sha256: Sha256Hex
+    byte_count: int = Field(ge=0)
+    media_type: str = Field(min_length=1, max_length=128)
+    encoding: str = Field(min_length=1, max_length=64)
+    raw_schema_id: Identifier
+    raw_schema_version: int = Field(ge=1)
+    publication_generation: int = Field(ge=1)
+
+
+class CommittedRawReference(StrictContractModel):
+    """Durable reference to an immutable raw acquisition bundle."""
+
+    publication_id: Identifier
+    task_id: Identifier
+    logical_request_id: Identifier
+    physical_attempt_id: Identifier
+    relative_path: str = Field(pattern=r"^acquisitions/[A-Za-z0-9_-]+/[A-Za-z0-9_-]+$")
+    content_sha256: Sha256Hex
+    byte_count: int = Field(ge=0)
+    raw_schema_id: Identifier
+    raw_schema_version: int = Field(ge=1)
+    publication_generation: int = Field(ge=1)
+
+
 class RuntimeLeasePolicy(StrictContractModel):
     """Versioned timing policy for one production runtime owner."""
 
