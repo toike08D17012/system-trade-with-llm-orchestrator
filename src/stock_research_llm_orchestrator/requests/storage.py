@@ -4,12 +4,16 @@ import os
 import sqlite3
 import stat
 from datetime import UTC, datetime, timedelta
+from math import isfinite
 from pathlib import Path
 
 from pydantic import TypeAdapter
 
 from stock_research_llm_orchestrator.contracts.base import Identifier
 from stock_research_llm_orchestrator.requests.production import (
+    GateKeys,
+    GateReservation,
+    HierarchicalGatePolicy,
     LogicalResultOutcome,
     ProductionLogicalRequest,
     ProductionLogicalResult,
@@ -21,7 +25,7 @@ from stock_research_llm_orchestrator.requests.production import (
 )
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 DATABASE_FILENAME = "request-coordinator.sqlite3"
 _SCHEMA_OWNER = "production-request-coordinator"
 _OWNER_TOKEN_ADAPTER = TypeAdapter(Identifier)
@@ -225,6 +229,294 @@ class ProductionRequestRepository:
             raise RuntimeStorageError("queue_event_read_failed") from error
         return tuple((str(event), None if reason is None else str(reason)) for event, reason in rows)
 
+    def acquire_gates(
+        self,
+        reservation_id: str,
+        attempt: ProductionPhysicalAttempt,
+        keys: GateKeys,
+        policy: HierarchicalGatePolicy,
+        lease: RuntimeLease,
+        now: datetime,
+    ) -> GateReservation:
+        """Atomically acquire every scope and create the physical attempt."""
+        reservation_id = _OWNER_TOKEN_ADAPTER.validate_python(reservation_id, strict=True)
+        attempt = ProductionPhysicalAttempt.model_validate(attempt.model_dump(warnings=False))
+        keys = GateKeys.model_validate(keys.model_dump(warnings=False))
+        policy = HierarchicalGatePolicy.model_validate(policy.model_dump(warnings=False))
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        if attempt.lease_generation != lease.generation:
+            raise RuntimeStorageError("gate_attempt_generation_mismatch")
+        blocked_reason: str | None = None
+        blocked_scope: tuple[str, str] | None = None
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                queue_state = connection.execute(
+                    "SELECT state FROM queue_entries WHERE logical_request_id = ?",
+                    (attempt.logical_request_id,),
+                ).fetchone()
+                if queue_state != ("dequeued",):
+                    raise RuntimeStorageError("gate_request_not_dequeued")
+                for scope, key_alias in keys.ordered():
+                    limit = policy.limits[scope]
+                    row = connection.execute(
+                        """
+                        SELECT active_count, last_started_at, cooldown_until
+                        FROM gate_state WHERE scope = ? AND key_alias = ?
+                        """,
+                        (scope.value, key_alias),
+                    ).fetchone()
+                    active_count = 0 if row is None else int(row[0])
+                    last_started = None if row is None or row[1] is None else _parse_timestamp(str(row[1]))
+                    cooldown = None if row is None or row[2] is None else _parse_timestamp(str(row[2]))
+                    cutoff = now - timedelta(seconds=limit.window_seconds)
+                    starts = int(
+                        connection.execute(
+                            """
+                            SELECT COUNT(*) FROM gate_starts
+                            WHERE scope = ? AND key_alias = ? AND started_at > ?
+                            """,
+                            (scope.value, key_alias, _timestamp(cutoff)),
+                        ).fetchone()[0]
+                    )
+                    if cooldown is not None and now < cooldown:
+                        blocked_reason = "cooldown"
+                    elif active_count >= limit.max_concurrency:
+                        blocked_reason = "concurrency"
+                    elif last_started is not None and now < last_started + timedelta(
+                        seconds=limit.min_interval_seconds
+                    ):
+                        blocked_reason = "minimum_interval"
+                    elif starts >= limit.requests_per_window:
+                        blocked_reason = "rolling_window"
+                    if blocked_reason is not None:
+                        blocked_scope = (scope.value, key_alias)
+                        _append_gate_event(
+                            connection,
+                            attempt.logical_request_id,
+                            None,
+                            scope.value,
+                            key_alias,
+                            "cooldown" if blocked_reason == "cooldown" else "blocked",
+                            now,
+                            blocked_reason,
+                        )
+                        break
+                if blocked_reason is None:
+                    connection.execute(
+                        """
+                        INSERT INTO physical_attempts (
+                            physical_attempt_id, logical_request_id, sequence_number,
+                            lease_generation, created_at, state
+                        ) VALUES (?, ?, ?, ?, ?, 'reserved')
+                        """,
+                        (
+                            attempt.physical_attempt_id,
+                            attempt.logical_request_id,
+                            attempt.sequence_number,
+                            attempt.lease_generation,
+                            attempt.created_at,
+                        ),
+                    )
+                    connection.execute(
+                        """
+                        INSERT INTO gate_reservations VALUES (?, ?, ?, ?, ?, 'active')
+                        """,
+                        (
+                            reservation_id,
+                            attempt.physical_attempt_id,
+                            attempt.logical_request_id,
+                            lease.generation,
+                            _timestamp(now),
+                        ),
+                    )
+                    for scope, key_alias in keys.ordered():
+                        connection.execute(
+                            """
+                            INSERT INTO gate_state (scope, key_alias, active_count, last_started_at, cooldown_until)
+                            VALUES (?, ?, 1, ?, NULL)
+                            ON CONFLICT(scope, key_alias) DO UPDATE SET
+                                active_count = active_count + 1,
+                                last_started_at = excluded.last_started_at
+                            """,
+                            (scope.value, key_alias, _timestamp(now)),
+                        )
+                        connection.execute(
+                            "INSERT INTO gate_reservation_scopes VALUES (?, ?, ?)",
+                            (reservation_id, scope.value, key_alias),
+                        )
+                        connection.execute(
+                            """
+                            INSERT INTO gate_starts (reservation_id, scope, key_alias, started_at)
+                            VALUES (?, ?, ?, ?)
+                            """,
+                            (reservation_id, scope.value, key_alias, _timestamp(now)),
+                        )
+                        _append_gate_event(
+                            connection,
+                            attempt.logical_request_id,
+                            reservation_id,
+                            scope.value,
+                            key_alias,
+                            "acquired",
+                            now,
+                            None,
+                        )
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("gate_acquisition_failed") from error
+        if blocked_reason is not None:
+            scope_name = "unknown" if blocked_scope is None else blocked_scope[0]
+            raise RuntimeStorageError(f"gate_blocked:{scope_name}:{blocked_reason}")
+        return GateReservation(
+            reservation_id=reservation_id,
+            physical_attempt_id=attempt.physical_attempt_id,
+            logical_request_id=attempt.logical_request_id,
+            lease_generation=lease.generation,
+            acquired_at=_timestamp(now),
+        )
+
+    def release_gates(self, reservation: GateReservation, outcome: str, lease: RuntimeLease, now: datetime) -> None:
+        """Release concurrency reservations and persist a terminal attempt outcome."""
+        if outcome not in {"succeeded", "failed"}:
+            raise RuntimeStorageError("invalid_gate_release_outcome")
+        self._finish_gate_reservation(reservation, outcome, None, lease, now)
+
+    def record_retry_after(
+        self,
+        reservation: GateReservation,
+        retry_after_seconds: float,
+        lease: RuntimeLease,
+        now: datetime,
+    ) -> None:
+        """Persist provider cooldown and fail without scheduling an automatic retry."""
+        if not isfinite(retry_after_seconds) or retry_after_seconds < 0:
+            raise RuntimeStorageError("invalid_retry_after")
+        self._finish_gate_reservation(reservation, "failed", retry_after_seconds, lease, now)
+
+    def _finish_gate_reservation(
+        self,
+        reservation: GateReservation,
+        outcome: str,
+        retry_after_seconds: float | None,
+        lease: RuntimeLease,
+        now: datetime,
+    ) -> None:
+        reservation = GateReservation.model_validate(reservation.model_dump(warnings=False))
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                scopes = connection.execute(
+                    """
+                    SELECT scope, key_alias FROM gate_reservation_scopes
+                    WHERE reservation_id = ? ORDER BY scope
+                    """,
+                    (reservation.reservation_id,),
+                ).fetchall()
+                current = connection.execute(
+                    """
+                    SELECT state, logical_request_id, physical_attempt_id, lease_generation
+                    FROM gate_reservations WHERE reservation_id = ?
+                    """,
+                    (reservation.reservation_id,),
+                ).fetchone()
+                if (
+                    current
+                    != (
+                        "active",
+                        reservation.logical_request_id,
+                        reservation.physical_attempt_id,
+                        lease.generation,
+                    )
+                    or len(scopes) != 8
+                ):
+                    raise RuntimeStorageError("stale_gate_reservation")
+                for scope, key_alias in scopes:
+                    updated = connection.execute(
+                        """
+                        UPDATE gate_state SET active_count = active_count - 1
+                        WHERE scope = ? AND key_alias = ? AND active_count > 0
+                        """,
+                        (scope, key_alias),
+                    )
+                    if updated.rowcount != 1:
+                        raise RuntimeStorageError("gate_state_inconsistent")
+                connection.execute(
+                    "UPDATE gate_reservations SET state = 'released' WHERE reservation_id = ?",
+                    (reservation.reservation_id,),
+                )
+                connection.execute(
+                    """
+                    UPDATE physical_attempts SET state = ?
+                    WHERE physical_attempt_id = ? AND state IN ('reserved', 'started')
+                    """,
+                    (outcome, reservation.physical_attempt_id),
+                )
+                if retry_after_seconds is not None:
+                    provider = next((str(key) for scope, key in scopes if scope == "provider"), None)
+                    if provider is None:
+                        raise RuntimeStorageError("gate_state_inconsistent")
+                    deadline = now + timedelta(seconds=retry_after_seconds)
+                    connection.execute(
+                        """
+                        UPDATE gate_state SET cooldown_until = CASE
+                            WHEN cooldown_until IS NULL OR cooldown_until < ? THEN ? ELSE cooldown_until END
+                        WHERE scope = 'provider' AND key_alias = ?
+                        """,
+                        (_timestamp(deadline), _timestamp(deadline), provider),
+                    )
+                    _append_gate_event(
+                        connection,
+                        reservation.logical_request_id,
+                        reservation.reservation_id,
+                        "provider",
+                        provider,
+                        "cooldown",
+                        now,
+                        "retry_after",
+                    )
+                _append_gate_event(
+                    connection,
+                    reservation.logical_request_id,
+                    reservation.reservation_id,
+                    None,
+                    None,
+                    "released",
+                    now,
+                    outcome,
+                )
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("gate_release_failed") from error
+
+    def gate_events(self, logical_request_id: str) -> tuple[tuple[str, str | None, str | None], ...]:
+        """Return sanitized gate audit events."""
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                rows = connection.execute(
+                    """
+                    SELECT event_type, scope, reason FROM gate_events
+                    WHERE logical_request_id = ? ORDER BY event_id
+                    """,
+                    (logical_request_id,),
+                ).fetchall()
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("gate_event_read_failed") from error
+        return tuple(
+            (str(event), None if scope is None else str(scope), None if reason is None else str(reason))
+            for event, scope, reason in rows
+        )
+
     def add_physical_attempt(self, attempt: ProductionPhysicalAttempt) -> None:
         """Reserve one attempt after its logical request is durable."""
         attempt = ProductionPhysicalAttempt.model_validate(attempt.model_dump(warnings=False))
@@ -409,6 +701,7 @@ class ProductionRequestRepository:
                 if now < expiry:
                     raise RuntimeStorageError("runtime_lease_held")
                 _validate_recovery_state(connection, previous_generation)
+                _recover_gate_reservations(connection, previous_generation, now)
                 generation = previous_generation + 1
                 connection.execute(
                     """
@@ -612,6 +905,67 @@ def _append_queue_event(
     )
 
 
+def _append_gate_event(
+    connection: sqlite3.Connection,
+    logical_request_id: str,
+    reservation_id: str | None,
+    scope: str | None,
+    key_alias: str | None,
+    event_type: str,
+    now: datetime,
+    reason: str | None,
+) -> None:
+    connection.execute(
+        """
+        INSERT INTO gate_events (
+            logical_request_id, reservation_id, scope, key_alias, event_type, occurred_at, reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (logical_request_id, reservation_id, scope, key_alias, event_type, _timestamp(now), reason),
+    )
+
+
+def _recover_gate_reservations(connection: sqlite3.Connection, generation: int, now: datetime) -> None:
+    reservations = connection.execute(
+        """
+        SELECT reservation_id, logical_request_id FROM gate_reservations
+        WHERE state = 'active' AND lease_generation <= ?
+        """,
+        (generation,),
+    ).fetchall()
+    for reservation_id, logical_request_id in reservations:
+        scopes = connection.execute(
+            "SELECT scope, key_alias FROM gate_reservation_scopes WHERE reservation_id = ?",
+            (reservation_id,),
+        ).fetchall()
+        if len(scopes) != 8:
+            raise RuntimeStorageError("runtime_recovery_audit_gap")
+        for scope, key_alias in scopes:
+            updated = connection.execute(
+                """
+                UPDATE gate_state SET active_count = active_count - 1
+                WHERE scope = ? AND key_alias = ? AND active_count > 0
+                """,
+                (scope, key_alias),
+            )
+            if updated.rowcount != 1:
+                raise RuntimeStorageError("runtime_recovery_audit_gap")
+        connection.execute(
+            "UPDATE gate_reservations SET state = 'recovered' WHERE reservation_id = ?",
+            (reservation_id,),
+        )
+        _append_gate_event(
+            connection,
+            str(logical_request_id),
+            str(reservation_id),
+            None,
+            None,
+            "recovered",
+            now,
+            "owner_interrupted",
+        )
+
+
 def _assert_fence(connection: sqlite3.Connection, lease: RuntimeLease, now: datetime) -> None:
     row = connection.execute(
         """
@@ -681,6 +1035,9 @@ def initialize_runtime_storage(runtime_root: Path) -> ProductionRequestRepositor
                         current_version = 2
                     if current_version == 2:
                         _migrate_v2_to_v3(connection)
+                        current_version = 3
+                    if current_version == 3:
+                        _migrate_v3_to_v4(connection)
                 _verify_schema(connection)
         finally:
             connection.close()
@@ -709,7 +1066,7 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             schema_owner TEXT NOT NULL,
             schema_version INTEGER NOT NULL CHECK (schema_version >= 1)
         );
-        INSERT INTO schema_metadata VALUES (1, 'production-request-coordinator', 3);
+        INSERT INTO schema_metadata VALUES (1, 'production-request-coordinator', 4);
 
         CREATE TABLE logical_requests (
             logical_request_id TEXT PRIMARY KEY,
@@ -774,7 +1131,48 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             reason TEXT
         );
 
-        PRAGMA user_version = 3;
+        CREATE TABLE gate_state (
+            scope TEXT NOT NULL,
+            key_alias TEXT NOT NULL,
+            active_count INTEGER NOT NULL CHECK (active_count >= 0),
+            last_started_at TEXT,
+            cooldown_until TEXT,
+            PRIMARY KEY (scope, key_alias)
+        );
+        CREATE TABLE gate_reservations (
+            reservation_id TEXT PRIMARY KEY,
+            physical_attempt_id TEXT NOT NULL UNIQUE REFERENCES physical_attempts(physical_attempt_id),
+            logical_request_id TEXT NOT NULL REFERENCES logical_requests(logical_request_id),
+            lease_generation INTEGER NOT NULL CHECK (lease_generation >= 1),
+            acquired_at TEXT NOT NULL,
+            state TEXT NOT NULL CHECK (state IN ('active', 'released', 'recovered'))
+        );
+        CREATE TABLE gate_reservation_scopes (
+            reservation_id TEXT NOT NULL REFERENCES gate_reservations(reservation_id),
+            scope TEXT NOT NULL,
+            key_alias TEXT NOT NULL,
+            PRIMARY KEY (reservation_id, scope),
+            FOREIGN KEY (scope, key_alias) REFERENCES gate_state(scope, key_alias)
+        );
+        CREATE TABLE gate_starts (
+            start_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reservation_id TEXT NOT NULL REFERENCES gate_reservations(reservation_id),
+            scope TEXT NOT NULL,
+            key_alias TEXT NOT NULL,
+            started_at TEXT NOT NULL
+        );
+        CREATE TABLE gate_events (
+            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            logical_request_id TEXT NOT NULL REFERENCES logical_requests(logical_request_id),
+            reservation_id TEXT,
+            scope TEXT,
+            key_alias TEXT,
+            event_type TEXT NOT NULL,
+            occurred_at TEXT NOT NULL,
+            reason TEXT
+        );
+
+        PRAGMA user_version = 4;
         COMMIT;
         """
     )
@@ -824,6 +1222,62 @@ def _migrate_v2_to_v3(connection: sqlite3.Connection) -> None:
         );
         UPDATE schema_metadata SET schema_version = 3 WHERE singleton = 1;
         PRAGMA user_version = 3;
+        COMMIT;
+        """
+    )
+
+
+def _migrate_v3_to_v4(connection: sqlite3.Connection) -> None:
+    metadata = connection.execute(
+        "SELECT schema_owner, schema_version FROM schema_metadata WHERE singleton = 1"
+    ).fetchone()
+    if metadata != (_SCHEMA_OWNER, 3):
+        raise RuntimeStorageError("runtime_schema_metadata_mismatch")
+    connection.executescript(
+        """
+        BEGIN IMMEDIATE;
+        CREATE TABLE gate_state (
+            scope TEXT NOT NULL,
+            key_alias TEXT NOT NULL,
+            active_count INTEGER NOT NULL CHECK (active_count >= 0),
+            last_started_at TEXT,
+            cooldown_until TEXT,
+            PRIMARY KEY (scope, key_alias)
+        );
+        CREATE TABLE gate_reservations (
+            reservation_id TEXT PRIMARY KEY,
+            physical_attempt_id TEXT NOT NULL UNIQUE REFERENCES physical_attempts(physical_attempt_id),
+            logical_request_id TEXT NOT NULL REFERENCES logical_requests(logical_request_id),
+            lease_generation INTEGER NOT NULL CHECK (lease_generation >= 1),
+            acquired_at TEXT NOT NULL,
+            state TEXT NOT NULL CHECK (state IN ('active', 'released', 'recovered'))
+        );
+        CREATE TABLE gate_reservation_scopes (
+            reservation_id TEXT NOT NULL REFERENCES gate_reservations(reservation_id),
+            scope TEXT NOT NULL,
+            key_alias TEXT NOT NULL,
+            PRIMARY KEY (reservation_id, scope),
+            FOREIGN KEY (scope, key_alias) REFERENCES gate_state(scope, key_alias)
+        );
+        CREATE TABLE gate_starts (
+            start_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reservation_id TEXT NOT NULL REFERENCES gate_reservations(reservation_id),
+            scope TEXT NOT NULL,
+            key_alias TEXT NOT NULL,
+            started_at TEXT NOT NULL
+        );
+        CREATE TABLE gate_events (
+            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            logical_request_id TEXT NOT NULL REFERENCES logical_requests(logical_request_id),
+            reservation_id TEXT,
+            scope TEXT,
+            key_alias TEXT,
+            event_type TEXT NOT NULL,
+            occurred_at TEXT NOT NULL,
+            reason TEXT
+        );
+        UPDATE schema_metadata SET schema_version = 4 WHERE singleton = 1;
+        PRAGMA user_version = 4;
         COMMIT;
         """
     )

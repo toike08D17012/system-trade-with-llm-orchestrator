@@ -7,6 +7,7 @@ from pydantic import Field, ValidationInfo, field_validator, model_validator
 
 from stock_research_llm_orchestrator.contracts.base import Identifier, Sha256Hex, StrictContractModel, Timestamp
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence import _parse_rfc3339
+from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.external_requests import GateScope
 
 
 class LogicalRequestState(StrEnum):
@@ -178,4 +179,69 @@ class QueueClaim(StrictContractModel):
     def validate_enqueued_at(cls, value: str) -> str:
         """Require a semantic RFC 3339 queue timestamp."""
         _parse_rfc3339(value, "enqueued_at")
+        return value
+
+
+class GateLimit(StrictContractModel):
+    """One scope's concurrency and time-based limiter policy."""
+
+    max_concurrency: int = Field(ge=1)
+    min_interval_seconds: float = Field(ge=0, allow_inf_nan=False)
+    requests_per_window: int = Field(ge=1)
+    window_seconds: float = Field(gt=0, allow_inf_nan=False)
+
+
+class HierarchicalGatePolicy(StrictContractModel):
+    """Complete policy for every approved production gate scope."""
+
+    limits: dict[GateScope, GateLimit]
+
+    @model_validator(mode="after")
+    def require_every_scope(self) -> HierarchicalGatePolicy:
+        """Fail closed when any approved gate scope is missing or duplicated."""
+        if set(self.limits) != set(GateScope):
+            raise ValueError("gate policy must define every approved scope")
+        return self
+
+
+class GateKeys(StrictContractModel):
+    """Non-secret aliases used to derive every applicable gate key."""
+
+    global_key: Identifier = "global"
+    egress: Identifier
+    provider: Identifier
+    origin: Identifier
+    credential: Identifier
+    operation: Identifier
+    task: Identifier
+    role: Identifier
+
+    def ordered(self) -> tuple[tuple[GateScope, str], ...]:
+        """Return keys in the approved global-to-role acquisition order."""
+        return (
+            (GateScope.GLOBAL, self.global_key),
+            (GateScope.EGRESS, self.egress),
+            (GateScope.PROVIDER, self.provider),
+            (GateScope.ORIGIN, self.origin),
+            (GateScope.CREDENTIAL, self.credential),
+            (GateScope.OPERATION, self.operation),
+            (GateScope.TASK, self.task),
+            (GateScope.ROLE, self.role),
+        )
+
+
+class GateReservation(StrictContractModel):
+    """Durable ownership of all gates for one physical attempt."""
+
+    reservation_id: Identifier
+    physical_attempt_id: Identifier
+    logical_request_id: Identifier
+    lease_generation: int = Field(ge=1)
+    acquired_at: Timestamp
+
+    @field_validator("acquired_at")
+    @classmethod
+    def validate_acquired_at(cls, value: str) -> str:
+        """Require a semantic RFC 3339 acquisition timestamp."""
+        _parse_rfc3339(value, "acquired_at")
         return value

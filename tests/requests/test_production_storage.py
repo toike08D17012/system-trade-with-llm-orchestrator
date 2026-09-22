@@ -27,6 +27,17 @@ def _runtime_root(tmp_path: Path) -> Path:
     return root
 
 
+def _drop_phase_4b_tables(connection: sqlite3.Connection) -> None:
+    for table in (
+        "gate_events",
+        "gate_starts",
+        "gate_reservation_scopes",
+        "gate_reservations",
+        "gate_state",
+    ):
+        connection.execute(f"DROP TABLE {table}")
+
+
 def _logical_request() -> ProductionLogicalRequest:
     return ProductionLogicalRequest(
         logical_request_id="logical-1",
@@ -51,10 +62,10 @@ def test_initialize_runtime_storage_creates_versioned_private_database(tmp_path:
     database = root / DATABASE_FILENAME
     assert database.stat().st_mode & 0o777 == 0o600
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (3,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (4,)
         assert connection.execute("SELECT schema_owner, schema_version FROM schema_metadata").fetchone() == (
             "production-request-coordinator",
-            3,
+            4,
         )
         columns = {
             row[1]
@@ -116,6 +127,7 @@ def test_initialize_runtime_storage_migrates_phase_3a_schema(tmp_path: Path) -> 
     repository.add_logical_request(_logical_request())
     database = root / DATABASE_FILENAME
     with sqlite3.connect(database) as connection:
+        _drop_phase_4b_tables(connection)
         connection.execute("DROP TABLE queue_events")
         connection.execute("DROP TABLE provider_queue_cursors")
         connection.execute("DROP TABLE queue_entries")
@@ -127,7 +139,7 @@ def test_initialize_runtime_storage_migrates_phase_3a_schema(tmp_path: Path) -> 
 
     assert migrated.logical_request_state("logical-1") == "queued"
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (3,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (4,)
         columns = {row[1] for row in connection.execute("PRAGMA table_info(runtime_lease)")}
     assert "active" in columns
 
@@ -139,6 +151,7 @@ def test_initialize_runtime_storage_migrates_phase_3b_schema(tmp_path: Path) -> 
     repository.add_logical_request(_logical_request())
     database = root / DATABASE_FILENAME
     with sqlite3.connect(database) as connection:
+        _drop_phase_4b_tables(connection)
         connection.execute("DROP TABLE queue_events")
         connection.execute("DROP TABLE provider_queue_cursors")
         connection.execute("DROP TABLE queue_entries")
@@ -149,12 +162,39 @@ def test_initialize_runtime_storage_migrates_phase_3b_schema(tmp_path: Path) -> 
 
     assert migrated.logical_request_state("logical-1") == "queued"
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (3,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (4,)
         tables = {
             str(row[0])
             for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'queue_%'")
         }
     assert tables == {"queue_entries", "queue_events"}
+
+
+def test_initialize_runtime_storage_migrates_phase_4a_schema(tmp_path: Path) -> None:
+    """Add persistent gate state to an existing Phase 4A database."""
+    root = _runtime_root(tmp_path)
+    initialize_runtime_storage(root)
+    database = root / DATABASE_FILENAME
+    with sqlite3.connect(database) as connection:
+        _drop_phase_4b_tables(connection)
+        connection.execute("UPDATE schema_metadata SET schema_version = 3")
+        connection.execute("PRAGMA user_version = 3")
+
+    initialize_runtime_storage(root)
+
+    with sqlite3.connect(database) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone() == (4,)
+        tables = {
+            str(row[0])
+            for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'gate_%'")
+        }
+    assert tables == {
+        "gate_events",
+        "gate_reservation_scopes",
+        "gate_reservations",
+        "gate_starts",
+        "gate_state",
+    }
 
 
 def test_initialize_runtime_storage_rejects_schema_metadata_mismatch(tmp_path: Path) -> None:
