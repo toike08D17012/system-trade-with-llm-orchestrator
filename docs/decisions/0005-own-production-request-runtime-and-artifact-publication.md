@@ -9,7 +9,7 @@
 | 適用範囲 | 詳細解析MVPの決定論的な外部データ取得 |
 | 要件との整合確認日 | 2026-09-21 |
 | 対応仕様 | 要件04版1.1・要件05版1.3 |
-| 実装状態 | Phase 3A〜3Cのlease・attempt・queue recoveryとPhase 4Aの永続queueを実装。gate以降は未実装 |
+| 実装状態 | Phase 3A〜3C、Phase 4Aのqueue、Phase 4Bのgate・cooldownを実装。cache・single-flight以降は未実装 |
 
 ## コンテキスト
 
