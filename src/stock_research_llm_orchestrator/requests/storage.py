@@ -105,6 +105,43 @@ class ProductionRequestRepository:
             raise RuntimeStorageError("logical_request_read_failed") from error
         return None if row is None else str(row[0])
 
+    def physical_attempt_state(self, physical_attempt_id: str) -> tuple[str, int] | None:
+        """Return a physical attempt state and fencing generation."""
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                row = connection.execute(
+                    "SELECT state, lease_generation FROM physical_attempts WHERE physical_attempt_id = ?",
+                    (physical_attempt_id,),
+                ).fetchone()
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("physical_attempt_read_failed") from error
+        return None if row is None else (str(row[0]), int(row[1]))
+
+    def mark_physical_attempt_started(self, physical_attempt_id: str, lease: RuntimeLease, now: datetime) -> None:
+        """Fence the durable transition immediately before external send."""
+        physical_attempt_id = _OWNER_TOKEN_ADAPTER.validate_python(physical_attempt_id, strict=True)
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                updated = connection.execute(
+                    """
+                    UPDATE physical_attempts SET state = 'started'
+                    WHERE physical_attempt_id = ? AND lease_generation = ? AND state = 'reserved'
+                    """,
+                    (physical_attempt_id, lease.generation),
+                )
+                if updated.rowcount != 1:
+                    raise RuntimeStorageError("physical_attempt_transition_rejected")
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("physical_attempt_transition_failed") from error
+
     def complete_logical_request(self, result: ProductionLogicalResult, lease: RuntimeLease, now: datetime) -> None:
         """Atomically fence and persist one terminal logical result."""
         result = ProductionLogicalResult.model_validate(result.model_dump(warnings=False))
@@ -181,6 +218,101 @@ class ProductionRequestRepository:
             raise
         except (sqlite3.Error, OSError, TypeError, ValueError) as error:
             raise RuntimeStorageError("runtime_lease_acquisition_failed") from error
+        return RuntimeLease(
+            owner_token=owner_token,
+            generation=generation,
+            acquired_at=_timestamp(now),
+            heartbeat_at=_timestamp(now),
+            expires_at=_timestamp(expires),
+        )
+
+    def recover_expired_lease(self, owner_token: str, now: datetime, policy: RuntimeLeasePolicy) -> RuntimeLease:
+        """Reconcile interrupted attempts and atomically take over an expired lease."""
+        owner_token = _OWNER_TOKEN_ADAPTER.validate_python(owner_token, strict=True)
+        now = _validate_utc(now)
+        policy = RuntimeLeasePolicy.model_validate(policy.model_dump(warnings=False))
+        expires = now + timedelta(seconds=policy.lease_duration_seconds)
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                row = connection.execute(
+                    """
+                    SELECT generation, heartbeat_at, expires_at, active
+                    FROM runtime_lease WHERE singleton = 1
+                    """
+                ).fetchone()
+                if row is None or int(row[3]) != 1:
+                    raise RuntimeStorageError("expired_runtime_lease_not_found")
+                previous_generation = int(row[0])
+                heartbeat = _parse_timestamp(str(row[1]))
+                expiry = _parse_timestamp(str(row[2]))
+                if now < heartbeat:
+                    raise RuntimeStorageError("runtime_clock_rollback")
+                if now < expiry:
+                    raise RuntimeStorageError("runtime_lease_held")
+                _validate_recovery_state(connection, previous_generation)
+                generation = previous_generation + 1
+                started_requests = connection.execute(
+                    """
+                    SELECT DISTINCT logical_request_id FROM physical_attempts
+                    WHERE state = 'started' AND lease_generation <= ?
+                    """,
+                    (previous_generation,),
+                ).fetchall()
+                for (logical_request_id,) in started_requests:
+                    updated = connection.execute(
+                        """
+                        UPDATE logical_requests SET state = 'failed'
+                        WHERE logical_request_id = ? AND state = 'queued'
+                        """,
+                        (logical_request_id,),
+                    )
+                    if updated.rowcount != 1:
+                        raise RuntimeStorageError("runtime_recovery_audit_gap")
+                    connection.execute(
+                        """
+                        INSERT INTO logical_results (logical_request_id, outcome, completed_at, error_code)
+                        VALUES (?, 'unknown', ?, 'owner_interrupted')
+                        """,
+                        (logical_request_id, _timestamp(now)),
+                    )
+                connection.execute(
+                    """
+                    UPDATE physical_attempts SET state = 'unknown'
+                    WHERE state = 'started' AND lease_generation <= ?
+                    """,
+                    (previous_generation,),
+                )
+                connection.execute(
+                    """
+                    UPDATE physical_attempts SET lease_generation = ?
+                    WHERE state = 'reserved' AND lease_generation <= ?
+                    """,
+                    (generation, previous_generation),
+                )
+                lease_updated = connection.execute(
+                    """
+                    UPDATE runtime_lease
+                    SET owner_token = ?, generation = ?, acquired_at = ?,
+                        heartbeat_at = ?, expires_at = ?, active = 1
+                    WHERE singleton = 1 AND generation = ? AND active = 1
+                    """,
+                    (
+                        owner_token,
+                        generation,
+                        _timestamp(now),
+                        _timestamp(now),
+                        _timestamp(expires),
+                        previous_generation,
+                    ),
+                )
+                if lease_updated.rowcount != 1:
+                    raise RuntimeStorageError("runtime_recovery_lease_race")
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError, TypeError, ValueError) as error:
+            raise RuntimeStorageError("runtime_recovery_failed") from error
         return RuntimeLease(
             owner_token=owner_token,
             generation=generation,
@@ -273,6 +405,33 @@ def _assert_fence(connection: sqlite3.Connection, lease: RuntimeLease, now: date
         raise RuntimeStorageError("runtime_clock_rollback")
     if now >= expires:
         raise RuntimeStorageError("runtime_lease_expired")
+
+
+def _validate_recovery_state(connection: sqlite3.Connection, previous_generation: int) -> None:
+    future_attempt = connection.execute(
+        "SELECT 1 FROM physical_attempts WHERE lease_generation > ? LIMIT 1",
+        (previous_generation,),
+    ).fetchone()
+    if future_attempt is not None:
+        raise RuntimeStorageError("runtime_recovery_clock_or_generation_anomaly")
+    audit_gap = connection.execute(
+        """
+        SELECT 1
+        FROM physical_attempts AS attempt
+        JOIN logical_requests AS request USING (logical_request_id)
+        LEFT JOIN logical_results AS result USING (logical_request_id)
+        WHERE (
+            attempt.state = 'started'
+            AND (request.state != 'queued' OR result.logical_request_id IS NOT NULL)
+        ) OR (
+            attempt.state IN ('succeeded', 'failed', 'unknown')
+            AND (request.state = 'queued' OR result.logical_request_id IS NULL)
+        )
+        LIMIT 1
+        """
+    ).fetchone()
+    if audit_gap is not None:
+        raise RuntimeStorageError("runtime_recovery_audit_gap")
 
 
 def initialize_runtime_storage(runtime_root: Path) -> ProductionRequestRepository:
