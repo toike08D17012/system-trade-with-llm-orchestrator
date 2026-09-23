@@ -10,6 +10,10 @@ from stock_research_llm_orchestrator.sources.edinet import (
     EdinetDocumentRetrievalAdapter,
     EdinetDocumentRetrievalParseError,
     EdinetDocumentType,
+    EdinetXbrlFactCandidate,
+    EdinetXbrlFactExtractor,
+    EdinetXbrlFactParseError,
+    EdinetXbrlFactSet,
 )
 from stock_research_llm_orchestrator.sources.protocol import (
     BoundedSourceResponse,

@@ -13,3 +13,9 @@ from stock_research_llm_orchestrator.sources.edinet.document_retrieval import (
     EdinetDocumentRetrievalAdapter,
     EdinetDocumentRetrievalParseError,
 )
+from stock_research_llm_orchestrator.sources.edinet.xbrl_facts import (
+    EdinetXbrlFactCandidate,
+    EdinetXbrlFactExtractor,
+    EdinetXbrlFactParseError,
+    EdinetXbrlFactSet,
+)
