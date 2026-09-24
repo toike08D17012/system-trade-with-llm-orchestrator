@@ -6,6 +6,7 @@ import zipfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import httpx
 import pytest
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.external_requests import GateScope
@@ -25,19 +26,21 @@ from stock_research_llm_orchestrator.requests.storage import ProductionRequestRe
 from stock_research_llm_orchestrator.requests.transport import (
     ProductionTransportCoordinator,
     TransportValidationPolicy,
-    UntrustedTransportResponse,
 )
 from stock_research_llm_orchestrator.sources import (
+    EdinetHttpClientPolicy,
     EdinetXbrlDocument,
     EdinetXbrlDocumentAdapter,
     EdinetXbrlFactParseError,
     PublishedSourceResult,
     SourceParameter,
+    build_httpx_edinet_transport,
     publish_source_candidate,
 )
 
 
 NOW = datetime(2026, 9, 23, tzinfo=UTC)
+CANARY = "dummy-edinet-retrieval-key-do-not-persist"
 XBRL = b"""<xbrli:xbrl xmlns:xbrli="http://www.xbrl.org/2003/instance"
  xmlns:iso4217="http://www.xbrl.org/2003/iso4217" xmlns:jp="https://example.invalid/synthetic">
  <xbrli:context id="CurrentYear">
@@ -70,6 +73,9 @@ def _run(
         "document-retrieval",
         (SourceParameter(name="document_id", value="SYNTHETIC001"), SourceParameter(name="type", value="1")),
     )
+    credential = tmp_path / "edinet-api-key"
+    credential.write_text(CANARY)
+    credential.chmod(0o600)
     logical = ProductionLogicalRequest(
         logical_request_id="logical-edinet-xbrl-1",
         task_id="task-1",
@@ -93,17 +99,26 @@ def _run(
         lease_generation=lease.generation,
         created_at=(NOW + timedelta(seconds=2)).isoformat(),
     )
-    response = UntrustedTransportResponse(
-        status_code=200,
-        body=body,
-        media_type="application/zip",
-        encoding="binary",
-        final_origin="api.edinet-fsa.go.jp",
-        redirected=False,
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v2/documents/SYNTHETIC001"
+        assert request.url.params["type"] == "1"
+        assert request.url.params["Subscription-Key"] == CANARY
+        return httpx.Response(200, headers={"Content-Type": "application/octet-stream"}, content=body)
+
+    callback = build_httpx_edinet_transport(
+        source_intent,
+        credential,
+        EdinetHttpClientPolicy(
+            max_response_bytes=256 * 1024 * 1024,
+            connect_timeout_seconds=1,
+            read_timeout_seconds=10,
+            write_timeout_seconds=1,
+            pool_timeout_seconds=1,
+        ),
+        transport=httpx.MockTransport(handler),
     )
-    result = ProductionTransportCoordinator(
-        repository, lambda _request: response, lambda: "permit-edinet-xbrl-1"
-    ).execute(
+    result = ProductionTransportCoordinator(repository, callback, lambda: "permit-edinet-xbrl-1").execute(
         source_intent.to_transport_request(logical.logical_request_id, attempt.physical_attempt_id),
         attempt,
         "reservation-edinet-xbrl-1",
@@ -124,7 +139,7 @@ def _run(
         ),
         TransportValidationPolicy(
             max_response_bytes=256 * 1024 * 1024,
-            allowed_media_types=("application/zip",),
+            allowed_media_types=("application/octet-stream",),
             allowed_encodings=("binary",),
         ),
         lease,
@@ -141,7 +156,7 @@ def _run(
         operation="document-retrieval",
         content_sha256=result.candidate.sha256,
         byte_count=len(body),
-        media_type="application/zip",
+        media_type="application/octet-stream",
         encoding="binary",
         raw_schema_id="edinet-xbrl-zip-raw",
         raw_schema_version=1,
@@ -156,6 +171,10 @@ def _run(
         NOW + timedelta(seconds=5),
         adapter,
     )
+    for root in (runtime, runs):
+        for path in root.rglob("*"):
+            if path.is_file():
+                assert CANARY.encode() not in path.read_bytes()
     return repository, published, runs
 
 

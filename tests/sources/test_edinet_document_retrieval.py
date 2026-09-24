@@ -23,7 +23,9 @@ def _zip_bytes(entries: tuple[tuple[str, bytes], ...]) -> bytes:
     return output.getvalue()
 
 
-def _response(body: bytes, *, media_type: str = "application/zip", encoding: str = "binary") -> BoundedSourceResponse:
+def _response(
+    body: bytes, *, media_type: str = "application/octet-stream", encoding: str = "binary"
+) -> BoundedSourceResponse:
     return BoundedSourceResponse(
         physical_attempt_id="attempt-1",
         body=body,
@@ -143,7 +145,7 @@ def test_parse_requires_at_least_one_xbrl_member() -> None:
 
 @pytest.mark.parametrize(
     ("media_type", "encoding"),
-    [("application/octet-stream", "binary"), ("application/zip", "utf-8")],
+    [("application/zip", "binary"), ("application/octet-stream", "utf-8")],
 )
 def test_parse_rejects_unapproved_transport_metadata(media_type: str, encoding: str) -> None:
     """Require the approved EDINET ZIP media type and binary encoding marker."""

@@ -18,7 +18,7 @@ from stock_research_llm_orchestrator.sources.protocol import (
 
 _DOCUMENT_RETRIEVAL_OPERATION = "document-retrieval"
 _DOCUMENT_RETRIEVAL_ORIGIN = "api.edinet-fsa.go.jp"
-_DOCUMENT_RETRIEVAL_MEDIA_TYPE = "application/zip"
+_DOCUMENT_RETRIEVAL_MEDIA_TYPE = "application/octet-stream"
 _DOCUMENT_RETRIEVAL_ENCODING = "binary"
 _MAX_ARCHIVE_MEMBERS = 10_000
 _MAX_MEMBER_UNCOMPRESSED_BYTES = 256 * 1024 * 1024

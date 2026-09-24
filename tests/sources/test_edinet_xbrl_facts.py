@@ -48,7 +48,7 @@ def _zip_response(xbrl: bytes = XBRL, *, path: str = "XBRL/PublicDoc/synthetic.x
         physical_attempt_id="attempt-1",
         body=body,
         sha256=hashlib.sha256(body).hexdigest(),
-        media_type="application/zip",
+        media_type="application/octet-stream",
         encoding="binary",
     )
 

@@ -135,6 +135,9 @@ Phase 8で確定するまでpublic schemaを増やさない。これによりpro
 | `document-list` | 日付、承認済みdocument type | 一覧JSON | document ID、公表日時、書類種別、訂正関係 |
 | `document-retrieval` | document ID | XBRL ZIP | filing metadataとparse済みfact候補 |
 
+公式API仕様の成功レスポンスに従い、`document-retrieval`のZIP transport media typeは
+`application/octet-stream`として検証・記録する。ZIP形式そのものはbounded archive parserで別途検証する。
+
 対象は有価証券報告書、半期報告書、四半期報告書、これらの訂正報告書とする。大量保有報告、公開買付、PDFだけの表示資料は
 初期対象外とする。訂正報告書は元書類を上書きせず、関係を保持する。
 
