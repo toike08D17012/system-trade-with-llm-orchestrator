@@ -44,6 +44,15 @@ from stock_research_llm_orchestrator.sources.edinet import (
     plan_edinet_retrievals,
     render_edinet_http_target,
 )
+from stock_research_llm_orchestrator.sources.jpx import (
+    JpxCurrentList,
+    JpxCurrentListAdapter,
+    JpxCurrentListParseError,
+    JpxHttpClientPolicy,
+    JpxHttpTransportError,
+    JpxListedIssue,
+    JpxPhysicalTransport,
+)
 from stock_research_llm_orchestrator.sources.protocol import (
     BoundedSourceResponse,
     CredentialFreeSourceIntent,
