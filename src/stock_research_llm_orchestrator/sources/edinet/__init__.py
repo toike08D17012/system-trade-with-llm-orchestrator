@@ -18,6 +18,13 @@ from stock_research_llm_orchestrator.sources.edinet.retrieval_plan import (
     EdinetRetrievalPlan,
     plan_edinet_retrievals,
 )
+from stock_research_llm_orchestrator.sources.edinet.transport import (
+    EdinetHttpTarget,
+    EdinetPhysicalTransport,
+    EdinetTransportError,
+    EdinetWireSend,
+    render_edinet_http_target,
+)
 from stock_research_llm_orchestrator.sources.edinet.xbrl_document import (
     EdinetXbrlDocument,
     EdinetXbrlDocumentAdapter,
