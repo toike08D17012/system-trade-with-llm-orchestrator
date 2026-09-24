@@ -1,0 +1,29 @@
+{
+  "STATUS": 200,
+  "MESSAGEID": "M1810001",
+  "MESSAGE": "Successfully completed",
+  "DATE": "2026-09-24T08:50:00.000+09:00",
+  "PARAMETER": {
+    "FORMAT": "JSON",
+    "LANG": "EN",
+    "DB": "FM08",
+    "STARTDATE": "202609",
+    "ENDDATE": "202609",
+    "STARTPOSITION": ""
+  },
+  "NEXTPOSITION": null,
+  "RESULTSET": [
+    {
+      "SERIES_CODE": "FXERD04",
+      "NAME_OF_TIME_SERIES": "US.Dollar/Yen Spot Rate at 17:00 in JST, Tokyo Market",
+      "UNIT": "Yen per U.S. Dollar",
+      "FREQUENCY": "DAILY",
+      "CATEGORY": "Foreign Exchange Rates (Tokyo Market Interbank Rates)",
+      "LAST_UPDATE": 20260924,
+      "VALUES": {
+        "SURVEY_DATES": [20260921, 20260922, 20260923],
+        "VALUES": [147.25, null, 148]
+      }
+    }
+  ]
+}
