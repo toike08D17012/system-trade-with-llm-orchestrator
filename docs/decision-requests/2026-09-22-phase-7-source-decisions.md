@@ -88,6 +88,10 @@ sourceだけ有効にする。
 - custom headerへcredentialをsend直前だけ注入
 - exception、request representation、debug logへのsecret非露出
 
+EDINETだけは、公式API仕様が`Subscription-Key` query parameterを要求するため、2026-09-24の`EDINET-HTTP-01`で
+physical send中の一時的なHTTPX request URLとrequest representationへの露出を承認した。永続化、log、外向きexceptionへの
+露出は禁止し、sourceはlive acceptance完了までdisabledとする。
+
 条件を満たさない場合はdependencyを追加せず、そのsourceをdisabledにする。`yfinance`はライブラリが要求するsession実装を
 使用し、公式source用HTTP clientと混同しない。
 
