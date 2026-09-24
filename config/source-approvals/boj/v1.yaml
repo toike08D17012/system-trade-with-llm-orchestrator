@@ -1,0 +1,89 @@
+schema_id: detailed-analysis.source-approval
+schema_version: 1
+artifact_id: boj-source-approval-v1
+approval_id: boj-source-approval
+approval_version: 1
+source_id: boj
+status: approved
+provider: Bank of Japan
+service: BOJ Time-Series Data Search API version 1
+dataset: Daily Tokyo market U.S. dollar to yen spot rate at 17:00 JST
+reviewer: repository-owner
+reviewed_on: "2026-09-24"
+approved_by: repository-owner
+effective_on: "2026-09-24"
+recheck_due_on: "2026-12-24"
+status_reason: Offline implementation is approved; online use remains disabled until source-specific live acceptance is completed.
+usage_entity: private_individual_internal_analysis
+usage_purposes:
+  - Local deterministic acquisition of official exchange-rate evidence for internal analysis
+contract_plan: Review quarterly and suspend on API, terms, series identity, revision, or provider-condition changes.
+credential_scope_alias: null
+secret_value_storage_allowed: false
+online_use_allowed: false
+external_agent_transfer_allowed: false
+official_references:
+  - reference_id: boj-api-user-manual-v1
+    document_type: api_specification
+    url: https://www.stat-search.boj.or.jp/info/api_manual_en.pdf
+    document_version_or_sha256: reviewed-2026-09-24
+    reviewed_on: "2026-09-24"
+  - reference_id: boj-api-notice
+    document_type: terms
+    url: https://www.stat-search.boj.or.jp/info/api_notice_en.pdf
+    document_version_or_sha256: reviewed-2026-09-24
+    reviewed_on: "2026-09-24"
+  - reference_id: boj-main-series-list
+    document_type: dataset_documentation
+    url: https://www.stat-search.boj.or.jp/info/nme_Mdframe_en.html
+    document_version_or_sha256: reviewed-2026-09-24
+    reviewed_on: "2026-09-24"
+conditions:
+  - category: terms
+    knowledge_status: known
+    summary: Local internal use is approved; a public service would require notification and the prescribed BOJ credit.
+    official_reference_ids: [boj-api-notice]
+  - category: pricing
+    knowledge_status: known
+    summary: The reviewed public API documentation requires no paid entitlement or API credential.
+    official_reference_ids: [boj-api-user-manual-v1]
+  - category: authentication
+    knowledge_status: unsupported
+    summary: The reviewed API request contract defines no authentication parameter for this endpoint.
+    official_reference_ids: [boj-api-user-manual-v1]
+  - category: redistribution
+    knowledge_status: known
+    summary: Any copying or reproduction must credit the Bank of Japan and remains subject to the site notice.
+    official_reference_ids: [boj-api-notice]
+  - category: derived_output
+    knowledge_status: known
+    summary: Derived internal analysis preserves BOJ provenance; public service release is outside this approval.
+    official_reference_ids: [boj-api-notice]
+  - category: external_processing
+    knowledge_status: known
+    summary: Provider raw is retained locally and is not transferred to an external Agent under this approval.
+    official_reference_ids: [boj-api-notice]
+  - category: provider_retention
+    knowledge_status: unsupported
+    summary: The request contains only public series and date parameters and exposes no retention control.
+    official_reference_ids: [boj-api-user-manual-v1]
+  - category: provider_training
+    knowledge_status: unsupported
+    summary: The public data API exposes no provider-training control.
+    official_reference_ids: [boj-api-user-manual-v1]
+  - category: freshness
+    knowledge_status: known
+    summary: API data follows the search site availability schedule and each acquisition records retrieval time and content identity.
+    official_reference_ids: [boj-api-user-manual-v1]
+  - category: available_period
+    knowledge_status: known
+    summary: Date-bounded code API requests return available observations for the approved daily series without gap filling.
+    official_reference_ids: [boj-api-user-manual-v1, boj-main-series-list]
+  - category: rate_limit
+    knowledge_status: unsupported
+    summary: No numeric request rate is published; excessive access is prohibited and the source remains disabled pending live acceptance.
+    official_reference_ids: [boj-api-user-manual-v1, boj-api-notice]
+  - category: failure_behavior
+    knowledge_status: known
+    summary: Suspension, degradation, limit, transport, and parse failures stop safely without retry, cache, or fallback.
+    official_reference_ids: [boj-api-notice]

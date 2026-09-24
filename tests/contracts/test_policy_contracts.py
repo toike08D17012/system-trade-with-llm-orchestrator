@@ -98,6 +98,8 @@ def test_source_profile_rejects_secret_field() -> None:
         "policies/review-audit/v1.yaml",
         "policies/session-continuation/v1.yaml",
         "market-profiles/xtks/v1.yaml",
+        "source-approvals/boj/v1.yaml",
+        "source-profiles/boj/v1.yaml",
         "source-approvals/yfinance/v1.yaml",
         "source-profiles/yfinance/v1.yaml",
     ],
