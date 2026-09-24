@@ -23,11 +23,12 @@ def test_validate_configuration_accepts_repository_config_in_path_order(tmp_path
     root = _copy_config(tmp_path)
     artifacts = validate_configuration(root)
     paths = [artifact.path.as_posix() for artifact in artifacts]
-    assert len(paths) == 11
+    assert len(paths) == 12
     assert "source-approvals/boj/v1.yaml" in paths
     assert "source-profiles/boj/v1.yaml" in paths
     assert "source-approvals/edinet/v1.yaml" in paths
     assert "source-profiles/edinet/v1.yaml" in paths
+    assert "source-profiles/yfinance/v2.yaml" in paths
     assert paths == sorted(paths)
 
 
@@ -84,6 +85,18 @@ def test_validate_configuration_rejects_layout_schema_mismatch(tmp_path: Path) -
     destination.write_bytes(source.read_bytes())
     with pytest.raises(ApplicationError) as exc_info:
         validate_configuration(root)
+    assert exc_info.value.exit_code == ExitCode.INVALID_CONFIGURATION
+
+
+def test_validate_configuration_rejects_source_artifact_version_mismatch(tmp_path: Path) -> None:
+    """Bind source filenames to artifact revisions while keeping schema v1."""
+    root = _copy_config(tmp_path)
+    source = root / "source-profiles" / "yfinance" / "v2.yaml"
+    destination = root / "source-profiles" / "yfinance" / "v3.yaml"
+    source.rename(destination)
+    with pytest.raises(ApplicationError) as exc_info:
+        validate_configuration(root)
+
     assert exc_info.value.exit_code == ExitCode.INVALID_CONFIGURATION
 
 

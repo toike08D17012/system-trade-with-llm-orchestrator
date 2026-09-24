@@ -110,7 +110,12 @@ def _validate_layout(relative: Path, model: StrictContractModel) -> None:
         raise ApplicationError("Configuration artifact uses an unsupported layout.", ExitCode.INVALID_CONFIGURATION)
     version = int(version_match.group(1))
     schema_id, schema_version = _schema_identity(model)
-    if schema_id != expected_schema or schema_version != version:
+    artifact_version = schema_version
+    if isinstance(model, SourceApprovalV1):
+        artifact_version = model.approval_version
+    elif isinstance(model, SourceProfileV1):
+        artifact_version = model.profile_version
+    if schema_id != expected_schema or artifact_version != version:
         raise ApplicationError(
             "Configuration layout does not match its schema identity.", ExitCode.INVALID_CONFIGURATION
         )
