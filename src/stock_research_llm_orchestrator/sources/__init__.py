@@ -12,6 +12,8 @@ from stock_research_llm_orchestrator.sources.edinet import (
     EdinetDocumentType,
     EdinetXbrlContext,
     EdinetXbrlDimension,
+    EdinetXbrlDocument,
+    EdinetXbrlDocumentAdapter,
     EdinetXbrlFactCandidate,
     EdinetXbrlFactExtractor,
     EdinetXbrlFactParseError,
