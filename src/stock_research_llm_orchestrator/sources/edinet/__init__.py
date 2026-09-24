@@ -13,6 +13,11 @@ from stock_research_llm_orchestrator.sources.edinet.document_retrieval import (
     EdinetDocumentRetrievalAdapter,
     EdinetDocumentRetrievalParseError,
 )
+from stock_research_llm_orchestrator.sources.edinet.httpx_transport import (
+    EdinetHttpClientError,
+    EdinetHttpClientPolicy,
+    HttpxEdinetWireClient,
+)
 from stock_research_llm_orchestrator.sources.edinet.retrieval_plan import (
     EdinetRetrievalDecision,
     EdinetRetrievalPlan,

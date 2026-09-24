@@ -10,6 +10,8 @@ from stock_research_llm_orchestrator.sources.edinet import (
     EdinetDocumentRetrievalAdapter,
     EdinetDocumentRetrievalParseError,
     EdinetDocumentType,
+    EdinetHttpClientError,
+    EdinetHttpClientPolicy,
     EdinetHttpTarget,
     EdinetPhysicalTransport,
     EdinetRetrievalDecision,
@@ -26,6 +28,7 @@ from stock_research_llm_orchestrator.sources.edinet import (
     EdinetXbrlFactSet,
     EdinetXbrlQName,
     EdinetXbrlUnit,
+    HttpxEdinetWireClient,
     plan_edinet_retrievals,
     render_edinet_http_target,
 )
