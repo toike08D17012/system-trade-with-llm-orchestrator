@@ -3,13 +3,15 @@
 import logging
 import math
 from dataclasses import dataclass, field
+from os import PathLike
 
 import httpx
 from pydantic import Field
 
 from stock_research_llm_orchestrator.contracts.base import StrictContractModel
 from stock_research_llm_orchestrator.requests.transport import UntrustedTransportResponse
-from stock_research_llm_orchestrator.sources.edinet.transport import EdinetHttpTarget
+from stock_research_llm_orchestrator.sources.edinet.transport import EdinetHttpTarget, EdinetPhysicalTransport
+from stock_research_llm_orchestrator.sources.protocol import CredentialFreeSourceIntent
 
 
 _SUBSCRIPTION_KEY_PARAMETER = "Subscription-Key"
@@ -81,6 +83,17 @@ class HttpxEdinetWireClient:
             raise
         except Exception:
             raise EdinetHttpClientError("edinet_http_exchange_failed") from None
+
+
+def build_httpx_edinet_transport(
+    intent: CredentialFreeSourceIntent,
+    credential_path: str | PathLike[str],
+    policy: EdinetHttpClientPolicy,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> EdinetPhysicalTransport:
+    """Compose the approved credential boundary with the bounded HTTPX client."""
+    return EdinetPhysicalTransport(intent, credential_path, HttpxEdinetWireClient(policy, transport))
 
 
 def _read_bounded(response: httpx.Response, limit: int) -> bytes:

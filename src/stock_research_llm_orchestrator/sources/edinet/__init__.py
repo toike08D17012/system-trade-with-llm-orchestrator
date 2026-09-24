@@ -17,6 +17,7 @@ from stock_research_llm_orchestrator.sources.edinet.httpx_transport import (
     EdinetHttpClientError,
     EdinetHttpClientPolicy,
     HttpxEdinetWireClient,
+    build_httpx_edinet_transport,
 )
 from stock_research_llm_orchestrator.sources.edinet.retrieval_plan import (
     EdinetRetrievalDecision,

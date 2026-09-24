@@ -29,6 +29,7 @@ from stock_research_llm_orchestrator.sources.edinet import (
     EdinetXbrlQName,
     EdinetXbrlUnit,
     HttpxEdinetWireClient,
+    build_httpx_edinet_transport,
     plan_edinet_retrievals,
     render_edinet_http_target,
 )
