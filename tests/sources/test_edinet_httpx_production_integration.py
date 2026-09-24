@@ -154,6 +154,18 @@ def _raise_timeout(request: httpx.Request) -> httpx.Response:
             "failed",
         ),
         (
+            "rate-limited",
+            lambda _request: httpx.Response(
+                429,
+                headers={"Content-Type": "application/json", "Retry-After": "60"},
+                content=b"{}",
+            ),
+            32,
+            "failed",
+            "rate_limited",
+            "failed",
+        ),
+        (
             "redirect",
             lambda _request: httpx.Response(302, headers={"Location": "https://example.invalid/other"}),
             32,
