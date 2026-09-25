@@ -3,6 +3,8 @@
 import hashlib
 import io
 import zipfile
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import httpx
 import pytest
@@ -132,3 +134,133 @@ def test_transport_uses_fixed_url_and_rejects_redirect() -> None:
     )
     with pytest.raises(JpxHttpTransportError, match="jpx_http_redirect_rejected"):
         redirect(intent.to_transport_request("logical-2", "attempt-2"))
+
+
+def test_jpx_runs_through_production_and_publishes_exact_raw(tmp_path: Path) -> None:
+    """Commit exact XLSX bytes only after strict source parsing succeeds."""
+    from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.external_requests import GateScope
+    from stock_research_llm_orchestrator.requests.production import (
+        GateKeys,
+        GateLimit,
+        HierarchicalGatePolicy,
+        ProductionCachePolicy,
+        ProductionLogicalRequest,
+        ProductionPhysicalAttempt,
+        QueuePolicy,
+        RawPublicationIntent,
+        RuntimeLeasePolicy,
+    )
+    from stock_research_llm_orchestrator.requests.raw_artifacts import RawArtifactPublisher
+    from stock_research_llm_orchestrator.requests.storage import initialize_runtime_storage
+    from stock_research_llm_orchestrator.requests.transport import (
+        ProductionTransportCoordinator,
+        TransportValidationPolicy,
+    )
+    from stock_research_llm_orchestrator.sources import publish_source_candidate
+
+    now = datetime(2026, 9, 25, tzinfo=UTC)
+    body = _body()
+    runtime = tmp_path / ".runtime"
+    runtime.mkdir(mode=0o700)
+    runs = tmp_path / "runs"
+    runs.mkdir(mode=0o700)
+    repository = initialize_runtime_storage(runtime)
+    lease = repository.acquire_lease("owner-a", now, RuntimeLeasePolicy())
+    adapter = JpxCurrentListAdapter()
+    intent = adapter.build_intent("current-listed-issues", ())
+    logical = ProductionLogicalRequest(
+        logical_request_id="logical-jpx-1",
+        task_id="task-1",
+        source_id="jpx",
+        operation="current-listed-issues",
+        request_fingerprint=hashlib.sha256(intent.model_dump_json().encode()).hexdigest(),
+        source_approval_version=1,
+        source_profile_version=1,
+        credential_scope_alias=None,
+        egress_scope="default-egress",
+        created_at=now.isoformat(),
+    )
+    repository.admit_logical_request(
+        logical, "jpx-public-web", ProductionCachePolicy(applicable=False), lease, now, QueuePolicy()
+    )
+    assert repository.claim_next_queued("jpx-public-web", lease, now + timedelta(seconds=1)) is not None
+    attempt = ProductionPhysicalAttempt(
+        physical_attempt_id="attempt-jpx-1",
+        logical_request_id=logical.logical_request_id,
+        sequence_number=1,
+        lease_generation=lease.generation,
+        created_at=(now + timedelta(seconds=2)).isoformat(),
+    )
+    callback = JpxPhysicalTransport(
+        intent,
+        JpxHttpClientPolicy(max_response_bytes=len(body), connect_timeout_seconds=1, read_timeout_seconds=2),
+        httpx.MockTransport(
+            lambda _request: httpx.Response(
+                200,
+                headers={"Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+                content=body,
+            )
+        ),
+    )
+    result = ProductionTransportCoordinator(repository, callback, lambda: "permit-jpx-1").execute(
+        intent.to_transport_request(logical.logical_request_id, attempt.physical_attempt_id),
+        attempt,
+        "reservation-jpx-1",
+        GateKeys(
+            egress="default-egress",
+            provider="jpx-public-web",
+            origin="www.jpx.co.jp",
+            credential="anonymous",
+            operation="current-listed-issues",
+            task="task-1",
+            role="source-acquisition",
+        ),
+        HierarchicalGatePolicy(
+            limits={
+                scope: GateLimit(
+                    max_concurrency=1,
+                    min_interval_seconds=60,
+                    requests_per_window=3,
+                    window_seconds=86400,
+                )
+                for scope in GateScope
+            }
+        ),
+        TransportValidationPolicy(
+            max_response_bytes=len(body),
+            allowed_media_types=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",),
+            allowed_encodings=("binary",),
+        ),
+        lease,
+        now + timedelta(seconds=2),
+        now + timedelta(seconds=3),
+    )
+    assert result.candidate is not None
+    published = publish_source_candidate(
+        RawArtifactPublisher(runs, repository),
+        result.candidate,
+        RawPublicationIntent(
+            publication_id="publication-jpx-1",
+            task_id="task-1",
+            logical_request_id=logical.logical_request_id,
+            physical_attempt_id=attempt.physical_attempt_id,
+            source_id="jpx",
+            operation="current-listed-issues",
+            content_sha256=result.candidate.sha256,
+            byte_count=len(body),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            encoding="binary",
+            raw_schema_id="jpx-current-listed-issues-xlsx",
+            raw_schema_version=1,
+            publication_generation=lease.generation,
+        ),
+        lease,
+        now + timedelta(seconds=4),
+        now + timedelta(seconds=5),
+        adapter,
+    )
+    assert published.value.snapshot_on == "2026-08-31"
+    assert published.value.issues[0].eligibility == "eligible"
+    stored = runs / "task-1" / published.reference.relative_path / "body.bin"
+    assert stored.read_bytes() == body
+    assert repository.committed_raw_references(logical.logical_request_id) == (published.reference,)

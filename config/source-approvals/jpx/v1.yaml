@@ -1,0 +1,84 @@
+schema_id: detailed-analysis.source-approval
+schema_version: 1
+artifact_id: jpx-source-approval-v1
+approval_id: jpx-source-approval
+approval_version: 1
+source_id: jpx
+status: approved
+provider: Japan Exchange Group
+service: TSE current listed-issues workbook
+dataset: Current month-end list of TSE-listed issues
+reviewer: repository-owner
+reviewed_on: "2026-09-24"
+approved_by: repository-owner
+effective_on: "2026-09-24"
+recheck_due_on: "2026-12-24"
+status_reason: Repository owner approved low-frequency private non-commercial acquisition, storage, and analysis without redistribution.
+usage_entity: private_individual_internal_analysis
+usage_purposes:
+  - Local deterministic current-eligibility verification for private internal analysis
+contract_plan: Review quarterly and on any public, commercial, third-party, or redistribution scope change.
+credential_scope_alias: null
+secret_value_storage_allowed: false
+online_use_allowed: true
+external_agent_transfer_allowed: false
+official_references:
+  - reference_id: jpx-current-listed-issues
+    document_type: dataset_documentation
+    url: https://www.jpx.co.jp/markets/statistics-equities/misc/01.html
+    document_version_or_sha256: reviewed-2026-09-24
+    reviewed_on: "2026-09-24"
+  - reference_id: jpx-site-terms
+    document_type: terms
+    url: https://www.jpx.co.jp/term-of-use/index.html
+    document_version_or_sha256: reviewed-2026-09-24
+    reviewed_on: "2026-09-24"
+conditions:
+  - category: terms
+    knowledge_status: known
+    summary: Approved only for the repository owner's private non-commercial internal use; scope expansion requires review.
+    official_reference_ids: [jpx-current-listed-issues, jpx-site-terms]
+  - category: pricing
+    knowledge_status: known
+    summary: The reviewed public workbook requires no paid entitlement for this approved private use.
+    official_reference_ids: [jpx-current-listed-issues]
+  - category: authentication
+    knowledge_status: unsupported
+    summary: The approved public workbook request has no credential.
+    official_reference_ids: [jpx-current-listed-issues]
+  - category: redistribution
+    knowledge_status: known
+    summary: Raw and extracted issue-list data remain local and are not redistributed or published.
+    official_reference_ids: [jpx-site-terms]
+  - category: derived_output
+    knowledge_status: known
+    summary: Derived eligibility is restricted to the repository owner's private internal analysis.
+    official_reference_ids: [jpx-site-terms]
+  - category: external_processing
+    knowledge_status: known
+    summary: Raw workbook and the complete extracted list are not transferred to external Agents.
+    official_reference_ids: [jpx-site-terms]
+  - category: provider_retention
+    knowledge_status: unsupported
+    summary: The anonymous request contains no private input and exposes no provider retention control.
+    official_reference_ids: [jpx-site-terms]
+  - category: provider_training
+    knowledge_status: unsupported
+    summary: The public download exposes no provider-training control.
+    official_reference_ids: [jpx-site-terms]
+  - category: freshness
+    knowledge_status: known
+    summary: JPX replaces the workbook monthly; retrieval time and exact content hash are retained.
+    official_reference_ids: [jpx-current-listed-issues]
+  - category: available_period
+    knowledge_status: known
+    summary: The workbook represents the current published month-end snapshot and is not historical point-in-time data.
+    official_reference_ids: [jpx-current-listed-issues]
+  - category: rate_limit
+    knowledge_status: known
+    summary: No provider numeric limit is assumed; local policy permits at most three serialized requests per day.
+    official_reference_ids: [jpx-site-terms]
+  - category: failure_behavior
+    knowledge_status: known
+    summary: Transport, status, size, and parse failures stop without automatic retry, cache, or fallback.
+    official_reference_ids: [jpx-site-terms]
