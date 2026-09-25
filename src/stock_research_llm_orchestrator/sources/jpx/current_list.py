@@ -46,15 +46,15 @@ class JpxListedIssue(StrictContractModel):
     """One source-native current listed issue."""
 
     snapshot_on: str
-    code: str = Field(pattern=r"^[0-9A-Z]{4,5}$")
+    code: str = Field(pattern=r"^[0-9A-Z]{4}$")
     name: str
     market_product_category: str
-    industry_33_code: str | None
-    industry_33_name: str | None
-    industry_17_code: str | None
-    industry_17_name: str | None
-    scale_code: str | None
-    scale_name: str | None
+    industry_33_code: str | None = None
+    industry_33_name: str | None = None
+    industry_17_code: str | None = None
+    industry_17_name: str | None = None
+    scale_code: str | None = None
+    scale_name: str | None = None
     mic: Literal["XTKS"] = "XTKS"
     issuer_domesticity: Literal["domestic", "unknown"]
     security_class: Literal["ordinary_common_equity", "unknown"]

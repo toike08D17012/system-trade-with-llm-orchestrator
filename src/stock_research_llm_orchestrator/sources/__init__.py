@@ -52,6 +52,8 @@ from stock_research_llm_orchestrator.sources.jpx import (
     JpxHttpTransportError,
     JpxListedIssue,
     JpxPhysicalTransport,
+    JpxSecurityVerification,
+    verify_jpx_security,
 )
 from stock_research_llm_orchestrator.sources.protocol import (
     BoundedSourceResponse,
