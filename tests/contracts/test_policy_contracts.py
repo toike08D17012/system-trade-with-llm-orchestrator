@@ -103,8 +103,10 @@ def test_source_profile_rejects_secret_field() -> None:
         "source-approvals/jpx/v1.yaml",
         "source-profiles/jpx/v1.yaml",
         "source-approvals/yfinance/v1.yaml",
+        "source-approvals/yfinance/v2.yaml",
         "source-profiles/yfinance/v1.yaml",
         "source-profiles/yfinance/v2.yaml",
+        "source-profiles/yfinance/v3.yaml",
     ],
 )
 def test_versioned_yaml_configuration_is_contract_valid(relative_path: str) -> None:
@@ -142,7 +144,7 @@ def test_yfinance_profile_uses_the_approved_conservative_limits() -> None:
     assert not profile.direct_connection_fallback_allowed
 
 
-def test_latest_yfinance_profile_is_disabled_after_failed_compatibility_gate() -> None:
+def test_yfinance_profile_v2_preserves_failed_compatibility_gate() -> None:
     """Fail closed when the latest stable yfinance cannot disable its status retry."""
     import hashlib
 
@@ -153,9 +155,27 @@ def test_latest_yfinance_profile_is_disabled_after_failed_compatibility_gate() -
 
     assert isinstance(approval, SourceApprovalV1)
     assert isinstance(profile, SourceProfileV1)
-    assert profile.profile_version == 2
-    assert profile.policy_version == 2
     assert profile.source_approval_reference.sha256 == hashlib.sha256(approval_path.read_bytes()).hexdigest()
     assert not profile.enabled
+    assert not profile.cooldown_policy.automatic_retry_allowed
+    assert not profile.direct_connection_fallback_allowed
+
+
+def test_latest_yfinance_profile_enables_approved_status_fallback() -> None:
+    """Enable v1.7.0 only under the revised approval and controlled-session boundary."""
+    import hashlib
+
+    approval_path = CONFIG_ROOT / "source-approvals/yfinance/v2.yaml"
+    profile_path = CONFIG_ROOT / "source-profiles/yfinance/v3.yaml"
+    approval = validate_text(approval_path.read_text(encoding="utf-8"), InputFormat.YAML)
+    profile = validate_text(profile_path.read_text(encoding="utf-8"), InputFormat.YAML)
+
+    assert isinstance(approval, SourceApprovalV1)
+    assert isinstance(profile, SourceProfileV1)
+    assert approval.approval_version == 2
+    assert profile.profile_version == 3
+    assert profile.policy_version == 3
+    assert profile.source_approval_reference.sha256 == hashlib.sha256(approval_path.read_bytes()).hexdigest()
+    assert profile.enabled
     assert not profile.cooldown_policy.automatic_retry_allowed
     assert not profile.direct_connection_fallback_allowed
