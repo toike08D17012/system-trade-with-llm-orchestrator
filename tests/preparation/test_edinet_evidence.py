@@ -17,7 +17,19 @@ from .test_financial_disclosure import inputs as financial_inputs  # noqa: F401
 
 @pytest.mark.parametrize(
     "case",
-    ["success", "no_optin", "permission", "no_match", "duplicate", "timeout", "401", "429", "redirect", "bad_zip"],
+    [
+        "success",
+        "no_optin",
+        "permission",
+        "no_match",
+        "legal_unknown",
+        "duplicate",
+        "timeout",
+        "401",
+        "429",
+        "redirect",
+        "bad_zip",
+    ],
 )
 def test_acceptance_boundaries(tmp_path: Path, request: pytest.FixtureRequest, case: str) -> None:
     """Respect scope, gate timing, failure stops, and secret-free persistent artifacts."""
@@ -27,6 +39,8 @@ def test_acceptance_boundaries(tmp_path: Path, request: pytest.FixtureRequest, c
     listing["metadata"]["parameter"]["date"] = "2026-06-10"
     for item in listing["results"]:
         item.update(csvFlag="1", legalStatus="1")
+    if case == "legal_unknown":
+        listing["results"][0]["legalStatus"] = "unknown"
     if case == "no_match":
         listing["results"][0]["secCode"] = "99990"
     if case == "duplicate":

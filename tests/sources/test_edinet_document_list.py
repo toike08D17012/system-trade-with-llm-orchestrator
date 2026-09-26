@@ -134,16 +134,22 @@ def test_parse_rejects_unapproved_transport_metadata(media_type: str, encoding: 
         EdinetDocumentListAdapter().parse(_response(FIXTURE.read_bytes(), media_type=media_type, encoding=encoding))
 
 
-def test_parse_official_csv_and_legal_flags() -> None:
-    """Accept documented optional provider flags without ignoring unknown fields."""
+def test_parse_ignores_additive_and_unused_provider_fields() -> None:
+    """External extensions and unused metadata cannot invalidate consumed fields."""
     from pathlib import Path
 
     raw = json.loads(Path("tests/fixtures/sources/edinet/document-list.json").read_bytes())
+    raw["new_api_field"] = {"future": True}
+    raw["metadata"]["extension"] = []
+    raw["metadata"]["parameter"]["extension"] = 1
+    raw["metadata"]["resultset"]["extension"] = None
     for document in raw["results"]:
-        document.update(csvFlag="1", legalStatus="2")
+        document.update(csvFlag={"future": True}, legalStatus="future", newFlag=7)
+        for field in ("JCN", "fundCode", "ordinanceCode", "formCode", "pdfFlag"):
+            document.pop(field)
     parsed = EdinetDocumentListAdapter().parse(_response(json.dumps(raw).encode()))
     assert len(parsed.documents) == 1
-    raw["results"][0]["legalStatus"] = "unknown"
+    raw["results"][0]["xbrlFlag"] = "unknown"
     with pytest.raises(EdinetDocumentListParseError):
         EdinetDocumentListAdapter().parse(_response(json.dumps(raw).encode()))
 

@@ -1,11 +1,11 @@
-"""Pure EDINET document-list intent and parser."""
+"""EDINET list parsing validates consumed fields and tolerates additive API changes."""
 
 import json
 from datetime import date, datetime
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import Field, StringConstraints, ValidationError, field_validator, model_validator
+from pydantic import ConfigDict, Field, StringConstraints, ValidationError, field_validator, model_validator
 
 from stock_research_llm_orchestrator.contracts.base import Identifier, StrictContractModel
 from stock_research_llm_orchestrator.sources.protocol import (
@@ -104,16 +104,21 @@ class EdinetDocumentList(StrictContractModel):
 
 
 class _RawParameter(StrictContractModel):
+    model_config = ConfigDict(extra="ignore")
+
     date: str
     type: Literal["2"]
 
 
 class _RawResultSet(StrictContractModel):
+    model_config = ConfigDict(extra="ignore")
+
     count: int = Field(ge=0)
 
 
 class _RawMetadata(StrictContractModel):
-    title: str
+    model_config = ConfigDict(extra="ignore")
+
     parameter: _RawParameter
     resultset: _RawResultSet
     processDateTime: str  # noqa: N815 - exact provider field
@@ -122,38 +127,26 @@ class _RawMetadata(StrictContractModel):
 
 
 class _RawDocument(StrictContractModel):
+    model_config = ConfigDict(extra="ignore")
+
     seqNumber: int = Field(ge=1)  # noqa: N815 - exact provider field
     docID: Identifier  # noqa: N815 - exact provider field
     edinetCode: Identifier | None  # noqa: N815 - exact provider field
     secCode: Identifier | None  # noqa: N815 - exact provider field
-    JCN: str | None  # noqa: N815 - exact provider field
     filerName: str | None  # noqa: N815 - exact provider field
-    fundCode: str | None  # noqa: N815 - exact provider field
-    ordinanceCode: str | None  # noqa: N815 - exact provider field
-    formCode: str | None  # noqa: N815 - exact provider field
     docTypeCode: str | None  # noqa: N815 - exact provider field
     periodStart: str | None  # noqa: N815 - exact provider field
     periodEnd: str | None  # noqa: N815 - exact provider field
     submitDateTime: str | None  # noqa: N815 - exact provider field
     docDescription: str | None  # noqa: N815 - exact provider field
-    issuerEdinetCode: str | None  # noqa: N815 - exact provider field
-    subjectEdinetCode: str | None  # noqa: N815 - exact provider field
-    subsidiaryEdinetCode: str | None  # noqa: N815 - exact provider field
-    currentReportReason: str | None  # noqa: N815 - exact provider field
     parentDocID: Identifier | None  # noqa: N815 - exact provider field
-    opeDateTime: str | None  # noqa: N815 - exact provider field
     withdrawalStatus: Literal["0", "1"]  # noqa: N815 - exact provider field
-    docInfoEditStatus: str  # noqa: N815 - exact provider field
-    disclosureStatus: str  # noqa: N815 - exact provider field
     xbrlFlag: Literal["0", "1"]  # noqa: N815 - exact provider field
-    pdfFlag: Literal["0", "1"]  # noqa: N815 - exact provider field
-    attachDocFlag: Literal["0", "1"]  # noqa: N815 - exact provider field
-    englishDocFlag: Literal["0", "1"]  # noqa: N815 - exact provider field
-    csvFlag: Literal["0", "1"] | None = None  # noqa: N815 - legacy fixture compatibility
-    legalStatus: Literal["0", "1", "2"] | None = None  # noqa: N815 - exact provider field
 
 
 class _RawDocumentList(StrictContractModel):
+    model_config = ConfigDict(extra="ignore")
+
     metadata: _RawMetadata
     results: tuple[_RawDocument, ...] = Field(strict=False)
 
