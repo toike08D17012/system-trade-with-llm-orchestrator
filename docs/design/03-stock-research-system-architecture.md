@@ -1175,3 +1175,11 @@ Antigravity追加監査ではファイル更新を許可せず、争点パケッ
 JPY価格とUTC Bid日足の確定時刻の違いを明示する。
 この内部準備工程は実装済みだが、財務・開示を含む証拠集合の凍結と
 公開`ExecutionManifestV1`への接続は後続であり、`analysis_ready=false`を維持する。
+
+### 財務・法定開示の内部準備工程
+
+保存済みEDINET原証拠からtask・評価時刻付きの書類索引とXBRL候補を作る内部CLIを実装した。
+訂正・取下げ・欠損・銘柄対応未確定を保持し、同一task・時刻の価格・FX準備を参照できる。
+取得記録の入力はoperator exportであり、実行DBのcommit確認や新規取得は行わない。
+財務正規化、最新性確認、IR接続は未完成で、結果は常にpending、analysis_ready=falseとなる。
+公開証拠集合・実行manifestへの昇格は後続である。

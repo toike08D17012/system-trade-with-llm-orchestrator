@@ -453,3 +453,10 @@ P0承認の阻害課題へ混在させない。
 - [リポジトリ共通指示](../AGENTS.md)
 - [Agent指示原本の配置方針](../agent-sources/README.md)
 - [Python開発指示](../src/AGENTS.md)
+
+### Financial/disclosure preparation follow-up
+
+- [x] Connect retained EDINET lists and archives to offline task-bound candidate preparation and price/FX references.
+- [ ] Define taxonomy mappings, correction adoption, and complete financial-period acceptance.
+- [ ] Complete EDINET live acceptance and issuer IR/disclosure source approval before enabling acquisition.
+- [ ] Export acquisition metadata from runtime storage without manual assembly.

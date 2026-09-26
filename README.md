@@ -432,6 +432,47 @@ v2証拠にはraw・設定bytes・正規化結果とhashを保持し、保存後
 公開 `ExecutionManifestV1` / 凍結済み `EvidenceSetV1` への昇格は行わず、
 常に `analysis_ready=false` です。取得工程の当日対応と自動接続は後続作業です。
 
+## 財務・法定開示のオフライン準備
+
+内部CLI `preparation.financial_disclosure_cli` は、保存済みEDINET一覧・XBRL書類を
+再parseし、銘柄別の書類索引、訂正・取下げ、不足期間、context/unit付き財務候補を保存します。
+初版は財務指標の正規化・最新公表分の確認・発行体IR接続が未完成のため、常に
+`pending` / `analysis_ready=false` です。オンライン取得や外部Agent転送は行いません。
+
+入力directoryは以下の形式で事前に組み立てます。実行DBからの自動exportは未実装です。
+
+| 入力 | 内容 |
+| --- | --- |
+| `task.json` | 既存 `DetailedAnalysisTaskV1` |
+| `inputs.json` | `FinancialInput`。version=1、checked_at、survey_period、issuer、acquisitions |
+| `evaluation-policy.yaml` | taskの評価policyに対応する設定bytes |
+| `approval.yaml` | 現在のEDINETローカル利用承認 |
+| `acquisition-approvals/<key>.yaml` | 各取得時の承認bytes |
+| `raw/<key>/` | 既存raw bundleの `body.bin` / `request.json` / `response.json` / `receipt.json` |
+| `price-fx/`（任意） | 同じtask・評価時刻の価格・FX準備bundle一式 |
+
+`acquisitions` の各項目はkey、publication（`RawPublicationIntent`）、source_intent
+（秘密値を含まない `CredentialFreeSourceIntent`）、retrieved_at、acquisition_approval_sha256です。
+これらはoperatorによる取得記録のexportであり、DBへのcommit確認を証明するものではありません。
+`issuer` はsecurity_code、edinet_code、provider_security_code、applicable_period、
+list_key、list_sha256を持つ根拠付き対応表です。不明ならnullとし、対応未確定を保存します。
+キー値そのものや認証ファイルは入力に含めません。
+
+合成入力を構築する例は `tests/preparation/test_financial_disclosure.py` の `inputs` fixtureです。
+用意した入力には次のように実行します。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.financial_disclosure_cli prepare \
+  --input runs/financial-input --output runs/financial-prepared
+python -m stock_research_llm_orchestrator.preparation.financial_disclosure_cli validate \
+  --input runs/financial-prepared
+```
+
+上記はPython環境のあるdevcontainer内の例です。終了コード0は保存・再生成功、1は技術エラーです。
+候補はraw/member/concept/context/unit/ordinalのidentityを保ち、単位変換や四半期差分計算をしません。
+書類の期間件数は観測値であり、年次5期・四半期半期8期間・開示3年の充足認定ではありません。
+元証拠は変更せず、既存宛先・symlink・競合公開・改変を拒否します。
+
 ## 開発への参加
 
 Pythonの開発前に `src/AGENTS.md` と `.agents/instructions/python.md` を
