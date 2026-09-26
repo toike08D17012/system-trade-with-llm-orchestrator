@@ -11,6 +11,11 @@ RUN npm install --global "markdownlint-cli2@${MARKDOWNLINT_CLI2_VERSION}" \
     && npm cache clean --force
 
 
+WORKDIR /opt/dukascopy
+COPY node/dukascopy/package*.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY node/dukascopy/bridge.cjs ./
+
 # ======================================================================
 # Runtime
 # ======================================================================
@@ -70,6 +75,11 @@ RUN ln -s \
     /usr/local/bin/markdownlint-cli2
 
 # ----------------------------------------------------------------------
+COPY --from=markdownlint-builder /opt/dukascopy /opt/dukascopy
+COPY --from=markdownlint-builder /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+
 # Non-root user
 # ----------------------------------------------------------------------
 ARG USER_UID

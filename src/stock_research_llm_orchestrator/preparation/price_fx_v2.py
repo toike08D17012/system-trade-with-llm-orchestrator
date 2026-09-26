@@ -1,23 +1,20 @@
-"""Offline same-Tokyo-date conversion with retained immutable evidence."""
+"""Offline UTC-date-label conversion with retained immutable evidence."""
 
 import json
 from collections.abc import Mapping
 from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 from stock_research_llm_orchestrator.contracts.base import StrictContractModel
-from stock_research_llm_orchestrator.preparation.fx_evidence import FxMetadata, read_bundle, validate_fx_evidence
+from stock_research_llm_orchestrator.preparation.dukascopy_fx import FxMetadataV2, validate_dukascopy_fx
+from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path
 from stock_research_llm_orchestrator.preparation.price_acceptance import PriceAcceptanceIndex, validate_price_acceptance
 from stock_research_llm_orchestrator.preparation.storage import publish_preparation
-from stock_research_llm_orchestrator.sources.boj.code_api import BojFxDailySeries
+from stock_research_llm_orchestrator.sources.dukascopy.daily import DailySeries
 from stock_research_llm_orchestrator.sources.yfinance.normalization import NormalizedPrices
-
-
-if TYPE_CHECKING:
-    from stock_research_llm_orchestrator.preparation.price_fx_v2 import PriceFxIndexV2
 
 
 class PriceFxRow(StrictContractModel):
@@ -30,16 +27,16 @@ class PriceFxRow(StrictContractModel):
     missing_reasons: tuple[str, ...]
 
 
-class PriceFxIndex(StrictContractModel):
+class PriceFxIndexV2(StrictContractModel):
     """Reproducible fixed-period conversion without a detailed-analysis readiness claim."""
 
-    version: Literal[1] = 1
+    version: Literal[2] = 2
     analysis_ready: Literal[False] = False
     calculation: Literal["unadjusted-close-jpy-divided-by-usdjpy-v1"] = "unadjusted-close-jpy-divided-by-usdjpy-v1"
     precision: Literal[28] = 28
     rounding: Literal["ROUND_HALF_EVEN"] = "ROUND_HALF_EVEN"
-    timing_limitation: Literal["Stock session close and BOJ 17:00 JST FX are not simultaneous observations."] = (
-        "Stock session close and BOJ 17:00 JST FX are not simultaneous observations."
+    timing_limitation: Literal["Stock date labels use same-date UTC Bid FX closes for reference conversion."] = (
+        "Stock date labels use same-date UTC Bid FX closes for reference conversion."
     )
     status: Literal["complete_with_limitations", "incomplete"]
     period_start: str
@@ -50,24 +47,24 @@ class PriceFxIndex(StrictContractModel):
     files: dict[str, str]
 
 
-def _evaluate(files: Mapping[str, bytes]) -> PriceFxIndex:
+def _evaluate(files: Mapping[str, bytes]) -> PriceFxIndexV2:
     price_files = {name.removeprefix("price/"): body for name, body in files.items() if name.startswith("price/")}
     fx_files = {name.removeprefix("fx/"): body for name, body in files.items() if name.startswith("fx/")}
     if set(files) - {"index.json"} != {f"price/{name}" for name in price_files} | {f"fx/{name}" for name in fx_files}:
         raise ValueError("price_fx_inventory_mismatch")
     validate_price_acceptance(price_files)
-    validate_fx_evidence(fx_files)
+    validate_dukascopy_fx(fx_files)
     acceptance = PriceAcceptanceIndex.model_validate_json(price_files["index.json"])
     prices = NormalizedPrices.model_validate_json(price_files["preparation/normalized.json"])
-    metadata = FxMetadata.model_validate_json(fx_files["metadata.json"])
-    fx = BojFxDailySeries.model_validate_json(fx_files["normalized.json"])
+    metadata = FxMetadataV2.model_validate_json(fx_files["metadata.json"])
+    fx = DailySeries.model_validate_json(fx_files["normalized.json"])
     if acceptance.status == "pending" or prices.currency != "JPY":
         raise ValueError("price_fx_requires_accepted_jpy_prices")
     if (acceptance.period_start, acceptance.period_end) != (metadata.period_start, metadata.period_end):
         raise ValueError("price_fx_period_mismatch")
     days = json.loads(price_files["calendar.json"])["dates"]
     price_map = {row.on: row for row in prices.rows}
-    fx_map = {row.observed_on: row.value for row in fx.observations}
+    fx_map = {row.on: row.close for row in fx.rows if row.confirmed}
     rows = []
     for day in days:
         if not acceptance.period_start <= day <= acceptance.period_end:
@@ -102,7 +99,7 @@ def _evaluate(files: Mapping[str, bytes]) -> PriceFxIndex:
         if day not in target
     }
     count = sum(row.close_usd is not None for row in rows)
-    return PriceFxIndex(
+    return PriceFxIndexV2(
         status="complete_with_limitations" if count == len(rows) else "incomplete",
         period_start=acceptance.period_start,
         period_end=acceptance.period_end,
@@ -115,16 +112,11 @@ def _evaluate(files: Mapping[str, bytes]) -> PriceFxIndex:
 
 def validate_price_fx(files: Mapping[str, bytes]) -> None:
     """Revalidate both source bundles and recalculate every result from retained bytes."""
-    if json.loads(files["index.json"]).get("version") == 2:
-        from stock_research_llm_orchestrator.preparation.price_fx_v2 import validate_price_fx as validate_v2
-
-        validate_v2(files)
-        return
-    if PriceFxIndex.model_validate_json(files["index.json"]) != _evaluate(files):
+    if PriceFxIndexV2.model_validate_json(files["index.json"]) != _evaluate(files):
         raise ValueError("price_fx_index_mismatch")
 
 
-def join_price_fx(price_directory: Path, fx_directory: Path, output_directory: Path) -> PriceFxIndex | PriceFxIndexV2:
+def join_price_fx_v2(price_directory: Path, fx_directory: Path, output_directory: Path) -> PriceFxIndexV2:
     """Publish a separate conversion bundle using no transport or external service."""
     price, fx, output = map(_safe_path, (price_directory, fx_directory, output_directory))
     if any(output == source or output in source.parents or source in output.parents for source in (price, fx)):
@@ -133,10 +125,6 @@ def join_price_fx(price_directory: Path, fx_directory: Path, output_directory: P
         raise FileExistsError("price_fx_destination_exists")
     files = {f"price/{name}": body for name, body in read_bundle(price).items()}
     files.update({f"fx/{name}": body for name, body in read_bundle(fx).items()})
-    if json.loads(files["fx/index.json"]).get("version") == 2:
-        from stock_research_llm_orchestrator.preparation.price_fx_v2 import join_price_fx_v2
-
-        return join_price_fx_v2(price, fx, output)
     index = _evaluate(files)
     files["index.json"] = index.model_dump_json(indent=2).encode()
     publish_preparation(output.parent, output.name, files, validator=validate_price_fx)

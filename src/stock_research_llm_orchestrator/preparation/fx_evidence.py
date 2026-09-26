@@ -166,6 +166,11 @@ def _index(files: Mapping[str, bytes]) -> FxIndex:
 
 def validate_fx_evidence(files: Mapping[str, bytes]) -> None:
     """Reparse exact raw and reproduce all retained normalization and hashes."""
+    if json.loads(files["index.json"]).get("version") == 2:
+        from stock_research_llm_orchestrator.preparation.dukascopy_fx import validate_dukascopy_fx
+
+        validate_dukascopy_fx(files)
+        return
     if FxIndex.model_validate_json(files["index.json"]) != _index(files):
         raise ValueError("fx_index_mismatch")
 

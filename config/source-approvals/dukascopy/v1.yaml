@@ -1,0 +1,108 @@
+schema_id: detailed-analysis.source-approval
+schema_version: 1
+artifact_id: dukascopy-source-approval-v1
+approval_id: dukascopy-source-approval
+approval_version: 1
+source_id: dukascopy
+status: approved
+provider: Dukascopy
+service: Public daily candles via dukascopy-node 1.50.0
+dataset: USDJPY UTC daily Bid close
+reviewer: repository-owner
+reviewed_on: '2026-09-26'
+approved_by: repository-owner
+effective_on: '2026-09-26'
+recheck_due_on: '2026-12-26'
+status_reason: Owner explicitly chose to proceed after reviewing the terms conflict;
+  this records owner authorization, not provider written consent.
+usage_entity: private_individual_internal_analysis
+usage_purposes:
+- Local deterministic FX evidence and reference currency conversion
+contract_plan: Review quarterly; retain unresolved provider terms applicability separately
+  from owner authorization.
+credential_scope_alias: null
+secret_value_storage_allowed: false
+online_use_allowed: true
+external_agent_transfer_allowed: false
+official_references:
+- reference_id: dukascopy-terms
+  document_type: terms
+  url: https://www.dukascopy.com/swiss/english/legal-pages/terms-of-use/
+  document_version_or_sha256: reviewed-2026-09-26
+  reviewed_on: '2026-09-26'
+- reference_id: dukascopy-historical
+  document_type: dataset_documentation
+  url: https://www.dukascopy.com/swiss/english/marketwatch/historical/
+  document_version_or_sha256: reviewed-2026-09-26
+  reviewed_on: '2026-09-26'
+conditions:
+- category: terms
+  knowledge_status: known
+  summary: Reviewed terms require written consent for automated access and restrict
+    database use. Owner explicitly elects to use this source despite unresolved API
+    applicability; no provider consent is asserted.
+  official_reference_ids:
+  - dukascopy-terms
+- category: pricing
+  knowledge_status: known
+  summary: General Terms section 5 states website access is free absent a separate
+    agreement.
+  official_reference_ids:
+  - dukascopy-terms
+- category: authentication
+  knowledge_status: unsupported
+  summary: The selected public endpoint has no credential parameter; no account or
+    authenticated service is used.
+  official_reference_ids:
+  - dukascopy-terms
+- category: redistribution
+  knowledge_status: known
+  summary: Reviewed terms restrict redistribution; this approval permits no redistribution.
+  official_reference_ids:
+  - dukascopy-terms
+- category: derived_output
+  knowledge_status: known
+  summary: Only private internal reference conversion is owner-authorized; terms restrictions
+    remain recorded.
+  official_reference_ids:
+  - dukascopy-terms
+- category: external_processing
+  knowledge_status: known
+  summary: Owner prohibits raw transfer to external agents.
+  official_reference_ids:
+  - dukascopy-terms
+- category: provider_retention
+  knowledge_status: unsupported
+  summary: The public request exposes no retention control; no private inputs are
+    sent.
+  official_reference_ids:
+  - dukascopy-terms
+- category: provider_training
+  knowledge_status: unsupported
+  summary: The public request exposes no training control; no private inputs are sent.
+  official_reference_ids:
+  - dukascopy-terms
+- category: freshness
+  knowledge_status: known
+  summary: Historical page offers market history without a completeness guarantee;
+    capture receipt time and exclude unfinished UTC days.
+  official_reference_ids:
+  - dukascopy-terms
+- category: available_period
+  knowledge_status: known
+  summary: Retain only returned observations from requested annual buckets; availability
+    of every requested day is not guaranteed.
+  official_reference_ids:
+  - dukascopy-terms
+- category: rate_limit
+  knowledge_status: unsupported
+  summary: 'No numeric provider limit confirmed. Owner internal limit: concurrency
+    1, burst 1, 2 seconds minimum, 30 sends per rolling 60 seconds.'
+  official_reference_ids:
+  - dukascopy-terms
+- category: failure_behavior
+  knowledge_status: known
+  summary: Terms disclaim availability and accuracy; stop on failed HTTP or validation
+    without retry or fallback.
+  official_reference_ids:
+  - dukascopy-terms

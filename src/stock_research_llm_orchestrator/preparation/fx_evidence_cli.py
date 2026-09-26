@@ -1,10 +1,11 @@
-"""Explicit single-send BOJ acquisition and independently usable offline conversion."""
+"""Explicit annual Dukascopy acquisition and independently usable offline conversion."""
 
 import argparse
 from datetime import date
 from pathlib import Path
 
-from stock_research_llm_orchestrator.preparation.fx_evidence import acquire_fx_evidence, revalidate_fx_diagnostic
+from stock_research_llm_orchestrator.preparation.dukascopy_fx import acquire_dukascopy_fx
+from stock_research_llm_orchestrator.preparation.fx_evidence import revalidate_fx_diagnostic
 from stock_research_llm_orchestrator.preparation.price_fx import join_price_fx
 
 
@@ -38,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         if args.command == "acquire":
-            result = acquire_fx_evidence(
+            acquired = acquire_dukascopy_fx(
                 config=args.config,
                 runtime=args.runtime,
                 runs=args.runs,
@@ -47,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
                 start=args.start,
                 end=args.end,
             )
-            print(f"fx_evidence: {result.status}; analysis_ready=false")
+            print(f"fx_evidence: {acquired.status}; analysis_ready=false")
         elif args.command == "revalidate":
             result = revalidate_fx_diagnostic(
                 config=args.config,

@@ -78,7 +78,7 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | 構想・アーキテクチャ | 設計資料あり |
 | 詳細解析MVP要件 | P0要件6文書とP1契約基盤文書を承認済み |
 | Pythonパッケージ・アプリケーション | 契約基盤、task入力準備、credential preflight、原子的保存、共有Coordinatorの永続制御・raw公開・single-flight終了連携を実装済み。詳細解析runtimeの統合は未完了 |
-| 実行用CLI | 公開CLIは`config validate`。市場証拠準備・オフライン再検証・価格受入・BOJ為替取得と価格結合は内部module CLIで実装済み。詳細解析の調査・運用commandは未実装 |
+| 実行用CLI | 公開CLIは`config validate`。市場証拠準備・オフライン再検証・価格受入・Dukascopy為替取得と価格結合は内部module CLIで実装済み。詳細解析の調査・運用commandは未実装 |
 | データソース・評価指標・閾値 | JPX銘柄検証、標準`yfinance`取得、価格正規化・保存・再検証・固定期間の受入を実装済み。通常実行の鮮度確認と、財務・為替・開示等を含む証拠集合の確定は未完了 |
 | Pythonバージョン・依存関係 | Python 3.14、runtime・開発依存関係、品質ツール、ロックファイルを定義済み |
 | テスト・lint・型チェック | 契約、設定、CLI、logging、task準備、credential、request coordinator、市場証拠準備・再検証・価格受入のテストあり |
@@ -346,50 +346,53 @@ PA-01〜PA-09を再評価します。価格を再取得せず、入力一式と�
 旧索引の未確認issueは書き換えず、価格証拠を受け入れても`analysis_ready=false`を維持します。
 `validate_price_acceptance`で、同梱した入力から条件別結果と索引全体を再現・検証できます。
 
-## 日銀為替証拠と価格の同日結合
+## 為替日足証拠と価格の日付ラベル結合
 
-内部CLI `preparation.fx_evidence_cli`は、承認済みBOJ v2設定と共有Coordinatorを使って
-`FM08/FXERD04`を1回取得します。送信間隔60秒・60秒につき1送信は
-[利用者が承認した内部制限](docs/decision-requests/2026-09-26-boj-fx-evidence-approval.md)です。
-実行ごとに設定bytesと期限を検証し、応答の系列・単位・期間検証と保存後に論理成功を確定します。
-cache、自動retry、fallbackはありません。429では有効なRetry-Afterだけを永続化します。
+内部CLI `preparation.fx_evidence_cli acquire`は、共有Coordinator経由でDukascopyの
+USDJPY Bid日足を年単位で取得し、`dukascopy-node 1.50.0`でオフライン解釈します。
+UTC日足終値を使い、東京市場の終了時刻への整合やtick取得は行いません。
+内部制限は同時数1・burst 1・最小間隔2秒・rolling 60秒に30送信です。
+cache・自動retry・fallbackはなく、失敗時は後続年の取得を止めます。
+[承認と利用条件の判断](docs/decision-requests/2026-09-26-dukascopy-fx-migration-approval.md)を保持します。
 
-以下の取得例は明示的なオンライン操作です。今回の承認は最初のGET 1回を対象とし、
-同じ例を再実行する許可や取得成功を意味しません。共有制限を守るためruntime directoryを継続使用します。
+Docker imageにはNode/npmと固定依存を`/opt/dukascopy/`へ配置します。
+ホスト実行ではNode 22と`npm ci --prefix node/dukascopy --ignore-scripts`が必要です。
+Node bridgeは通信を禁止し、送信・permit・原応答公開・論理結果はPython側が管理します。
+共有runtime directoryを継続使用してください。以下は明示的なオンライン取得の例です。
 
 ```bash
 ./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.fx_evidence_cli acquire \
-  --allow-network --config config --runtime runs/boj-shared-runtime --runs runs/boj-evidence \
-  --destination boj-fx-7203-20260926 --task-id boj-acquisition-7203-20260926 \
+  --allow-network --config config --runtime runs/dukascopy-shared-runtime --runs runs/dukascopy-evidence \
+  --destination dukascopy-fx-7203-20260926 --task-id dukascopy-acquisition-7203-20260926 \
   --start 2023-09-26 --end 2026-09-25
 ```
 
-検証実装の修正後は`revalidate`で未受入診断を通信なしで再検証できます。
-`--diagnostic`・`--logical-request-id`と元のruntime、task、期間を明示し、元の物理送信成功・論理検証失敗を照合します。
-成功時も元の`failed`結果と診断directoryは変更せず、新しい成果物へ失敗記録を同梱します。
-系列コード・単位・系列名・期間は検証し、分類名はproviderメタデータとしてそのまま保持します。
-
-保存済みFXと価格受入証拠の結合には通信しません。
-以下は[初回実確認で再検証した証拠](docs/decision-requests/2026-09-26-boj-fx-evidence-acceptance-outcome.md)の例です。
-実確認では731日中729日を換算し、残り2日のFX nullを欠損として保存しました。
+保存済み価格とFXの結合には通信しません。
 
 ```bash
 ./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.fx_evidence_cli join \
-  --prices runs/price-acceptance-7203-20260926 --fx runs/boj-evidence/boj-fx-7203-20260926-revalidated \
-  --output runs/price-fx-7203-20260926
+  --prices runs/price-acceptance-7203-20260926 \
+  --fx runs/dukascopy-evidence/dukascopy-fx-7203-20260926 \
+  --output runs/price-fx-dukascopy-7203-20260926
 ```
 
-同じ東京日付の調整前終値をUSDJPYで除算します。Decimal精度28・ROUND_HALF_EVENを固定し、
-元値、受信時刻、BOJ生成時刻・更新日、入力bytes・hash、価格側の制約を保持します。
-取引終了時点と17時の為替は同時刻観測ではありません。別日で欠損を埋めず、
-価格欠損・FX行なし・null・不正値を区別し、取引対象外のFX日付も除外理由を残します。
-出力の`validate_price_fx`は保存bytesから全入力検証と計算を再現します。
-既存出力先・入力との重複・symlink・改変された入力は拒否します。
+株価の日付ラベル`D`にUTC日付ラベル`D`の確定したBid終値を対応させ、
+調整前JPY終値を除算します。Decimal精度28・ROUND_HALF_EVENを固定した参考値です。
+最終quote・公表時刻は推測せず、足のtimestamp・対象区間・受信時刻を保存します。
+欠損を別日やBOJで補完せず、原応答にない補完足と未確定足を採用しません。
+v2証拠にはraw・設定bytes・正規化結果とhashを保持し、保存後に再検証します。
 
-終了コード0は成果物の保存成功を示します。結合の`incomplete`は欠損を含む保存可能な状態であり、
-全期間の換算完了ではありません。技術エラーは1で停止します。
+旧BOJ v1証拠と価格FX索引の再検証・結合互換は維持します。
+`revalidate`は旧BOJ未受入診断の互換コマンドであり、Dukascopy取得には使用しません。
+[Dukascopy初回確認](docs/decision-requests/2026-09-26-dukascopy-fx-evidence-acceptance-outcome.md)では
+4 GETで731/731日を換算した。旧BOJの[729/731日という結果](docs/decision-requests/2026-09-26-boj-fx-evidence-acceptance-outcome.md)は
+歴史的記録として保持します。
+
+終了コード0は保存成功を示し、`incomplete`なら欠損が残っています。
+技術エラーは1で停止し、既存出力先・入力との重複・symlink・改変を拒否します。
+実rawはGit追跡しないローカル`runs/`に保存します。
 財務・開示との接続、証拠集合の凍結、通常実行の最新終端日判定は未実装で、
-すべての成果物で`analysis_ready=false`を維持します。実rawはローカルの`runs/`にのみ保存します。
+`analysis_ready=false`を維持します。
 
 ## 開発への参加
 

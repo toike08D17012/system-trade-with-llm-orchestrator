@@ -5,15 +5,16 @@
 | 文書状態 | Approved |
 | 文書オーナー | リポジトリ所有者 |
 | 承認者 | リポジトリ所有者 |
-| 版 | 1.6 |
+| 版 | 1.7 |
 | 作成日 | 2026-08-18 |
-| 外部条件の確認日 | 2026-08-24 |
+| 外部条件の確認日 | 2026-09-26（Dukascopy追加確認） |
 | 変更提案日 | 2026-09-26 |
-| 直前の承認版 | 1.5（2026-09-26承認・発効） |
+| 直前の承認版 | 1.6（2026-09-26承認・発効） |
 | 承認日 | 2026-09-26 |
 | 発効日 | 2026-09-26 |
 
 > [!IMPORTANT]
+> version 1.7は、DukascopyのUTC Bid日足終値への移行と利用者判断を反映する。
 > version 1.6は、価格証拠の受入条件と許容制約を追加する。5.1節と6.3節を参照する。
 > 出典付きローカルカレンダーとsnapshot時点の銘柄適格性を採用する。
 > 固定期間の内部受入API・CLIは実装済み。既存成果物の状態は変更しない。
@@ -62,7 +63,7 @@
 | 日本の法定開示 | EDINET API Version 2 | 日本市場のMVP採用ソース |
 | 米国の法定開示・XBRL | SEC `data.sec.gov` | 米国市場の第一候補 |
 | 日本株・米国株の市場データ | `yfinance`（Yahoo Finance） | 株価、出来高、配当、株式分割、銘柄メタデータの取得に使用する。利用開始にはソース承認を必要とする |
-| 日本株向け為替 | 日本銀行時系列統計データ検索API | USD/JPY日次時系列のMVP採用ソース。APIキー不要。利用開始にはソース承認を必要とする |
+| 日本株向け為替 | Dukascopy / dukascopy-node | UTC基準のUSDJPY Bid日足終値。内部利用の承認理由・制限を記録する |
 | ニュース・反証材料の調査 | Agent内蔵Web検索 | 全Agentが必要時に使用し、検証済み資料だけを共通証拠へ追加する。別の検索APIキーは使用しない |
 | 発行体ニュース | 発行体IR・適時開示 | 日本市場のMVP採用ソース |
 
@@ -91,12 +92,14 @@
   自動的に`yfinance`の値を採用しない。
 - News APIは利用しない。Developerプランでは必要な対象期間と実行用途を満たせず、
   有償プランはMVPの費用要件に適合しない。
-- 日本銀行時系列統計データ検索APIは、APIキーや利用者登録なしでJSONまたはCSVを取得できる。
-  USD/JPYには外国為替市況`FM08`の東京市場17時時点の日次系列`FXERD04`を使用する。
-  この系列は1米ドル当たりの円で表すBid・Askの中間値で、1998年1月5日以降の履歴を取得できる。
-  高頻度アクセスを避ける。APIを使用したサービスを公開する場合は、日銀の指定する連絡と
-  クレジット表示を行う。ローカル実行用スクリプトのソースコードだけを公開し、ホスト型の
-  取得・配信を行わない間は、公開サービスとして扱わない。
+- 為替はDukascopyのUSDJPY UTC Bid日足終値を`dukascopy-node 1.50.0`で解釈する。
+  日足を年単位で取得し、tick・1分足や東京市場の終了時刻への整合を要求しない。
+  送信は共有Coordinator経由とし、内部制限は同時数1・burst 1・最小間隔2秒・60秒に30送信。
+  原応答の実在する確定足だけを採用し、ライブラリの補完足を除外する。
+  [承認記録](../decision-requests/2026-09-26-dukascopy-fx-migration-approval.md)に、
+  自動取得・保存に関する規約条項と、それを提示後の利用者の利用判断を保持する。
+  提供者の書面許諾や例外適用の確認とは扱わない。rawの外部転送・再配布はしない。
+  BOJの旧証拠・版付き設定は再検証のために保持し、新規取得や自動fallbackには使わない。
 - Agent内蔵Web検索は、Codex系・Claude系、オーケストレーター、一次レビューワー、
   Antigravityを含む各Agentが、担当処理に必要なニュース、一次資料、反証材料を
   調査するために使用できる。検索サービスとの個別API契約は追加しない。
@@ -122,14 +125,14 @@
 - [yfinance.download API reference](https://ranaroussi.github.io/yfinance/reference/api/yfinance.download.html)
 - [yfinance GitHub repository](https://github.com/ranaroussi/yfinance)
 - [Yahoo Developer API Terms of Use](https://legal.yahoo.com/us/en/yahoo/terms/product-atos/apiforydn/index.html)
-- [日本銀行時系列統計データ検索API機能利用マニュアル](https://www.stat-search.boj.or.jp/info/api_manual.pdf)
-- [日本銀行API機能利用時の留意点](https://www.stat-search.boj.or.jp/info/api_notice.pdf)
-- [日本銀行USD/JPY日次時系列](https://www.stat-search.boj.or.jp/ssi/mtshtml/fm08_d_1.html)
+- [Dukascopy Historical Data Export](https://www.dukascopy.com/swiss/english/marketwatch/historical/)
+- [Dukascopy Terms of Use](https://www.dukascopy.com/swiss/english/legal-pages/terms-of-use/)
+- [dukascopy-node](https://www.dukascopy-node.app/)
 - [JPX内国株の売買制度・取引時間](https://www.jpx.co.jp/equities/trading/domestic/01.html)
 
 外部条件は変更され得るため、採用時と各リリース評価前に再確認する。
 
-初期MVPのソース構成は、`yfinance`、EDINET API Version 2、日本銀行時系列統計データ検索API、
+初期MVPのソース構成は、`yfinance`、EDINET API Version 2、Dukascopy、
 発行体IR・適時開示、Agent内蔵Web検索で確定する。SEC `data.sec.gov`は将来の米国市場対応時に
 使用し、初期MVPの必須ソースにはしない。利用はリポジトリ所有者による私的な内部分析に限定し、
 成果物を外部公開しない。外部Agentへ渡せる情報は、対象AgentがWeb検索で取得可能な公開情報と、
@@ -206,7 +209,7 @@ requestはglobal、egress、provider、origin、credential、operation、task、
 | 年次財務 | 証拠凍結時点で公表済みの直近5期 | 最新年次報告を含む。未公表の通期推計を実績として扱わない |
 | 四半期・半期財務 | 証拠凍結時点で公表済みの直近8期間 | 最新公表分を含み、年次値との期間重複を識別する |
 | 日次価格・出来高 | 証拠凍結時点まで最低3年 | 調整前後、休場日、通貨、タイムゾーンを記録する |
-| USD/JPY日次時系列 | 証拠凍結時点まで最低3年 | 1米ドル当たりの円、Bid・Askの中間値、17時の観測時刻、`Asia/Tokyo`、休場日を記録する |
+| USD/JPY日次時系列 | 証拠凍結時点まで最低3年 | 1米ドル当たりの円、Bid日足終値、UTC timestamp・対象区間、確定状態を記録する |
 | 開示 | 証拠凍結時点で公表済みの直近3年と最新の重要開示 | 公表・更新日時と訂正・差替えを追跡する |
 | ニュース | 証拠凍結時点で公表済みの直近12か月 | 直近30日を重点確認し、記事の公表・更新日時を区別する |
 
@@ -269,7 +272,7 @@ requestはglobal、egress、provider、origin、credential、operation、task、
   片方だけが発見した資料も、検証に成功した場合は発見元を保持したまま共通証拠へ追加する。
 - 日本株のドル換算価格とリターンは、円建て株価とUSD/JPYの原系列を保持したまま、
   ローカルの決定論的処理で算出する。`Asia/Tokyo`の取引日`D`について、東証終値`D`と
-  日銀`FXERD04`の同じ東京日付`D`の17時時点USD/JPYだけを結合する。株価または為替の
+  DukascopyのUTC日付ラベル`D`の確定済みBid終値だけを結合する。株価または為替の
   一方が欠損・未公表の場合はドル換算値も未確定または欠損とし、前後日の為替値で
   自動補完しない。各系列の実際の観測時刻、公表時刻、取得時刻は別に保持する。
 - 利用規約で本文保存が許可されない場合は、URL、見出し、公表日時、取得日時、
@@ -354,8 +357,8 @@ flowchart TD
 - 欠損を0、前期値、推計値で自動補完しない。
 - 条件不適合による `不合格` と、データ不足による `not_evaluable` を区別する。
 - 通貨、単位、会計期間、株式分割、訂正開示、調整価格を検証する。
-- USD/JPYは基準通貨・決済通貨、中間値、17時の観測時刻を検証する。東証休業日は
-  結合対象の株価がないためドル換算値を作らない。東証取引日に日銀`FXERD04`が欠損する場合は
+- USD/JPYは通貨ペア、Bid、日足、UTCの対象区間と確定状態を検証する。東証休業日は
+  結合対象の株価がないためドル換算値を作らない。東証取引日に対応する確定済みFX日足が欠損する場合は
   その日のドル換算値を欠損とし、別日の値で補完しない。
 - 出典間の差異を平均化して消さず、採用値と採用理由を記録する。
 - 重要値が解消不能な場合、その値に依存する主張を確定しない。

@@ -1,0 +1,11 @@
+{
+  "name": "stock-research-dukascopy-bridge",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "dukascopy-node": "1.50.0"
+  },
+  "scripts": {
+    "test": "node bridge.test.cjs"
+  }
+}

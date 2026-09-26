@@ -91,6 +91,10 @@ flowchart LR
 
 ## 5. P0承認文書
 
+2026-09-26のFX移行承認により、要件01はversion 1.2、要件02はversion 1.7となった。
+UTC Bid日足の採用と利用条件に関する判断は
+[移行承認記録](../decision-requests/2026-09-26-dukascopy-fx-migration-approval.md)を参照する。
+
 | 文書 | 主な内容 |
 | --- | --- |
 | [詳細解析MVPの範囲と成功条件](01-detailed-analysis-mvp-scope.md) | 入力、実行時設定、MVP境界、5観点、4段階評価、成功条件 |

@@ -1,0 +1,62 @@
+schema_id: detailed-analysis.source-profile
+schema_version: 1
+artifact_id: dukascopy-source-profile-v1
+source_id: dukascopy
+profile_version: 1
+policy_version: 1
+source_approval_reference:
+  artifact_type: source_approval
+  artifact_id: dukascopy-source-approval-v1
+  schema_id: detailed-analysis.source-approval
+  schema_version: 1
+  sha256: f276cbcda92a35b3491d4e9196a1a1da06abba7465e8628c7d75f55cdb9534a5
+source_approval_status: approved
+enabled: true
+rate_domain: dukascopy-daily-candles
+credential_scope_alias: null
+egress_scope: default-egress
+max_concurrency: 1
+# Internal owner limits approved in docs/decision-requests/2026-09-26-dukascopy-fx-migration-approval.md.
+# These are not provider-published numeric limits.
+min_interval_seconds:
+  knowledge_status: known
+  value: 2
+  unit: second
+  evidence_reference_ids: [dukascopy-owner-rate-policy-20260926]
+rate_requests:
+  knowledge_status: known
+  value: 30
+  unit: request
+  evidence_reference_ids: [dukascopy-owner-rate-policy-20260926]
+rate_window_seconds:
+  knowledge_status: known
+  value: 60
+  unit: second
+  evidence_reference_ids: [dukascopy-owner-rate-policy-20260926]
+burst: 1
+cache_policy:
+  enabled: false
+  ttl_seconds:
+    knowledge_status: unsupported
+    value: null
+    unit: second
+    evidence_reference_ids: []
+  varies_by_credential_scope: true
+  varies_by_freshness_and_period: true
+  varies_by_source_policy_version: true
+batch_policy:
+  support_status: unsupported
+  max_batch_size:
+    knowledge_status: unsupported
+    value: null
+    unit: item
+    evidence_reference_ids: []
+cooldown_policy:
+  honor_provider_retry_after: true
+  default_cooldown_seconds:
+    knowledge_status: unsupported
+    value: null
+    unit: second
+    evidence_reference_ids: []
+  automatic_retry_allowed: false
+direct_connection_fallback_allowed: false
