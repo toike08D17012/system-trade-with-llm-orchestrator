@@ -1,0 +1,89 @@
+schema_id: detailed-analysis.source-approval
+schema_version: 1
+artifact_id: yfinance-source-approval-v3
+approval_id: yfinance-source-approval
+approval_version: 3
+source_id: yfinance
+status: approved
+provider: Yahoo Finance
+service: Yahoo Finance public API accessed through yfinance
+dataset: Market price, volume, corporate action, and security metadata
+reviewer: repository-owner
+reviewed_on: "2026-09-26"
+approved_by: repository-owner
+effective_on: "2026-09-26"
+recheck_due_on: "2026-12-25"
+status_reason: Repository owner approved native yfinance 1.7.0 history acquisition with shared library-call throttling instead of per-HTTP interception and logs.
+usage_entity: private_individual_internal_analysis
+usage_purposes:
+  - Local deterministic acquisition for detailed-analysis evidence preparation
+contract_plan: Permission-confirmed personal internal analysis; review quarterly and suspend on terms, API, or provider-condition changes.
+credential_scope_alias: null
+secret_value_storage_allowed: false
+online_use_allowed: true
+external_agent_transfer_allowed: true
+official_references:
+  - reference_id: yfinance-docs
+    document_type: api_documentation
+    url: https://ranaroussi.github.io/yfinance/
+    document_version_or_sha256: 7fd290a8dc757f01c04eff8e6bfb11c87b5d63a6ebe9f1f19a54a1615ebf771f
+    reviewed_on: "2026-09-14"
+  - reference_id: yahoo-terms
+    document_type: terms
+    url: https://legal.yahoo.com/ca/en/yahoo/terms/otos/index.html
+    document_version_or_sha256: 158a31a3472ad3fdc9f1279f7d6c1bae859526c8f544e6e4534bdeb1a8387f1e
+    reviewed_on: "2026-09-14"
+  - reference_id: yahoo-ydn-guidelines
+    document_type: api_guidelines
+    url: https://legal.yahoo.com/us/en/yahoo/guidelines/ydn/index.html
+    document_version_or_sha256: bdd9e8786f2a05ccc735c7dd5a35bf8caaceffae3e57f8a771b61fc94ec7946b
+    reviewed_on: "2026-09-14"
+conditions:
+  - category: terms
+    knowledge_status: known
+    summary: Current Yahoo terms were reviewed and the repository owner confirmed completion of the required permission process for this limited use.
+    official_reference_ids: [yahoo-terms, yahoo-ydn-guidelines]
+  - category: pricing
+    knowledge_status: known
+    summary: Approval is limited to the permission-confirmed personal internal-analysis use; no paid provider plan is represented by this record.
+    official_reference_ids: [yahoo-ydn-guidelines]
+  - category: authentication
+    knowledge_status: unsupported
+    summary: The approved yfinance endpoint path has no project credential and no secret value may be stored in this record.
+    official_reference_ids: [yfinance-docs]
+  - category: redistribution
+    knowledge_status: known
+    summary: Raw Yahoo data redistribution is outside the approval; use is restricted to internal analysis.
+    official_reference_ids: [yahoo-terms, yahoo-ydn-guidelines]
+  - category: derived_output
+    knowledge_status: known
+    summary: Derived output is restricted to internal analysis and remains subject to evidence attribution and publication review.
+    official_reference_ids: [yahoo-terms]
+  - category: external_processing
+    knowledge_status: known
+    summary: External-Agent transfer is approved only for the minimum public information, verified evidence, and derived metrics needed for private internal analysis; bulk raw series, publication, and redistribution remain prohibited.
+    official_reference_ids: [yahoo-terms]
+  - category: provider_retention
+    knowledge_status: unsupported
+    summary: No private or confidential input is sent; provider-side public-request logging is not exposed as a configurable retention feature.
+    official_reference_ids: [yahoo-ydn-guidelines]
+  - category: provider_training
+    knowledge_status: unsupported
+    summary: No private or confidential input is sent and no provider training control is exposed by the approved endpoint path.
+    official_reference_ids: [yahoo-terms]
+  - category: freshness
+    knowledge_status: known
+    summary: No provider freshness SLA is assumed; every acquisition records its time and is validated against the evidence freshness policy.
+    official_reference_ids: [yfinance-docs]
+  - category: available_period
+    knowledge_status: known
+    summary: Available history is endpoint- and argument-dependent; the adapter must record the function, arguments, and returned period.
+    official_reference_ids: [yfinance-docs]
+  - category: rate_limit
+    knowledge_status: known
+    summary: No provider numeric limit is assumed; native-history policy v1 serializes library calls, spaces them ten seconds after completion, and persists a fifteen-minute failure cooldown.
+    official_reference_ids: [yfinance-docs, yahoo-ydn-guidelines]
+  - category: failure_behavior
+    knowledge_status: known
+    summary: Application and general network retries remain disabled; native authentication fallback is delegated to pinned yfinance. HTTP counts and Retry-After are not observed; failures stop acquisition and persist a conservative cooldown.
+    official_reference_ids: [yfinance-docs, yahoo-ydn-guidelines]

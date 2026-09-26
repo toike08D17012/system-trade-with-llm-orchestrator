@@ -190,13 +190,28 @@ P0承認の阻害課題へ混在させない。
 - [ ] EDINET API Version 2の利用登録とAPIキー取得を行い、採用するAgent CLIを含む認証情報の
   保管、実行環境への注入、更新・失効、漏えい時対応を運用ガイドへ記載する。秘密値はGit、
   文書、ログ、Agent入力へ保存しない。
-- [ ] 人間が指定した1銘柄を読み込み、銘柄識別子と市場を検証する。
+- [x] 人間が指定した1銘柄を読み込み、銘柄識別子と市場を検証する。
   - [x] 単一の銘柄コードから、人間起点、東証、国内現物株、2期間、全安全制約を固定した
     `DetailedAnalysisTaskV1`を構築する内部APIを追加する。task IDと受付時刻は注入可能にし、
     構文検証を実在・上場確認として扱わない。
   - [x] 取得した銘柄情報により、東証上場内国株としての実在・市場を検証する。
 - [ ] 初期MVPの東証上場内国株の市場データを取得する`yfinance`アダプターと、将来の米国株・
   国内他市場へ拡張できる共通取得インターフェースを実装する。
+  - [x] 検証済みJPX銘柄だけを`<code>.T`へ変換する取得intentを維持する。
+  - [x] [標準history方針](decision-requests/2026-09-26-yfinance-native-history-policy.md)に従い、
+    `YfinanceDailyAdapter`の既定を`Ticker.history()`へ移行する。独自Session・HTTP単位の監査は不要とする。
+    固定版1.7.0、日次、`auto_adjust=False`、`repair=False`、`keepna=True`、一般retryなしを使用する。
+  - [x] 同じprovider状態を使うprocess間の同時取得1件、完了後10秒の間隔、失敗後15分停止を永続化する。
+    429、異常終了、状態破損、時計の巻き戻りを検証し、制限中に自動待機・再試行しない。
+  - [x] 補助本文・cookie・tokenはメモリ内限定とし、株価CSVと出典・引数・取得時刻・hashを保存する。
+    CSVはライブラリ戻り値であり、Yahooの原HTTP JSONではない。
+  - [x] 標準経路の[実通信確認](decision-requests/2026-09-26-yfinance-live-verification-outcome.md)で
+    `7203.T`の1年分243行を取得する。旧補助probeの404・429とは区別する。
+  - [x] 全sourceの応答サイズ上限撤廃は維持する。
+  - [ ] JPX検証済み銘柄と証拠保存・正規化を結合した分析向けのend-to-end acceptanceを完了する。
+    単一銘柄の診断成功だけで、全取得条件・品質検証・市場適格性の確認済みとはしない。
+  - 旧HTTP制御・profile v3・個別permit・監査参照は互換経路のテストを維持する。
+    標準経路への必須条件とせず、通常運用で新旧経路を混在させない。
 - [ ] 東証上場内国株の代表fixtureで、銘柄識別、最低3年の日次価格・出来高、調整前後価格、
   配当・株式分割、通貨、`Asia/Tokyo`、欠損、取得失敗を検証する。米国株fixtureは
   対応市場の拡張時に追加する。
@@ -211,8 +226,8 @@ P0承認の阻害課題へ混在させない。
   証拠集合の版と凍結時刻を追跡する。通常分析ではタスク開始後の重要情報を除外せず、
   解析完了直前の鮮度確認と、重要な訂正・更新による影響成果物の再実行を検証する。
 - [ ] 決定論的なHTTP取得を共有Coordinator経由に限定し、provider別制限、共有cooldown、
-  cache、single-flightを適用する。`yfinance`は調整済みSessionを注入して`threads=False`で
-  実行し、未調整の直接通信へフォールバックしない。
+  cache、single-flightを適用する。`yfinance`は承認済み例外として、標準historyと
+  ライブラリ呼び出し単位の共有排他・間隔・cooldownを使用する。
   - [x] P3-3としてfake transport専用の内部Coordinatorを追加し、検証済みsource設定から
     `rate_domain`単位の同時数、最小間隔、rolling window、cooldownをメモリ上で共有する。
     1呼出しで最大1回だけ送信し、制限中は待機せず返す。既存契約のevent列を返す。
@@ -230,7 +245,7 @@ P0承認の阻害課題へ混在させない。
     永続cooldown、`Retry-After`、no automatic retry、restart recovery、gate auditを追加する。
   - [x] ADR-0005 Phase 4Cとして、cache disabled/not-applicable decision、single-flight leader/follower、
     consumer attribution、queued・follower・leader・in-flight cancellationを追加する。
-    committed rawを参照するcache hitはPhase 6で追加する。
+    committed rawを参照するcache hitは未実装である。
   - [x] ADR-0005 Phase 5として、credential-free physical request、private one-shot permit、controlled synthetic
     transport、共通response検証、temporary raw candidate、送信前failureのnegative testを追加する。
     source profileからproduction policyへのmappingはPhase 7で追加する。
