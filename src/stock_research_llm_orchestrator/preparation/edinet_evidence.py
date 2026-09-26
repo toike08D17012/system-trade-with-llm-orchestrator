@@ -16,6 +16,7 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence imp
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
 from stock_research_llm_orchestrator.credentials.models import CredentialFilePolicy
 from stock_research_llm_orchestrator.credentials.preflight import preflight_credential_file
+from stock_research_llm_orchestrator.preparation.edinet_revalidation import revalidate_list, select_target
 from stock_research_llm_orchestrator.preparation.financial_disclosure import (
     FilingInput,
     FinancialInput,
@@ -68,6 +69,7 @@ def acquire_edinet_acceptance(
     runtime: Path,
     runs: Path,
     credential: Path,
+    retained_list: Path | None = None,
     allow_network: bool = False,
     allow_credential: bool = False,
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
@@ -86,6 +88,13 @@ def acquire_edinet_acceptance(
         raise ValueError("edinet_storage_overlap")
     if preflight_credential_file(credential, policy=CredentialFilePolicy(required_mode=0o600)).status != "ready":
         raise ValueError("edinet_credential_preflight_failed")
+    retained = read_bundle(_safe_path(retained_list)) if retained_list is not None else {}
+    recovered = None
+    if retained:
+        recovered, listing = revalidate_list(retained)
+        select_target(retained["body.bin"], listing)
+        if _timestamp(recovered.received_at) > clock():
+            raise ValueError("edinet_retained_list_from_future")
     binding = load_edinet_binding(config, clock().astimezone(TOKYO).date())
     for path in (runtime, runs):
         path.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -109,8 +118,15 @@ def acquire_edinet_acceptance(
     source_intent = EdinetDocumentListAdapter().build_intent(
         "document-list", (SourceParameter(name="date", value="2026-06-10"), SourceParameter(name="type", value="2"))
     )
+    if retained:
+        selected = select_target(retained["body.bin"], listing)
+        files.update({f"retained-list/{name}": body for name, body in retained.items()})
+        source_intent = EdinetXbrlDocumentAdapter().build_intent(
+            "document-retrieval",
+            (SourceParameter(name="document_id", value=selected.document_id), SourceParameter(name="type", value="1")),
+        )
     try:
-        for sequence in range(2):
+        for sequence in range(1 if retained else 0, 2):
             key = "list" if sequence == 0 else "document"
             if sequence:
                 # Keep the lease alive while respecting all shared 60-second gates.
@@ -294,23 +310,7 @@ def acquire_edinet_acceptance(
                 listing = EdinetDocumentListAdapter().parse(BoundedSourceResponse.from_candidate(candidate))
                 if listing.requested_date != "2026-06-10":
                     raise ValueError("edinet_acceptance_list_date_mismatch")
-                raw_documents = {d["docID"]: d for d in json.loads(candidate.body)["results"]}
-                matches = [
-                    d
-                    for d in listing.documents
-                    if d.security_code == "72030"
-                    and d.edinet_code is not None
-                    and d.document_type.value == "120"
-                    and d.period_start == "2025-04-01"
-                    and d.period_end == "2026-03-31"
-                    and d.withdrawal_status == "0"
-                    and d.xbrl_available
-                    and raw_documents[d.document_id].get("legalStatus") in {"1", "2"}
-                    and raw_documents[d.document_id].get("disclosureStatus") == "0"
-                ]
-                if len(matches) != 1:
-                    raise ValueError("edinet_acceptance_target_not_unique")
-                selected = matches[0]
+                selected = select_target(candidate.body, listing)
                 source_intent = EdinetXbrlDocumentAdapter().build_intent(
                     "document-retrieval",
                     (
@@ -330,9 +330,10 @@ def acquire_edinet_acceptance(
                 provider_security_code="72030",
                 applicable_period=ApplicablePeriodV1(start_date="2026-06-10", end_date=day),
                 list_key="list",
-                list_sha256=acquisitions[0].publication.content_sha256,
+                list_sha256=recovered.sha256 if recovered is not None else acquisitions[0].publication.content_sha256,
             ),
             acquisitions=tuple(acquisitions),
+            retained_list=bool(retained),
         )
         files["inputs.json"] = inputs.model_dump_json(indent=2).encode()
         name = f"edinet-input-{uid}"

@@ -19,6 +19,8 @@ from .test_financial_disclosure import inputs as financial_inputs  # noqa: F401
     "case",
     [
         "success",
+        "resume",
+        "retained_tamper",
         "no_optin",
         "permission",
         "no_match",
@@ -76,6 +78,34 @@ def test_acceptance_boundaries(tmp_path: Path, request: pytest.FixtureRequest, c
             200, headers={"Content-Type": "application/octet-stream"}, content=b"invalid" if case == "bad_zip" else body
         )
 
+    retained = None
+    if case in {"resume", "retained_tamper"}:
+        from hashlib import sha256
+
+        from stock_research_llm_orchestrator.sources.edinet.document_list import EdinetDocumentListAdapter
+        from stock_research_llm_orchestrator.sources.protocol import SourceParameter
+
+        retained = tmp_path / "retained"
+        retained.mkdir()
+        list_body = json.dumps(listing).encode()
+        (retained / "body.bin").write_bytes(list_body)
+        intent = EdinetDocumentListAdapter().build_intent(
+            "document-list", (SourceParameter(name="date", value="2026-06-10"), SourceParameter(name="type", value="2"))
+        )
+        (retained / "failure.json").write_text(
+            json.dumps(
+                dict(
+                    reason="source_validation_failed",
+                    key="list",
+                    sha256=sha256(list_body).hexdigest(),
+                    received_at="2026-09-26T12:00:00+00:00",
+                    source_intent=intent.model_dump(mode="json"),
+                )
+            )
+        )
+        if case == "retained_tamper":
+            (retained / "body.bin").write_bytes(b"{}")
+
     def run() -> Path:
         return acquire_edinet_acceptance(
             task=task,
@@ -83,6 +113,7 @@ def test_acceptance_boundaries(tmp_path: Path, request: pytest.FixtureRequest, c
             runtime=tmp_path / "runtime",
             runs=tmp_path / "runs",
             credential=key,
+            retained_list=retained,
             allow_network=case != "no_optin",
             allow_credential=True,
             clock=lambda: current[0],
@@ -90,15 +121,21 @@ def test_acceptance_boundaries(tmp_path: Path, request: pytest.FixtureRequest, c
             transport=httpx.MockTransport(handler),
         )
 
-    if case == "success":
+    if case in {"success", "resume"}:
         output = run()
         validate_financial(read_bundle(output))
-        assert len(sends) == 2
-        assert (sends[1] - sends[0]).total_seconds() >= 60
+        assert len(sends) == (1 if case == "resume" else 2)
+        if case == "success":
+            assert (sends[1] - sends[0]).total_seconds() >= 60
+        else:
+            assert retained is not None
+            assert (output / "retained-list/failure.json").read_bytes() == (retained / "failure.json").read_bytes()
     else:
         with pytest.raises((ValueError, RuntimeError)):
             run()
-        assert len(sends) == (0 if case in {"no_optin", "permission"} else 2 if case == "bad_zip" else 1)
+        assert len(sends) == (
+            0 if case in {"no_optin", "permission", "retained_tamper"} else 2 if case == "bad_zip" else 1
+        )
     for root in (tmp_path / "runs", tmp_path / "runtime"):
         for artifact in root.rglob("*"):
             if artifact.is_file():

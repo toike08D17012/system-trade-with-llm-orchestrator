@@ -463,4 +463,5 @@ P0承認の阻害課題へ混在させない。
 
 - [x] Implement the owner-approved EDINET two-request acceptance CLI and metadata export.
 - [x] Preserve the first live list parse failure and revalidate its saved bytes offline after parser corrections.
-- [ ] Resume from the retained EDINET list without refetching it; acquire one target XBRL document and complete live acceptance.
+- [x] Resume from the retained EDINET list without refetching it; acquire one target XBRL document and verify offline replay.
+- [ ] Resolve XBRL entity identity and taxonomy mappings using retained local evidence before financial acceptance.

@@ -17,6 +17,7 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.policies imp
     SourceApprovalV1,
 )
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
+from stock_research_llm_orchestrator.preparation.edinet_revalidation import revalidate_list
 from stock_research_llm_orchestrator.preparation.financial_candidates import correction_reasons
 from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path, _timestamp
@@ -61,6 +62,7 @@ class FinancialInput(StrictContractModel):
     survey_period: ApplicablePeriodV1
     issuer: IssuerBinding | None
     acquisitions: tuple[FilingInput, ...]
+    retained_list: bool = False
 
 
 class FilingObservation(StrictContractModel):
@@ -180,6 +182,18 @@ def evaluate_financial(files: Mapping[str, bytes]) -> tuple[FinancialManifest, b
     candidates: dict[str, object] = {}
     entities: dict[str, set[str]] = {}
     expected = {"inputs.json", "task.json", "approval.yaml", "generation.json", "evaluation-policy.yaml"}
+    recovered = None
+    if inputs.retained_list:
+        if "list" in keys:
+            raise ValueError("financial_duplicate_retained_list")
+        retained = _subset(files, "retained-list/")
+        recovered, listing = revalidate_list(retained)
+        if _timestamp(recovered.received_at) > checked:
+            raise ValueError("financial_retained_list_from_future")
+        expected.update(f"retained-list/{name}" for name in retained)
+        observations.extend(("list", doc) for doc in listing.documents)
+        dates.add(listing.requested_date)
+        reasons.add("list_revalidated_after_failed_acquisition")
     for item in inputs.acquisitions:
         response = _response(files, item)
         expected.update(
@@ -242,9 +256,12 @@ def evaluate_financial(files: Mapping[str, bytes]) -> tuple[FinancialManifest, b
             and doc.security_code == binding.provider_security_code
             for key, doc in observations
         )
-        bound = bound and any(
-            i.key == binding.list_key and i.publication.content_sha256 == binding.list_sha256
-            for i in inputs.acquisitions
+        bound = bound and (
+            (recovered is not None and binding.list_key == "list" and recovered.sha256 == binding.list_sha256)
+            or any(
+                i.key == binding.list_key and i.publication.content_sha256 == binding.list_sha256
+                for i in inputs.acquisitions
+            )
         )
     if (
         binding is not None
@@ -266,8 +283,12 @@ def evaluate_financial(files: Mapping[str, bytes]) -> tuple[FinancialManifest, b
         elif doc.edinet_code != binding.edinet_code or doc.security_code != binding.provider_security_code:
             excluded.add("other_or_unresolved_issuer")
         submitted = datetime.strptime(doc.submitted_at, "%Y-%m-%d %H:%M").replace(tzinfo=TOKYO)
-        list_acquisition = next(i for i in inputs.acquisitions if i.key == key)
-        if submitted > _timestamp(list_acquisition.retrieved_at):
+        retrieved_at = (
+            recovered.received_at
+            if recovered is not None and key == "list"
+            else next(i.retrieved_at for i in inputs.acquisitions if i.key == key)
+        )
+        if submitted > _timestamp(retrieved_at):
             raise ValueError("financial_list_before_submission")
         if submitted > checked:
             excluded.add("filing_after_check")

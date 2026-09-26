@@ -13,6 +13,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--allow-network", action="store_true")
     parser.add_argument("--allow-credential", action="store_true")
+    parser.add_argument("--retained-list", type=Path)
     parser.add_argument("--task", type=Path, required=True)
     parser.add_argument("--config", type=Path, default=Path("config"))
     parser.add_argument("--runtime", type=Path, required=True)
@@ -26,6 +27,7 @@ def main(argv: list[str] | None = None) -> int:
             runtime=args.runtime,
             runs=args.runs,
             credential=args.credential_file,
+            retained_list=args.retained_list,
             allow_network=args.allow_network,
             allow_credential=args.allow_credential,
         )
