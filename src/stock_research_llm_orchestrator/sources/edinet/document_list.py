@@ -127,15 +127,15 @@ class _RawDocument(StrictContractModel):
     edinetCode: Identifier | None  # noqa: N815 - exact provider field
     secCode: Identifier | None  # noqa: N815 - exact provider field
     JCN: str | None  # noqa: N815 - exact provider field
-    filerName: str  # noqa: N815 - exact provider field
+    filerName: str | None  # noqa: N815 - exact provider field
     fundCode: str | None  # noqa: N815 - exact provider field
-    ordinanceCode: str  # noqa: N815 - exact provider field
-    formCode: str  # noqa: N815 - exact provider field
-    docTypeCode: str  # noqa: N815 - exact provider field
+    ordinanceCode: str | None  # noqa: N815 - exact provider field
+    formCode: str | None  # noqa: N815 - exact provider field
+    docTypeCode: str | None  # noqa: N815 - exact provider field
     periodStart: str | None  # noqa: N815 - exact provider field
     periodEnd: str | None  # noqa: N815 - exact provider field
-    submitDateTime: str  # noqa: N815 - exact provider field
-    docDescription: str  # noqa: N815 - exact provider field
+    submitDateTime: str | None  # noqa: N815 - exact provider field
+    docDescription: str | None  # noqa: N815 - exact provider field
     issuerEdinetCode: str | None  # noqa: N815 - exact provider field
     subjectEdinetCode: str | None  # noqa: N815 - exact provider field
     subsidiaryEdinetCode: str | None  # noqa: N815 - exact provider field
@@ -149,6 +149,8 @@ class _RawDocument(StrictContractModel):
     pdfFlag: Literal["0", "1"]  # noqa: N815 - exact provider field
     attachDocFlag: Literal["0", "1"]  # noqa: N815 - exact provider field
     englishDocFlag: Literal["0", "1"]  # noqa: N815 - exact provider field
+    csvFlag: Literal["0", "1"] | None = None  # noqa: N815 - legacy fixture compatibility
+    legalStatus: Literal["0", "1", "2"] | None = None  # noqa: N815 - exact provider field
 
 
 class _RawDocumentList(StrictContractModel):
@@ -214,7 +216,11 @@ class EdinetDocumentListAdapter:
             text = response.body.decode(_DOCUMENT_LIST_ENCODING, errors="strict")
             value = json.loads(text, object_pairs_hook=_unique_json_object, parse_constant=_reject_json_constant)
             raw = _RawDocumentList.model_validate(value)
-            documents = tuple(self._to_document(item) for item in raw.results if item.docTypeCode in EdinetDocumentType)
+            documents = tuple(
+                self._to_document(item)
+                for item in raw.results
+                if item.docTypeCode is not None and item.docTypeCode in EdinetDocumentType
+            )
             return EdinetDocumentList(
                 requested_date=raw.metadata.parameter.date,
                 processed_at=raw.metadata.processDateTime,
@@ -230,6 +236,8 @@ class EdinetDocumentListAdapter:
 
     @staticmethod
     def _to_document(raw: _RawDocument) -> EdinetDocument:
+        if raw.filerName is None or raw.docTypeCode is None or raw.submitDateTime is None or raw.docDescription is None:
+            raise ValueError("edinet_supported_filing_metadata_missing")
         return EdinetDocument(
             sequence_number=raw.seqNumber,
             document_id=raw.docID,

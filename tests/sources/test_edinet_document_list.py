@@ -132,3 +132,32 @@ def test_parse_rejects_unapproved_transport_metadata(media_type: str, encoding: 
     """Require the approved EDINET list media type and encoding."""
     with pytest.raises(EdinetDocumentListParseError, match="^edinet_document_list_invalid$"):
         EdinetDocumentListAdapter().parse(_response(FIXTURE.read_bytes(), media_type=media_type, encoding=encoding))
+
+
+def test_parse_official_csv_and_legal_flags() -> None:
+    """Accept documented optional provider flags without ignoring unknown fields."""
+    from pathlib import Path
+
+    raw = json.loads(Path("tests/fixtures/sources/edinet/document-list.json").read_bytes())
+    for document in raw["results"]:
+        document.update(csvFlag="1", legalStatus="2")
+    parsed = EdinetDocumentListAdapter().parse(_response(json.dumps(raw).encode()))
+    assert len(parsed.documents) == 1
+    raw["results"][0]["legalStatus"] = "unknown"
+    with pytest.raises(EdinetDocumentListParseError):
+        EdinetDocumentListAdapter().parse(_response(json.dumps(raw).encode()))
+
+
+def test_null_event_metadata_does_not_invent_a_filing() -> None:
+    """Keep null event rows in raw counts while requiring metadata for supported filings."""
+    from pathlib import Path
+
+    raw = json.loads(Path("tests/fixtures/sources/edinet/document-list.json").read_bytes())
+    event = raw["results"][1]
+    for name in ("filerName", "ordinanceCode", "formCode", "docTypeCode", "submitDateTime", "docDescription"):
+        event[name] = None
+    parsed = EdinetDocumentListAdapter().parse(_response(json.dumps(raw).encode()))
+    assert parsed.provider_result_count == 2 and len(parsed.documents) == 1
+    raw["results"][0]["filerName"] = None
+    with pytest.raises(EdinetDocumentListParseError):
+        EdinetDocumentListAdapter().parse(_response(json.dumps(raw).encode()))

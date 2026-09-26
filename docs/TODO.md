@@ -460,3 +460,7 @@ P0承認の阻害課題へ混在させない。
 - [ ] Define taxonomy mappings, correction adoption, and complete financial-period acceptance.
 - [ ] Complete EDINET live acceptance and issuer IR/disclosure source approval before enabling acquisition.
 - [ ] Export acquisition metadata from runtime storage without manual assembly.
+
+- [x] Implement the owner-approved EDINET two-request acceptance CLI and metadata export.
+- [x] Preserve the first live list parse failure and revalidate its saved bytes offline after parser corrections.
+- [ ] Resume from the retained EDINET list without refetching it; acquire one target XBRL document and complete live acceptance.

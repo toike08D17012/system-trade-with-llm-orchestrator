@@ -542,3 +542,21 @@ Pytestの終了コード5は、テストの未収集を検出する失敗とし�
 ## ライセンス
 
 [MIT License](LICENSE) を適用します。
+
+## EDINET限定取得受入
+
+内部CLI `preparation.edinet_evidence_cli` は承認済みv2設定で、2026-06-10の一覧1回と、
+7203の2026年3月期年次報告が一意に確認できた場合のXBRL1回だけを取得します。
+既存の共有runtimeを指定し、並列1・60秒間隔、retryなしを維持します。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.edinet_evidence_cli \
+  --allow-network --allow-credential --task runs/edinet-task.json \
+  --config config --runtime runs/dukascopy-shared-runtime --runs runs/edinet-evidence
+```
+
+taskファイルは事前に用意し、credentialは既存マウント先のowner-only `0600` ファイルを使用します。
+キー値を引数に渡しません。出力先には原証拠・取得記録からの財務準備入力・再生可能な準備結果を保存します。
+選別失敗時も取得済みrawは保持し、parse失敗応答は未受入として保存します。
+v1のoffline設定は保持します。v2はこの限定受入専用であり、過去日走査や通常取得の有効化ではありません。
+財務mapping、IR、最新性の不足により `analysis_ready=false` を維持します。
