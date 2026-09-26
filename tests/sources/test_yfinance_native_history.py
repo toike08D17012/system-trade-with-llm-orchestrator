@@ -3,6 +3,7 @@
 import json
 import multiprocessing
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pandas as pd  # type: ignore[import-untyped]
@@ -76,6 +77,56 @@ def test_native_adapter_uses_history_without_session_and_preserves_metadata(tmp_
     ]
     assert adapter.metadata(intent).function == "Ticker.history"
     assert (YfConfig.network.retries, YfConfig.debug.hide_exceptions) == previous
+
+
+@pytest.mark.parametrize(
+    "cached",
+    [
+        None,
+        {},
+        {
+            "currency": "JPY",
+            "exchangeTimezoneName": "Asia/Tokyo",
+            "symbol": "7203.T",
+            "instrumentType": "EQUITY",
+            "secret": "canary",
+        },
+    ],
+)
+def test_evidence_acquisition_reads_cached_metadata_without_lazy_calls(tmp_path: Path, cached: object) -> None:
+    """Retain allowlisted observed metadata with no metadata getter or second history call."""
+    calls: list[dict[str, object]] = []
+
+    class CachedTicker(_Ticker):
+        def history(self, **kwargs: object) -> object:
+            self._price_history = SimpleNamespace(_history_metadata=cached)
+            return super().history(**kwargs)
+
+        @property
+        def history_metadata(self) -> object:
+            pytest.fail("lazy getter invoked")
+
+        def get_history_metadata(self) -> object:
+            pytest.fail("lazy getter invoked")
+
+    client = NativeHistoryClient(tmp_path / "state", ticker_factory=lambda _: CachedTicker(calls), clock=lambda: 1000)
+    intent = YfinanceDailyIntent(
+        symbol="7203.T",
+        jpx_code="7203",
+        jpx_snapshot_on="2026-08-31",
+        mic="XTKS",
+        market_segment="Prime",
+        start="2023-09-26",
+        end="2026-09-26",
+    )
+    result = YfinanceDailyAdapter(history_client=client).acquire_history(intent)
+    assert len(calls) == 1
+    assert result.metadata["retrieved_at"] == "1970-01-01T00:16:40+00:00"
+    assert result.metadata["currency"] == ("JPY" if cached else None)
+    assert "canary" not in json.dumps(result.metadata)
+    if isinstance(cached, dict):
+        cached["currency"] = "USD"
+        assert result.metadata["currency"] != "USD"
 
 
 def test_spacing_is_persistent_and_measured_after_completion(tmp_path: Path) -> None:

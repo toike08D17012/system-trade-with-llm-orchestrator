@@ -23,6 +23,7 @@ from stock_research_llm_orchestrator.sources.yfinance.coordinated_session import
     YahooExchangeReceipt,
     YahooRequestIdentity,
 )
+from stock_research_llm_orchestrator.sources.yfinance.private_runtime import private_yfinance_runtime
 
 
 def _chart_body() -> bytes:
@@ -165,7 +166,9 @@ def test_real_download_routes_every_send_through_injected_exchange(monkeypatch: 
         invocation.append(kwargs)
         return yf.download(**kwargs)
 
-    result = cast("pd.DataFrame", YfinanceDailyAdapter(download=real_download).download(intent, session=session))
+    # Retained local cookies must not skip the synthetic cookie exchange.
+    with private_yfinance_runtime():
+        result = cast("pd.DataFrame", YfinanceDailyAdapter(download=real_download).download(intent, session=session))
 
     assert not result.empty
     assert list(result["Close"]["1301.T"]) == [101.0]

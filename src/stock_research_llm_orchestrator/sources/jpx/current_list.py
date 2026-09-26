@@ -46,7 +46,7 @@ class JpxListedIssue(StrictContractModel):
     """One source-native current listed issue."""
 
     snapshot_on: str
-    code: str = Field(pattern=r"^[0-9A-Z]{4}$")
+    code: str = Field(pattern=r"^(?:[0-9A-Z]{4}|[0-9]{5})$")
     name: str
     market_product_category: str
     industry_33_code: str | None = None
@@ -60,6 +60,13 @@ class JpxListedIssue(StrictContractModel):
     security_class: Literal["ordinary_common_equity", "unknown"]
     eligibility: Literal["eligible", "ineligible", "unknown"]
     market_segment: Literal["Prime", "Standard", "Growth"] | None
+
+    @model_validator(mode="after")
+    def restrict_supported_identity(self) -> JpxListedIssue:
+        """Keep observed five-digit source identifiers outside the MVP equity scope."""
+        if len(self.code) != 4 and (self.security_class != "unknown" or self.eligibility != "unknown"):
+            raise ValueError("jpx_extended_code_classification_unconfirmed")
+        return self
 
 
 class JpxCurrentList(StrictContractModel):
@@ -156,6 +163,7 @@ def _issue(row: list[str]) -> JpxListedIssue:
     snapshot = date(int(raw_date[:4]), int(raw_date[4:6]), int(raw_date[6:])).isoformat()
     segment = _ELIGIBLE_MARKETS.get(category)
     domestic = "（内国株式）" in category
+    supported_identity = len(code) == 4
     return JpxListedIssue(
         snapshot_on=snapshot,
         code=code,
@@ -168,7 +176,7 @@ def _issue(row: list[str]) -> JpxListedIssue:
         scale_code=scale_code or None,
         scale_name=scale_name or None,
         issuer_domesticity="domestic" if domestic else "unknown",
-        security_class="ordinary_common_equity" if segment else "unknown",
-        eligibility="eligible" if segment else "ineligible",
+        security_class="ordinary_common_equity" if segment and supported_identity else "unknown",
+        eligibility="unknown" if not supported_identity else "eligible" if segment else "ineligible",
         market_segment=segment,
     )

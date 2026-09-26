@@ -11,7 +11,7 @@ from yfinance.config import YfConfig  # type: ignore[import-untyped]
 from stock_research_llm_orchestrator.requests.production import LogicalResultOutcome
 from stock_research_llm_orchestrator.sources.yfinance.coordinated_session import CoordinatedSession
 from stock_research_llm_orchestrator.sources.yfinance.models import YfinanceDailyIntent, YfinanceDownloadMetadata
-from stock_research_llm_orchestrator.sources.yfinance.native_history import NativeHistoryClient
+from stock_research_llm_orchestrator.sources.yfinance.native_history import HistoryResult, NativeHistoryClient
 
 
 _YF_CONFIG_LOCK = RLock()
@@ -61,9 +61,7 @@ class YfinanceDailyAdapter:
     def download(self, intent: YfinanceDailyIntent, *, session: CoordinatedSession | None = None) -> object:
         """Use native history by default; preserve explicit legacy session callers."""
         if session is None and self._download is None:
-            snapshot = YfinanceDailyIntent.model_validate(intent.model_dump())
-            client = self._history_client or NativeHistoryClient()
-            return client.history(snapshot.symbol, start=snapshot.start, end=snapshot.end).frame
+            return self.acquire_history(intent).frame
         if not isinstance(session, CoordinatedSession):
             raise ValueError("yfinance_session_required")
         if session.expected_symbol != intent.symbol:
@@ -102,3 +100,11 @@ class YfinanceDailyAdapter:
             finally:
                 self._config.network.retries = previous_retries
                 logger.setLevel(previous_level)
+
+    def acquire_history(self, intent: YfinanceDailyIntent) -> HistoryResult:
+        """Retain actual native acquisition provenance for evidence preparation."""
+        if self._download is not None:
+            raise ValueError("native_history_required_for_evidence")
+        snapshot = YfinanceDailyIntent.model_validate(intent.model_dump())
+        client = self._history_client or NativeHistoryClient()
+        return client.history(snapshot.symbol, start=snapshot.start, end=snapshot.end)

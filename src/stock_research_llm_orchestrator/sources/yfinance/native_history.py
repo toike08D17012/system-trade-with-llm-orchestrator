@@ -72,6 +72,29 @@ class HistoryResult:
     metadata: dict[str, object]
 
 
+def _cached_market_metadata(ticker: _Ticker) -> dict[str, str | None]:
+    """Read pinned 1.7.0 caches only; public metadata getters can send requests."""
+    try:
+        price_history = vars(ticker).get("_price_history")
+        cached = vars(price_history).get("_history_metadata")
+    except TypeError:
+        cached = None
+    # Never enumerate HistoryMetadata or any other lazy mapping subclass.
+    if type(cached) is not dict:
+        cached = {}
+    fields = {
+        "currency": ("currency", r"[A-Z]{3}"),
+        "exchange_timezone": ("exchangeTimezoneName", r"[A-Za-z_/+-]{1,64}"),
+        "response_symbol": ("symbol", r"[0-9A-Z.=-]{1,32}"),
+        "instrument_type": ("instrumentType", r"[A-Z]{1,32}"),
+    }
+    result: dict[str, str | None] = {}
+    for name, (key, pattern) in fields.items():
+        value = cached.get(key)
+        result[name] = value if isinstance(value, str) and re.fullmatch(pattern, value) else None
+    return result
+
+
 class NativeHistoryClient:
     """Serialize all native calls sharing this state root across Linux processes.
 
@@ -196,6 +219,7 @@ class NativeHistoryClient:
                     raise HistoryAcquisitionError("yfinance_invalid_history")
                 if frame.index.has_duplicates or not frame.index.is_monotonic_increasing or frame["Close"].isna().all():
                     raise HistoryAcquisitionError("yfinance_invalid_history")
+                market_metadata = _cached_market_metadata(ticker)
             except YFRateLimitError:
                 raise HistoryAcquisitionError("yfinance_rate_limited") from None
             except HistoryAcquisitionError:
@@ -219,5 +243,8 @@ class NativeHistoryClient:
                 "source_approval_version": 3,
                 "rate_unit": "library_call",
                 "http_body_retained": False,
+                **market_metadata,
+                "market_metadata_origin": "cached-history-chart-meta",
+                "dividend_currency_verification": "not_independently_verified",
             },
         )

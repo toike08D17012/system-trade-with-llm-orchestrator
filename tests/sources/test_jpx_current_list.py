@@ -129,6 +129,51 @@ def test_rejects_malformed_or_unrecognized_workbook(body: bytes) -> None:
         )
 
 
+def test_five_digit_source_codes_do_not_reject_supported_equities_or_gain_eligibility() -> None:
+    """Retain extended source codes without truncating or classifying them as ordinary equity."""
+    from stock_research_llm_orchestrator.sources.jpx.verification import verify_jpx_security
+
+    body = _workbook(
+        ("20260831", "1234", "Synthetic ordinary", "プライム（内国株式）", "", "", "", "", "", ""),
+        ("20260831", "12345", "Synthetic extended", "プライム（内国株式）", "", "", "", "", "", ""),
+        ("20260831", "12346", "Synthetic extended second", "プライム（内国株式）", "", "", "", "", "", ""),
+    )
+    snapshot = JpxCurrentListAdapter().parse(
+        BoundedSourceResponse(
+            physical_attempt_id="synthetic-extended-codes",
+            body=body,
+            sha256=hashlib.sha256(body).hexdigest(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            encoding="binary",
+        )
+    )
+    assert tuple(issue.code for issue in snapshot.issues) == ("1234", "12345", "12346")
+    assert verify_jpx_security(snapshot, "1234").status == "verified_eligible"
+    for issue in snapshot.issues[1:]:
+        assert issue.eligibility == "unknown"
+        assert issue.security_class == "unknown"
+        with pytest.raises(ValueError, match="extended_code"):
+            type(issue).model_validate({**issue.model_dump(), "eligibility": "eligible"})
+        with pytest.raises(ValueError, match="invalid_jpx_security_code"):
+            verify_jpx_security(snapshot, issue.code)
+
+
+@pytest.mark.parametrize("code", ["123", "123456", "1234A", "12-4"])
+def test_unrecognized_code_shapes_remain_rejected(code: str) -> None:
+    """Accommodate only the observed source representation, not arbitrary identifiers."""
+    body = _workbook(("20260831", code, "Synthetic", "プライム（内国株式）", "", "", "", "", "", ""))
+    with pytest.raises(JpxCurrentListParseError):
+        JpxCurrentListAdapter().parse(
+            BoundedSourceResponse(
+                physical_attempt_id="synthetic-invalid-code",
+                body=body,
+                sha256=hashlib.sha256(body).hexdigest(),
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                encoding="binary",
+            )
+        )
+
+
 def test_transport_uses_fixed_url_and_rejects_redirect() -> None:
     """Perform one anonymous fixed-resource request with no redirect following."""
     intent = JpxCurrentListAdapter().build_intent("current-listed-issues", ())
