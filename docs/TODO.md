@@ -19,6 +19,9 @@ Python、設定、スクリプト、CI、依存関係、公開インターフェ
 
 ## 2. 現在の基準点
 
+- DukascopyのUTC Bid日足終値への移行計画は承認済み。自動取得・証拠保存と公式利用条件の
+  関係が未確認のため、取得元切替と追加GETは保留している。
+  [承認内容と確認事項](decision-requests/2026-09-26-dukascopy-fx-migration-approval.md)を参照する。
 - システムは設計段階であり、設計の責務は `docs/design/` の5文書に分割されている。
 - Dockerを標準開発環境とし、ロック済み依存関係、Git hook、既存の品質確認を実行できる。
 - `src/stock_research_llm_orchestrator/` には契約基盤とoffline設定検証CLIに加え、
