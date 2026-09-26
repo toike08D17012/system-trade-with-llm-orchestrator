@@ -1,7 +1,8 @@
 import os
 import sqlite3
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import cast
 
 import pytest
 from pydantic import ValidationError
@@ -12,10 +13,13 @@ from stock_research_llm_orchestrator.requests.production import (
     ProductionLogicalRequest,
     ProductionLogicalResult,
     ProductionPhysicalAttempt,
+    QueuePolicy,
+    RuntimeLease,
     RuntimeLeasePolicy,
 )
 from stock_research_llm_orchestrator.requests.storage import (
     DATABASE_FILENAME,
+    ProductionRequestRepository,
     RuntimeStorageError,
     initialize_runtime_storage,
 )
@@ -47,6 +51,10 @@ def _drop_phase_6_tables(connection: sqlite3.Connection) -> None:
     connection.execute("DROP TABLE raw_publications")
 
 
+def _drop_phase_7_columns(connection: sqlite3.Connection) -> None:
+    connection.execute("ALTER TABLE physical_attempts DROP COLUMN raw_eligible")
+
+
 def _logical_request() -> ProductionLogicalRequest:
     return ProductionLogicalRequest(
         logical_request_id="logical-1",
@@ -62,6 +70,40 @@ def _logical_request() -> ProductionLogicalRequest:
     )
 
 
+def _expected_lineage() -> dict[str, object]:
+    return {
+        "task_id": "task-1",
+        "source_id": "fixture",
+        "operation": "history",
+        "source_approval_version": 1,
+        "source_profile_version": 1,
+        "credential_scope_alias": None,
+        "egress_scope": "default",
+        "rate_domain": "provider-a",
+    }
+
+
+def _assert_lineage(
+    repository: ProductionRequestRepository,
+    lease: RuntimeLease,
+    now: datetime,
+    lineage: dict[str, object],
+) -> None:
+    repository.assert_claimed_logical_request(
+        "logical-1",
+        task_id=cast(str, lineage["task_id"]),
+        source_id=cast(str, lineage["source_id"]),
+        operation=cast(str, lineage["operation"]),
+        source_approval_version=cast(int, lineage["source_approval_version"]),
+        source_profile_version=cast(int, lineage["source_profile_version"]),
+        credential_scope_alias=cast(str | None, lineage["credential_scope_alias"]),
+        egress_scope=cast(str, lineage["egress_scope"]),
+        rate_domain=cast(str, lineage["rate_domain"]),
+        lease=lease,
+        now=now,
+    )
+
+
 def test_initialize_runtime_storage_creates_versioned_private_database(tmp_path: Path) -> None:
     """Create the exact current schema with owner-only database permissions."""
     root = _runtime_root(tmp_path)
@@ -71,10 +113,10 @@ def test_initialize_runtime_storage_creates_versioned_private_database(tmp_path:
     database = root / DATABASE_FILENAME
     assert database.stat().st_mode & 0o777 == 0o600
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (6,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
         assert connection.execute("SELECT schema_owner, schema_version FROM schema_metadata").fetchone() == (
             "production-request-coordinator",
-            6,
+            7,
         )
         columns = {
             row[1]
@@ -136,6 +178,7 @@ def test_initialize_runtime_storage_migrates_phase_3a_schema(tmp_path: Path) -> 
     repository.add_logical_request(_logical_request())
     database = root / DATABASE_FILENAME
     with sqlite3.connect(database) as connection:
+        _drop_phase_7_columns(connection)
         _drop_phase_6_tables(connection)
         _drop_phase_4c_tables(connection)
         _drop_phase_4b_tables(connection)
@@ -150,7 +193,7 @@ def test_initialize_runtime_storage_migrates_phase_3a_schema(tmp_path: Path) -> 
 
     assert migrated.logical_request_state("logical-1") == "queued"
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (6,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
         columns = {row[1] for row in connection.execute("PRAGMA table_info(runtime_lease)")}
     assert "active" in columns
 
@@ -162,6 +205,7 @@ def test_initialize_runtime_storage_migrates_phase_3b_schema(tmp_path: Path) -> 
     repository.add_logical_request(_logical_request())
     database = root / DATABASE_FILENAME
     with sqlite3.connect(database) as connection:
+        _drop_phase_7_columns(connection)
         _drop_phase_6_tables(connection)
         _drop_phase_4c_tables(connection)
         _drop_phase_4b_tables(connection)
@@ -175,7 +219,7 @@ def test_initialize_runtime_storage_migrates_phase_3b_schema(tmp_path: Path) -> 
 
     assert migrated.logical_request_state("logical-1") == "queued"
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (6,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
         tables = {
             str(row[0])
             for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'queue_%'")
@@ -189,6 +233,7 @@ def test_initialize_runtime_storage_migrates_phase_4a_schema(tmp_path: Path) -> 
     initialize_runtime_storage(root)
     database = root / DATABASE_FILENAME
     with sqlite3.connect(database) as connection:
+        _drop_phase_7_columns(connection)
         _drop_phase_6_tables(connection)
         _drop_phase_4c_tables(connection)
         _drop_phase_4b_tables(connection)
@@ -198,7 +243,7 @@ def test_initialize_runtime_storage_migrates_phase_4a_schema(tmp_path: Path) -> 
     initialize_runtime_storage(root)
 
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (6,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
         tables = {
             str(row[0])
             for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'gate_%'")
@@ -218,6 +263,7 @@ def test_initialize_runtime_storage_migrates_phase_4b_schema(tmp_path: Path) -> 
     initialize_runtime_storage(root)
     database = root / DATABASE_FILENAME
     with sqlite3.connect(database) as connection:
+        _drop_phase_7_columns(connection)
         _drop_phase_6_tables(connection)
         _drop_phase_4c_tables(connection)
         connection.execute("UPDATE schema_metadata SET schema_version = 4")
@@ -226,7 +272,7 @@ def test_initialize_runtime_storage_migrates_phase_4b_schema(tmp_path: Path) -> 
     initialize_runtime_storage(root)
 
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (6,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
         tables = {
             str(row[0])
             for row in connection.execute(
@@ -242,6 +288,7 @@ def test_initialize_runtime_storage_migrates_phase_5_schema(tmp_path: Path) -> N
     initialize_runtime_storage(root)
     database = root / DATABASE_FILENAME
     with sqlite3.connect(database) as connection:
+        _drop_phase_7_columns(connection)
         _drop_phase_6_tables(connection)
         connection.execute("UPDATE schema_metadata SET schema_version = 5")
         connection.execute("PRAGMA user_version = 5")
@@ -249,11 +296,41 @@ def test_initialize_runtime_storage_migrates_phase_5_schema(tmp_path: Path) -> N
     initialize_runtime_storage(root)
 
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (6,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
         table = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'raw_publications'"
         ).fetchone()
     assert table == ("raw_publications",)
+
+
+def test_initialize_runtime_storage_migrates_phase_6_raw_eligibility(tmp_path: Path) -> None:
+    """Add an explicit eligibility marker without trusting historical failed attempts."""
+    root = _runtime_root(tmp_path)
+    repository = initialize_runtime_storage(root)
+    repository.add_logical_request(_logical_request())
+    repository.add_physical_attempt(
+        ProductionPhysicalAttempt(
+            physical_attempt_id="attempt-1",
+            logical_request_id="logical-1",
+            sequence_number=1,
+            lease_generation=1,
+            created_at="2026-09-21T00:00:01+00:00",
+        )
+    )
+    database = root / DATABASE_FILENAME
+    with sqlite3.connect(database) as connection:
+        connection.execute("UPDATE physical_attempts SET state = 'failed'")
+        _drop_phase_7_columns(connection)
+        connection.execute("UPDATE schema_metadata SET schema_version = 6")
+        connection.execute("PRAGMA user_version = 6")
+
+    initialize_runtime_storage(root)
+
+    with sqlite3.connect(database) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
+        assert connection.execute(
+            "SELECT raw_eligible FROM physical_attempts WHERE physical_attempt_id = 'attempt-1'"
+        ).fetchone() == (0,)
 
 
 def test_initialize_runtime_storage_rejects_schema_metadata_mismatch(tmp_path: Path) -> None:
@@ -319,6 +396,39 @@ def test_repository_rejects_duplicate_attempt_sequence(tmp_path: Path) -> None:
         repository.add_physical_attempt(first.model_copy(update={"physical_attempt_id": "attempt-2"}))
 
 
+def test_repository_allocates_contiguous_attempt_sequences_transactionally(tmp_path: Path) -> None:
+    """Allocate sequence numbers under the current fence instead of trusting callers."""
+    root = _runtime_root(tmp_path)
+    repository = initialize_runtime_storage(root)
+    repository.add_logical_request(_logical_request())
+    now = datetime(2026, 9, 21, tzinfo=UTC)
+    lease = repository.acquire_lease("owner-a", now, RuntimeLeasePolicy())
+
+    first = repository.reserve_next_physical_attempt("attempt-1", "logical-1", lease, now)
+    with sqlite3.connect(root / DATABASE_FILENAME) as connection:
+        connection.execute("UPDATE physical_attempts SET state = 'failed' WHERE physical_attempt_id = 'attempt-1'")
+    second = repository.reserve_next_physical_attempt("attempt-2", "logical-1", lease, now + timedelta(seconds=1))
+
+    assert (first.sequence_number, second.sequence_number) == (1, 2)
+    with pytest.raises(RuntimeStorageError, match="physical_attempt_already_active"):
+        repository.reserve_next_physical_attempt("attempt-3", "logical-1", lease, now + timedelta(seconds=2))
+
+
+def test_repository_discards_only_never_gated_reservation(tmp_path: Path) -> None:
+    """Let a blocked pre-send path remove its reservation without touching gated attempts."""
+    repository = initialize_runtime_storage(_runtime_root(tmp_path))
+    repository.add_logical_request(_logical_request())
+    now = datetime(2026, 9, 21, tzinfo=UTC)
+    lease = repository.acquire_lease("owner-a", now, RuntimeLeasePolicy())
+    repository.reserve_next_physical_attempt("attempt-1", "logical-1", lease, now)
+
+    repository.discard_reserved_attempt("attempt-1", lease, now + timedelta(seconds=1))
+
+    assert repository.physical_attempt_state("attempt-1") is None
+    replacement = repository.reserve_next_physical_attempt("attempt-2", "logical-1", lease, now + timedelta(seconds=2))
+    assert replacement.sequence_number == 1
+
+
 def test_repository_completes_logical_request_atomically(tmp_path: Path) -> None:
     """Persist the sanitized result and terminal state in one transaction."""
     repository = initialize_runtime_storage(_runtime_root(tmp_path))
@@ -335,6 +445,86 @@ def test_repository_completes_logical_request_atomically(tmp_path: Path) -> None
     repository.complete_logical_request(result, lease, now)
 
     assert repository.logical_request_state("logical-1") == "succeeded"
+
+
+def test_repository_asserts_claimed_logical_request_lineage(tmp_path: Path) -> None:
+    """Verify the complete persisted request and claimed queue identity before a send."""
+    repository = initialize_runtime_storage(_runtime_root(tmp_path))
+    now = datetime(2026, 9, 21, tzinfo=UTC)
+    lease = repository.acquire_lease("owner-a", now, RuntimeLeasePolicy())
+    repository.enqueue_logical_request(_logical_request(), "provider-a", lease, now, QueuePolicy())
+    assert repository.claim_next_queued("provider-a", lease, now + timedelta(seconds=1)) is not None
+
+    _assert_lineage(repository, lease, now + timedelta(seconds=2), _expected_lineage())
+
+
+@pytest.mark.parametrize(
+    ("field", "unexpected"),
+    [
+        ("task_id", "task-2"),
+        ("source_id", "other-source"),
+        ("operation", "other-operation"),
+        ("source_approval_version", 2),
+        ("source_profile_version", 2),
+        ("credential_scope_alias", "other-credential"),
+        ("egress_scope", "other-egress"),
+        ("rate_domain", "other-provider"),
+    ],
+)
+def test_repository_rejects_claimed_logical_request_lineage_mismatch(
+    tmp_path: Path, field: str, unexpected: object
+) -> None:
+    """Fail closed when any policy-derived lineage value differs from durable state."""
+    repository = initialize_runtime_storage(_runtime_root(tmp_path))
+    now = datetime(2026, 9, 21, tzinfo=UTC)
+    lease = repository.acquire_lease("owner-a", now, RuntimeLeasePolicy())
+    repository.enqueue_logical_request(_logical_request(), "provider-a", lease, now, QueuePolicy())
+    assert repository.claim_next_queued("provider-a", lease, now + timedelta(seconds=1)) is not None
+    lineage = _expected_lineage()
+    lineage[field] = unexpected
+
+    with pytest.raises(RuntimeStorageError, match="logical_request_lineage_mismatch"):
+        _assert_lineage(repository, lease, now + timedelta(seconds=2), lineage)
+
+
+def test_repository_requires_claimed_queue_and_current_fence_for_lineage(tmp_path: Path) -> None:
+    """Reject an unclaimed request and a stale owner before transport composition."""
+    repository = initialize_runtime_storage(_runtime_root(tmp_path))
+    now = datetime(2026, 9, 21, tzinfo=UTC)
+    lease = repository.acquire_lease("owner-a", now, RuntimeLeasePolicy())
+    repository.enqueue_logical_request(_logical_request(), "provider-a", lease, now, QueuePolicy())
+
+    with pytest.raises(RuntimeStorageError, match="logical_request_lineage_mismatch"):
+        _assert_lineage(repository, lease, now + timedelta(seconds=1), _expected_lineage())
+    repository.release_lease(lease, now + timedelta(seconds=2))
+    with pytest.raises(RuntimeStorageError, match="stale_runtime_lease"):
+        _assert_lineage(repository, lease, now + timedelta(seconds=3), _expected_lineage())
+
+
+def test_strict_finalization_rejects_active_attempt_and_second_result(tmp_path: Path) -> None:
+    """Require terminal attempts and persist exactly one logical result."""
+    root = _runtime_root(tmp_path)
+    repository = initialize_runtime_storage(root)
+    repository.add_logical_request(_logical_request())
+    now = datetime(2026, 9, 21, tzinfo=UTC)
+    lease = repository.acquire_lease("owner-a", now, RuntimeLeasePolicy())
+    repository.reserve_next_physical_attempt("attempt-1", "logical-1", lease, now)
+    success = ProductionLogicalResult(
+        logical_request_id="logical-1",
+        outcome=LogicalResultOutcome.SUCCEEDED,
+        completed_at=(now + timedelta(seconds=2)).isoformat(),
+        error_code=None,
+    )
+
+    with pytest.raises(RuntimeStorageError, match="logical_request_has_active_attempt"):
+        repository.finalize_logical_request(success, lease, now + timedelta(seconds=1))
+    database = root / DATABASE_FILENAME
+    with sqlite3.connect(database) as connection:
+        connection.execute("UPDATE physical_attempts SET state = 'succeeded' WHERE physical_attempt_id = 'attempt-1'")
+    repository.finalize_logical_request(success, lease, now + timedelta(seconds=2))
+
+    with pytest.raises(RuntimeStorageError, match="logical_request_not_active"):
+        repository.finalize_logical_request(success, lease, now + timedelta(seconds=3))
 
 
 def test_repository_rolls_back_state_when_result_insert_fails(tmp_path: Path) -> None:

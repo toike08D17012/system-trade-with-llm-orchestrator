@@ -186,3 +186,44 @@ def test_cancelling_started_leader_marks_every_consumer_unknown(tmp_path: Path) 
     assert repository.logical_request_state("logical-1") == "failed"
     assert repository.logical_request_state("logical-2") == "failed"
     assert ("in_flight_cancelled", "operator_cancelled") in repository.admission_events("logical-2")
+
+
+def test_cancelling_between_attempts_never_promotes_follower(tmp_path: Path) -> None:
+    """Do not hand a request to another leader after any physical send completed."""
+    repository, lease = _runtime(tmp_path)
+    _admit(repository, lease, "logical-1", "task-1", 0)
+    _admit(repository, lease, "logical-2", "task-2", 1)
+    assert repository.claim_next_queued("provider-a", lease, NOW + timedelta(seconds=2)) is not None
+    attempt = ProductionPhysicalAttempt(
+        physical_attempt_id="attempt-1",
+        logical_request_id="logical-1",
+        sequence_number=1,
+        lease_generation=1,
+        created_at=(NOW + timedelta(seconds=2)).isoformat(),
+    )
+    limit = GateLimit(max_concurrency=1, min_interval_seconds=0, requests_per_window=10, window_seconds=60)
+    reservation = repository.acquire_gates(
+        "reservation-1",
+        attempt,
+        GateKeys(
+            egress="default",
+            provider="provider-a",
+            origin="example-com",
+            credential="anonymous",
+            operation="history",
+            task="task-1",
+            role="researcher",
+        ),
+        HierarchicalGatePolicy(limits={scope: limit for scope in GateScope}),
+        lease,
+        NOW + timedelta(seconds=3),
+    )
+    repository.mark_physical_attempt_started("attempt-1", lease, NOW + timedelta(seconds=3))
+    repository.release_gates(reservation, "failed", lease, NOW + timedelta(seconds=4))
+
+    promoted = repository.cancel_admitted_request("logical-1", "operator_cancelled", lease, NOW + timedelta(seconds=5))
+
+    assert promoted is None
+    assert repository.logical_request_state("logical-1") == "failed"
+    assert repository.logical_request_state("logical-2") == "failed"
+    assert repository.claim_next_queued("provider-a", lease, NOW + timedelta(seconds=6)) is None

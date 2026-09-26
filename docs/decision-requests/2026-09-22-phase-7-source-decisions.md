@@ -46,7 +46,7 @@ raw publicationを先に完成させ、live smokeは通常CIから分離した�
 | `DEC-17` | 対象銘柄 | 東証Prime/Standard/Growthの内国普通株。ETF、REIT、優先株、外国株等は除外 | 承認 |
 | `DEC-18` | suspension/delisting | 一覧から推測しない。公式status sourceが不足する場合はunknownとして採用停止 | 承認 |
 | `DEC-19` | EDINETとYahooの優先順位 | 財務値はEDINET/発行体一次資料を優先。Yahoo値は補助で、不一致を平均化しない | 承認 |
-| `DEC-20` | response上限 | source・operation別の保守的上限を採用し、超過時は保存・parseせず失敗 | 承認 |
+| `DEC-20` | response上限 | 当初はsource・operation別の上限を採用。後続のユーザー決定により全sourceで撤廃 | 変更済み |
 
 ## 4. 共通判断の背景
 
@@ -255,6 +255,8 @@ authority hierarchyへ追加する。必要fieldが取得できない銘柄はel
 ## 10. transport上限
 
 ### `DEC-20`: 初期値
+
+以下は当初の承認内容であり、サイズ上限は[後続のユーザー決定](2026-09-26-yfinance-auxiliary-response-policy.md)により全sourceで撤廃した。OOMの可能性は受容済みである。media type・encoding・形式検証など、サイズ以外の条件はこの変更では撤廃しない。
 
 | source / operation | 最大body | media type | encoding | redirect |
 | --- | ---: | --- | --- | --- |

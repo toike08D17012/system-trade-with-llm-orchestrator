@@ -153,6 +153,50 @@ def test_recovery_fails_closed_on_terminal_attempt_audit_gap(tmp_path: Path) -> 
         repository.acquire_lease("owner-b", NOW + timedelta(seconds=31), POLICY)
 
 
+def test_recovery_finalizes_interruption_between_known_attempts_without_resend(tmp_path: Path) -> None:
+    """Treat a released response followed by owner loss as a known logical failure."""
+    repository, database = _repository(tmp_path)
+    repository.acquire_lease("owner-a", NOW, POLICY)
+    _add_request_and_attempt(repository)
+    with sqlite3.connect(database) as connection:
+        connection.execute("UPDATE physical_attempts SET state = 'failed' WHERE physical_attempt_id = 'attempt-1'")
+        connection.execute(
+            "INSERT INTO gate_reservations VALUES (?, ?, ?, ?, ?, 'released')",
+            ("reservation-1", "attempt-1", "logical-1", 1, NOW.isoformat()),
+        )
+
+    recovered = repository.recover_expired_lease("owner-b", NOW + timedelta(seconds=30), POLICY)
+
+    assert recovered.generation == 2
+    assert repository.logical_request_state("logical-1") == "failed"
+    with sqlite3.connect(database) as connection:
+        result = connection.execute(
+            "SELECT outcome, error_code FROM logical_results WHERE logical_request_id = 'logical-1'"
+        ).fetchone()
+    assert result == ("failed", "owner_interrupted_between_attempts")
+
+
+def test_recovery_transfers_latest_unsent_attempt_after_known_response(tmp_path: Path) -> None:
+    """Preserve a reserved next attempt while retaining the prior terminal audit row."""
+    repository, database = _repository(tmp_path)
+    lease = repository.acquire_lease("owner-a", NOW, POLICY)
+    _add_request_and_attempt(repository)
+    with sqlite3.connect(database) as connection:
+        connection.execute("UPDATE physical_attempts SET state = 'failed' WHERE physical_attempt_id = 'attempt-1'")
+        connection.execute(
+            "INSERT INTO gate_reservations VALUES (?, ?, ?, ?, ?, 'released')",
+            ("reservation-1", "attempt-1", "logical-1", 1, NOW.isoformat()),
+        )
+    second = repository.reserve_next_physical_attempt("attempt-2", "logical-1", lease, NOW + timedelta(seconds=1))
+
+    recovered = repository.recover_expired_lease("owner-b", NOW + timedelta(seconds=30), POLICY)
+
+    assert second.sequence_number == 2
+    assert repository.physical_attempt_state("attempt-1") == ("failed", 1)
+    assert repository.physical_attempt_state("attempt-2") == ("reserved", recovered.generation)
+    assert repository.logical_request_state("logical-1") == "queued"
+
+
 def test_recovery_fails_closed_on_future_attempt_generation(tmp_path: Path) -> None:
     """Reject fencing generations that cannot belong to the expired owner."""
     repository, database = _repository(tmp_path)

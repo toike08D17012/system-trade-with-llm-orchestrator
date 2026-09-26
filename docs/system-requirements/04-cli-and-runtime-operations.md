@@ -5,15 +5,16 @@
 | 文書状態 | Approved |
 | 文書オーナー | リポジトリ所有者 |
 | 承認者 | リポジトリ所有者 |
-| 版 | 1.1 |
+| 版 | 1.2 |
 | 作成日 | 2026-08-18 |
-| 承認日 | 2026-09-21 |
-| 発効日 | 2026-09-21 |
+| 承認日 | 2026-09-26 |
+| 発効日 | 2026-09-26 |
 
 ### 変更記録
 
 | 版 | 日付 | 変更内容 | 承認者 |
 | --- | --- | --- | --- |
+| 1.2 | 2026-09-26 | yfinanceを標準historyと共有呼び出し制限へ移行 | リポジトリ所有者 |
 | 1.1 | 2026-09-21 | ADR-0005に基づくproduction runtime、lease、request、queue、gateの具体化 | リポジトリ所有者 |
 | 1.0 | 2026-08-28 | 初版 | リポジトリ所有者 |
 
@@ -102,9 +103,14 @@ task・role・provider accountごとの同時実行とproviderのcooldownを制�
 初回独立探索では他Agentの検索内容・結果cacheを共有せず、候補URLの検証取得だけを
 Coordinator配下へ戻す。
 
-`yfinance`は固定版を使い、全物理送信の直前にpermitを取得する`CoordinatedSession`を注入する。
-`threads=False`を明示し、session注入で全物理送信を捕捉できない版を採用しない。捕捉不能時に
-直接接続へfallbackしてはならない。
+`yfinance`は例外として固定版の`Ticker.history()`にHTTP処理を委任する。
+独自Session注入・全物理送信の捕捉は不要とし、呼び出し単位で共有排他・間隔・cooldownを管理する。
+同時1件、完了後10秒の間隔、失敗後15分停止を`runs/.runtime/yfinance-native/`へ永続化する。
+制限中に自動待機・再試行しない。一般network retryは0だが内部の認証fallbackはライブラリへ任せる。
+HTTP数・Retry-Afterは取得できたと記録しない。専用の単一thread workerで使用し、
+別machine・checkout・直接ノートブック実行とはレート状態を共有しない。
+旧`CoordinatedSession`は明示的な互換経路に限り、新旧を混在運用しない。
+[標準取得への移行決定](../decision-requests/2026-09-26-yfinance-native-history-policy.md)を参照する。
 
 Coordinator、SQLite state、source profileの検証に失敗した場合は外部接続を停止し、adapterや
 Agentが直接接続へfallbackしてはならない。rate limitまたはprovider障害時はproviderの
@@ -135,6 +141,7 @@ cooldownを記録して停止し、必要な再実行は人間が開始する。
 - 1 logical requestは1 logical resultと0件以上のphysical attemptを参照する。
 - cache hitとsingle-flight followerはphysical attemptを作らない。通常送信は最大1 attemptとする。
 - library内のredirect、cookie、crumb、paginationなどは個別physical attemptとしてpermit・監査する。
+  ただし上記yfinance標準取得は対象外とし、戻り値と取得メタデータを記録する。
 - fingerprintは非秘密のcanonical parameter、source・Policy版、期間、scope aliasからSHA-256で生成する。
 - queueはproviderごとのtask内FIFOとactive task間round-robinを使用する。
 - 初期queue boundはglobal 1024、provider 256、task/provider 64とし、超過時は`queue_full`で拒否する。

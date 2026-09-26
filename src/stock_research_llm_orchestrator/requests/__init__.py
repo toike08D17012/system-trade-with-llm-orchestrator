@@ -39,6 +39,7 @@ from stock_research_llm_orchestrator.requests.transport import (
     PhysicalTransportRequest,
     ProductionTransportCoordinator,
     TemporaryRawCandidate,
+    TransportExchangeResult,
     TransportExecutionResult,
     TransportValidationPolicy,
     UntrustedTransportResponse,

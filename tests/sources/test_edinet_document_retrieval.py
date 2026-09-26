@@ -86,6 +86,26 @@ def test_parse_inventories_xbrl_zip_without_extracting() -> None:
     assert parsed.total_uncompressed_bytes == 34
 
 
+def test_parse_does_not_reject_highly_compressible_member_for_capacity() -> None:
+    """Inventory valid metadata without imposing a compression-ratio resource ceiling."""
+    content = b"0" * (2 * 1024 * 1024)
+    parsed = EdinetDocumentRetrievalAdapter().parse(
+        _response(_zip_bytes((("XBRL/PublicDoc/synthetic.xbrl", content),)))
+    )
+
+    assert parsed.members[0].uncompressed_bytes == len(content)
+    assert parsed.members[0].compressed_bytes * 1_000 < len(content)
+
+
+def test_parse_does_not_reject_archive_member_count_for_capacity() -> None:
+    """Inventory every safe member without an arbitrary archive-count ceiling."""
+    entries = (("synthetic.xbrl", b"<xbrl />"),) + tuple((f"manifest/{index}.xml", b"") for index in range(10_000))
+
+    parsed = EdinetDocumentRetrievalAdapter().parse(_response(_zip_bytes(entries)))
+
+    assert len(parsed.members) == 10_001
+
+
 @pytest.mark.parametrize("body", [b"not-a-zip", b""])
 def test_parse_rejects_invalid_zip_without_body_leak(body: bytes) -> None:
     """Expose one sanitized error for malformed archive bytes."""

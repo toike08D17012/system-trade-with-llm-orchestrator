@@ -17,7 +17,6 @@ from stock_research_llm_orchestrator.sources import (
 
 CANARY = "dummy-edinet-httpx-key-do-not-log"
 POLICY = EdinetHttpClientPolicy(
-    max_response_bytes=32,
     connect_timeout_seconds=1,
     read_timeout_seconds=2,
     write_timeout_seconds=3,
@@ -57,8 +56,8 @@ def test_sends_query_key_with_explicit_policy_and_no_dependency_log(caplog: pyte
     assert logging.getLogger("httpcore").disabled
 
 
-def test_rejects_decompressed_body_over_limit() -> None:
-    """Enforce the byte limit after HTTPX content decoding."""
+def test_accepts_decompressed_body_above_former_limit() -> None:
+    """Retain decoded response bytes without a configured size ceiling."""
 
     def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -67,8 +66,8 @@ def test_rejects_decompressed_body_over_limit() -> None:
             content=gzip.compress(b"x" * 33),
         )
 
-    with pytest.raises(EdinetHttpClientError, match="^edinet_http_response_too_large$"):
-        HttpxEdinetWireClient(POLICY, httpx.MockTransport(handler))(TARGET, CANARY)
+    response = HttpxEdinetWireClient(POLICY, httpx.MockTransport(handler))(TARGET, CANARY)
+    assert response.body == b"x" * 33
 
 
 def test_rejects_redirect_without_following_it() -> None:

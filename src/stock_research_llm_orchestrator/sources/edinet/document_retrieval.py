@@ -20,10 +20,6 @@ _DOCUMENT_RETRIEVAL_OPERATION = "document-retrieval"
 _DOCUMENT_RETRIEVAL_ORIGIN = "api.edinet-fsa.go.jp"
 _DOCUMENT_RETRIEVAL_MEDIA_TYPE = "application/octet-stream"
 _DOCUMENT_RETRIEVAL_ENCODING = "binary"
-_MAX_ARCHIVE_MEMBERS = 10_000
-_MAX_MEMBER_UNCOMPRESSED_BYTES = 256 * 1024 * 1024
-_MAX_TOTAL_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
-_MAX_COMPRESSION_RATIO = 1_000
 _ALLOWED_COMPRESSION_METHODS = {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
 _ArchivePath = Annotated[str, StringConstraints(min_length=1, max_length=1024)]
 
@@ -88,21 +84,17 @@ class EdinetDocumentRetrievalAdapter:
             raise ValueError("invalid_edinet_document_retrieval_parameters") from exc
 
     def parse(self, response: BoundedSourceResponse) -> EdinetDocumentArchive:
-        """Inspect bounded ZIP metadata without extracting provider-controlled paths."""
+        """Inspect ZIP metadata without extracting provider-controlled paths."""
         if response.media_type != _DOCUMENT_RETRIEVAL_MEDIA_TYPE or response.encoding != _DOCUMENT_RETRIEVAL_ENCODING:
             raise EdinetDocumentRetrievalParseError("edinet_document_retrieval_invalid")
         try:
             with zipfile.ZipFile(io.BytesIO(response.body), mode="r") as archive:
                 infos = archive.infolist()
-                if len(infos) > _MAX_ARCHIVE_MEMBERS:
-                    raise ValueError("edinet_archive_member_limit_exceeded")
                 for info in infos:
                     _validate_archive_path(info.filename, is_directory=info.is_dir())
                 members = tuple(self._inspect_member(info) for info in infos if not info.is_dir())
             total_compressed = sum(member.compressed_bytes for member in members)
             total_uncompressed = sum(member.uncompressed_bytes for member in members)
-            if total_uncompressed > _MAX_TOTAL_UNCOMPRESSED_BYTES:
-                raise ValueError("edinet_archive_total_size_exceeded")
             return EdinetDocumentArchive(
                 archive_sha256=response.sha256,
                 total_compressed_bytes=total_compressed,
@@ -125,11 +117,6 @@ class EdinetDocumentRetrievalAdapter:
             raise ValueError("symlink_edinet_archive_member")
         if info.compress_type not in _ALLOWED_COMPRESSION_METHODS:
             raise ValueError("unsupported_edinet_archive_compression")
-        if info.file_size > _MAX_MEMBER_UNCOMPRESSED_BYTES:
-            raise ValueError("edinet_archive_member_size_exceeded")
-        denominator = max(info.compress_size, 1)
-        if info.file_size > denominator * _MAX_COMPRESSION_RATIO:
-            raise ValueError("edinet_archive_compression_ratio_exceeded")
         return EdinetArchiveMember(
             path=path,
             compressed_bytes=info.compress_size,

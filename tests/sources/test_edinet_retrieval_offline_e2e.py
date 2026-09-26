@@ -110,7 +110,6 @@ def _run(
         source_intent,
         credential,
         EdinetHttpClientPolicy(
-            max_response_bytes=256 * 1024 * 1024,
             connect_timeout_seconds=1,
             read_timeout_seconds=10,
             write_timeout_seconds=1,
@@ -138,7 +137,6 @@ def _run(
             }
         ),
         TransportValidationPolicy(
-            max_response_bytes=256 * 1024 * 1024,
             allowed_media_types=("application/octet-stream",),
             allowed_encodings=("binary",),
         ),

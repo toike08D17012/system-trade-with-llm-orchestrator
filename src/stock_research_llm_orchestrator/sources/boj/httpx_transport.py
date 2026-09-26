@@ -1,4 +1,4 @@
-"""Bounded anonymous HTTPX transport for the approved BOJ code API."""
+"""Anonymous HTTPX transport for the approved BOJ code API."""
 
 from dataclasses import dataclass, field
 from typing import Annotated, Literal
@@ -30,9 +30,9 @@ class BojHttpTarget(StrictContractModel):
 
 
 class BojHttpClientPolicy(StrictContractModel):
-    """Explicit bounds for one anonymous BOJ HTTP exchange."""
+    """Timeout policy for one anonymous BOJ exchange, without a body-size ceiling."""
 
-    max_response_bytes: int = Field(ge=1)
+    max_response_bytes: None = None
     connect_timeout_seconds: float = Field(gt=0, allow_inf_nan=False)
     read_timeout_seconds: float = Field(gt=0, allow_inf_nan=False)
     write_timeout_seconds: float = Field(gt=0, allow_inf_nan=False)
@@ -70,7 +70,7 @@ def render_boj_http_target(intent: CredentialFreeSourceIntent) -> BojHttpTarget:
 
 @dataclass(frozen=True)
 class BojPhysicalTransport:
-    """Bind one source intent to a bounded anonymous HTTPX send."""
+    """Bind one source intent to an anonymous HTTPX send."""
 
     intent: CredentialFreeSourceIntent
     policy: BojHttpClientPolicy
@@ -105,7 +105,7 @@ class BojPhysicalTransport:
             ):
                 if 300 <= response.status_code < 400:
                     raise BojHttpTransportError("boj_http_redirect_rejected")
-                body = _read_bounded(response, self.policy.max_response_bytes)
+                body = _read_response(response)
                 media_type = response.headers.get("Content-Type", "").partition(";")[0].strip().lower()
                 return UntrustedTransportResponse(
                     status_code=response.status_code,
@@ -121,10 +121,8 @@ class BojPhysicalTransport:
             raise BojHttpTransportError("boj_http_exchange_failed") from None
 
 
-def _read_bounded(response: httpx.Response, limit: int) -> bytes:
+def _read_response(response: httpx.Response) -> bytes:
     body = bytearray()
     for chunk in response.iter_bytes():
-        if len(body) + len(chunk) > limit:
-            raise BojHttpTransportError("boj_http_response_too_large")
         body.extend(chunk)
     return bytes(body)

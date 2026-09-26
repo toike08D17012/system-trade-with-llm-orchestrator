@@ -1,4 +1,4 @@
-"""Bounded anonymous transport for the official JPX current-list XLSX."""
+"""Anonymous transport for the official JPX current-list XLSX."""
 
 from dataclasses import dataclass, field
 
@@ -18,16 +18,16 @@ class JpxHttpTransportError(RuntimeError):
 
 
 class JpxHttpClientPolicy(StrictContractModel):
-    """Explicit bounds for one JPX XLSX exchange."""
+    """Timeout policy for one JPX exchange, without a body-size ceiling."""
 
-    max_response_bytes: int = Field(ge=1, le=64 * 1024 * 1024)
+    max_response_bytes: None = None
     connect_timeout_seconds: float = Field(gt=0)
     read_timeout_seconds: float = Field(gt=0)
 
 
 @dataclass(frozen=True)
 class JpxPhysicalTransport:
-    """Perform exactly one bounded request for the approved fixed resource."""
+    """Perform exactly one request for the approved fixed resource."""
 
     intent: CredentialFreeSourceIntent
     policy: JpxHttpClientPolicy
@@ -57,8 +57,6 @@ class JpxPhysicalTransport:
                     raise JpxHttpTransportError("jpx_http_redirect_rejected")
                 body = bytearray()
                 for chunk in response.iter_bytes():
-                    if len(body) + len(chunk) > self.policy.max_response_bytes:
-                        raise JpxHttpTransportError("jpx_http_response_too_large")
                     body.extend(chunk)
                 return UntrustedTransportResponse(
                     status_code=response.status_code,

@@ -100,7 +100,7 @@ class JpxCurrentListAdapter:
         )
 
     def parse(self, response: BoundedSourceResponse) -> JpxCurrentList:
-        """Parse a bounded XLSX without formulas, macros, or external relationships."""
+        """Parse XLSX without formulas, macros, or external relationships."""
         if response.media_type != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
             raise JpxCurrentListParseError("jpx_current_list_invalid")
         try:
@@ -108,8 +108,6 @@ class JpxCurrentListAdapter:
                 names = set(archive.namelist())
                 required = {"xl/sharedStrings.xml", "xl/worksheets/sheet1.xml"}
                 if not required <= names or any(name.endswith("vbaProject.bin") for name in names):
-                    raise ValueError
-                if any(info.file_size > 16 * 1024 * 1024 for info in archive.infolist()):
                     raise ValueError
                 if any(name.startswith("/") or ".." in name.split("/") for name in names):
                     raise ValueError

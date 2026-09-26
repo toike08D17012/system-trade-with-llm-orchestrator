@@ -1,4 +1,4 @@
-"""Bounded extraction of source-native fact candidates from an EDINET archive."""
+"""Extraction of source-native fact candidates from an EDINET archive."""
 
 import io
 import zipfile
@@ -21,9 +21,6 @@ _XBRLI_NAMESPACE = "http://www.xbrl.org/2003/instance"
 _XSI_NIL = "{http://www.w3.org/2001/XMLSchema-instance}nil"
 _XML_LANG = "{http://www.w3.org/XML/1998/namespace}lang"
 _XBRLDI_NAMESPACE = "http://xbrl.org/2006/xbrldi"
-_MAX_XBRL_MEMBER_BYTES = 64 * 1024 * 1024
-_MAX_FACTS = 250_000
-_MAX_FACT_VALUE_LENGTH = 1_000_000
 _NonEmptyBounded = Annotated[str, StringConstraints(min_length=1, max_length=1024)]
 _OptionalBounded = Annotated[str, StringConstraints(min_length=1, max_length=128)] | None
 _DimensionLocation = Literal["segment", "scenario"]
@@ -47,7 +44,7 @@ class EdinetXbrlFactCandidate(StrictContractModel):
     precision: _OptionalBounded
     scale: _OptionalBounded
     language: _OptionalBounded
-    value: Annotated[str, StringConstraints(max_length=_MAX_FACT_VALUE_LENGTH)] | None
+    value: str | None
     is_nil: bool
 
     @model_validator(mode="after")
@@ -72,7 +69,7 @@ class EdinetXbrlDimension(StrictContractModel):
     dimension: EdinetXbrlQName
     member_kind: Literal["explicit", "typed"]
     member: EdinetXbrlQName
-    typed_value: Annotated[str, StringConstraints(min_length=1, max_length=_MAX_FACT_VALUE_LENGTH)] | None
+    typed_value: Annotated[str, StringConstraints(min_length=1)] | None
 
     @model_validator(mode="after")
     def require_typed_value_only_for_typed_member(self) -> EdinetXbrlDimension:
@@ -154,7 +151,7 @@ class EdinetXbrlFactExtractor:
     """Read only inventoried XBRL members and produce unnormalized candidates."""
 
     def extract(self, response: BoundedSourceResponse, inventory: EdinetDocumentArchive) -> EdinetXbrlFactSet:
-        """Verify inventory identity, bounded-read XBRL members, and parse facts."""
+        """Verify inventory identity, read exact XBRL members, and parse facts."""
         try:
             verified_inventory = EdinetDocumentRetrievalAdapter().parse(response)
             if verified_inventory != inventory:
@@ -165,8 +162,6 @@ class EdinetXbrlFactExtractor:
             facts: list[EdinetXbrlFactCandidate] = []
             with zipfile.ZipFile(io.BytesIO(response.body), mode="r") as archive:
                 for member in xbrl_members:
-                    if member.uncompressed_bytes > _MAX_XBRL_MEMBER_BYTES:
-                        raise ValueError("edinet_xbrl_member_size_exceeded")
                     with archive.open(member.path, mode="r") as source:
                         body = source.read(member.uncompressed_bytes + 1)
                     if len(body) != member.uncompressed_bytes:
@@ -175,8 +170,6 @@ class EdinetXbrlFactExtractor:
                     contexts.extend(parsed.contexts)
                     units.extend(parsed.units)
                     facts.extend(parsed.facts)
-                    if len(facts) > _MAX_FACTS:
-                        raise ValueError("edinet_xbrl_fact_limit_exceeded")
             return EdinetXbrlFactSet(
                 archive_sha256=response.sha256,
                 xbrl_member_paths=tuple(member.path for member in xbrl_members),
@@ -208,15 +201,11 @@ def _parse_xbrl_member(path: str, body: bytes, *, first_ordinal: int) -> _Parsed
             unit = _to_unit(path, element, namespaces)
             _add_unique_definition(units, unit.unit_id, unit, "unit")
         elif element.get("contextRef") is not None:
-            if len(raw_facts) >= _MAX_FACTS:
-                raise ValueError("edinet_xbrl_fact_limit_exceeded")
             raw_facts.append(element)
     facts = tuple(
         _to_fact(path, element, set(contexts), set(units), ordinal=first_ordinal + offset)
         for offset, element in enumerate(raw_facts)
     )
-    if first_ordinal + len(facts) - 1 > _MAX_FACTS:
-        raise ValueError("edinet_xbrl_fact_limit_exceeded")
     return _ParsedXbrlMember(tuple(contexts.values()), tuple(units.values()), facts)
 
 

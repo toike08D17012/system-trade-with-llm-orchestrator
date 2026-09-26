@@ -85,7 +85,6 @@ def test_production_coordinator_uses_httpx_without_persisting_key(tmp_path: Path
         intent,
         credential,
         EdinetHttpClientPolicy(
-            max_response_bytes=len(body),
             connect_timeout_seconds=1,
             read_timeout_seconds=2,
             write_timeout_seconds=3,
@@ -118,7 +117,6 @@ def test_production_coordinator_uses_httpx_without_persisting_key(tmp_path: Path
             }
         ),
         TransportValidationPolicy(
-            max_response_bytes=len(body),
             allowed_media_types=("application/json",),
             allowed_encodings=("utf-8",),
         ),
@@ -143,12 +141,11 @@ def _raise_timeout(request: httpx.Request) -> httpx.Response:
 
 
 @pytest.mark.parametrize(
-    ("scenario", "response_factory", "wire_limit", "expected_status", "expected_reason", "expected_attempt_state"),
+    ("scenario", "response_factory", "expected_status", "expected_reason", "expected_attempt_state"),
     [
         (
             "provider-error",
             lambda _request: httpx.Response(500, headers={"Content-Type": "application/json"}, content=b"{}"),
-            32,
             "failed",
             "provider_error",
             "failed",
@@ -160,7 +157,6 @@ def _raise_timeout(request: httpx.Request) -> httpx.Response:
                 headers={"Content-Type": "application/json", "Retry-After": "60"},
                 content=b"{}",
             ),
-            32,
             "failed",
             "rate_limited",
             "failed",
@@ -168,54 +164,53 @@ def _raise_timeout(request: httpx.Request) -> httpx.Response:
         (
             "redirect",
             lambda _request: httpx.Response(302, headers={"Location": "https://example.invalid/other"}),
-            32,
             "unknown",
             "transport_outcome_unknown",
             "unknown",
         ),
         (
-            "response-too-large",
+            "response-above-former-limit",
             lambda _request: httpx.Response(200, headers={"Content-Type": "application/json"}, content=b"x" * 33),
-            32,
-            "unknown",
-            "transport_outcome_unknown",
-            "unknown",
+            "succeeded",
+            "ok",
+            "succeeded",
         ),
         (
             "timeout",
             _raise_timeout,
-            32,
             "unknown",
             "transport_outcome_unknown",
             "unknown",
         ),
     ],
 )
-def test_production_coordinator_records_http_failures_without_persisting_key(
+def test_production_coordinator_records_http_outcomes_without_persisting_key(
     tmp_path: Path,
     scenario: str,
     response_factory: Callable[[httpx.Request], httpx.Response],
-    wire_limit: int,
     expected_status: str,
     expected_reason: str,
     expected_attempt_state: str,
 ) -> None:
     """Classify received provider errors separately from uncertain post-send failures."""
-    result, repository, runtime = _execute_failure_case(tmp_path / scenario, response_factory, wire_limit)
+    result, repository, runtime = _execute_http_case(tmp_path / scenario, response_factory)
 
     assert result.status == expected_status
     assert result.reason_code == expected_reason
-    assert result.candidate is None
+    if expected_status == "succeeded":
+        assert result.candidate is not None
+        assert result.candidate.body == b"x" * 33
+    else:
+        assert result.candidate is None
     assert repository.physical_attempt_state("attempt-edinet-httpx-failure") == (expected_attempt_state, 1)
     for path in runtime.rglob("*"):
         if path.is_file():
             assert CANARY.encode() not in path.read_bytes()
 
 
-def _execute_failure_case(
+def _execute_http_case(
     root: Path,
     response_factory: Callable[[httpx.Request], httpx.Response],
-    wire_limit: int,
 ) -> tuple[TransportExecutionResult, ProductionRequestRepository, Path]:
     root.mkdir()
     credential = root / "edinet-api-key"
@@ -256,7 +251,6 @@ def _execute_failure_case(
         intent,
         credential,
         EdinetHttpClientPolicy(
-            max_response_bytes=wire_limit,
             connect_timeout_seconds=1,
             read_timeout_seconds=2,
             write_timeout_seconds=3,
@@ -289,7 +283,6 @@ def _execute_failure_case(
             }
         ),
         TransportValidationPolicy(
-            max_response_bytes=wire_limit,
             allowed_media_types=("application/json",),
             allowed_encodings=("utf-8",),
         ),

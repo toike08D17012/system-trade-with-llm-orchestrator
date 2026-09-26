@@ -44,15 +44,20 @@ class UntrustedTransportResponse(StrictContractModel):
 
 
 class TransportValidationPolicy(StrictContractModel):
-    """Provider-independent bounds checked before source parsing."""
+    """Provider-independent format validation with no response size ceiling."""
 
-    max_response_bytes: int = Field(ge=1)
+    max_response_bytes: None = None
     allowed_media_types: tuple[str, ...] = Field(min_length=1)
     allowed_encodings: tuple[str, ...] = Field(min_length=1)
     allowed_redirect_origins: tuple[Identifier, ...] = ()
 
 
 SyntheticTransport = Callable[[PhysicalTransportRequest], UntrustedTransportResponse]
+EphemeralTransportCallback = Callable[[PhysicalTransportRequest, object], tuple[UntrustedTransportResponse, object]]
+
+
+class ReceivedResponseValidationError(RuntimeError):
+    """Sanitized marker for a received provider response that failed local validation."""
 
 
 class _TransportCallbackError(RuntimeError):
@@ -88,6 +93,15 @@ class TransportExecutionResult:
     status: Literal["succeeded", "failed", "unknown"]
     reason_code: str
     candidate: TemporaryRawCandidate | None = None
+
+
+@dataclass(frozen=True)
+class TransportExchangeResult:
+    """Validated exchange outcome paired with a non-persisted provider response."""
+
+    execution: TransportExecutionResult
+    status_code: int | None
+    provider_response: object | None = field(default=None, repr=False, compare=False)
 
 
 class _PermitAuthority:
@@ -141,6 +155,26 @@ class _ControlledTransport:
         _validate_response(request, response, policy)
         return response
 
+    def send_ephemeral(
+        self,
+        request: PhysicalTransportRequest,
+        permit: TransportPermit,
+        policy: TransportValidationPolicy,
+        envelope: object,
+        callback: EphemeralTransportCallback,
+    ) -> tuple[UntrustedTransportResponse, object]:
+        """Invoke one envelope-aware callback only after consuming its permit."""
+        self._authority.consume(permit, request)
+        try:
+            raw_response, provider_response = callback(request, envelope)
+        except ReceivedResponseValidationError:
+            raise
+        except Exception as error:
+            raise _TransportCallbackError("transport_callback_failed") from error
+        response = UntrustedTransportResponse.model_validate(raw_response.model_dump(warnings=False))
+        _validate_response(request, response, policy)
+        return response, provider_response
+
 
 class ProductionTransportCoordinator:
     """Own permits and execute one already-admitted logical leader."""
@@ -168,7 +202,47 @@ class ProductionTransportCoordinator:
         started_at: datetime,
         completed_at: datetime,
     ) -> TransportExecutionResult:
-        """Run gate, permit, send, validation, and durable result finalization once."""
+        """Run one exchange and finalize its logical request for legacy callers."""
+        result = self.execute_exchange(
+            request,
+            attempt,
+            reservation_id,
+            keys,
+            gate_policy,
+            transport_policy,
+            lease,
+            started_at,
+            completed_at,
+        )
+        outcome = {
+            "succeeded": LogicalResultOutcome.SUCCEEDED,
+            "failed": LogicalResultOutcome.FAILED,
+            "unknown": LogicalResultOutcome.UNKNOWN,
+        }[result.status]
+        self.finalize_logical_request(
+            request.logical_request_id,
+            outcome,
+            lease,
+            completed_at,
+            None if outcome is LogicalResultOutcome.SUCCEEDED else result.reason_code,
+        )
+        if result.status == "failed" and result.candidate is not None:
+            return TransportExecutionResult(result.status, result.reason_code)
+        return result
+
+    def execute_exchange(
+        self,
+        request: PhysicalTransportRequest,
+        attempt: ProductionPhysicalAttempt,
+        reservation_id: str,
+        keys: GateKeys,
+        gate_policy: HierarchicalGatePolicy,
+        transport_policy: TransportValidationPolicy,
+        lease: RuntimeLease,
+        started_at: datetime,
+        completed_at: datetime,
+    ) -> TransportExecutionResult:
+        """Execute and terminate exactly one physical attempt without finalizing its logical request."""
         request = PhysicalTransportRequest.model_validate(request.model_dump(warnings=False))
         if (
             request.logical_request_id != attempt.logical_request_id
@@ -181,65 +255,108 @@ class ProductionTransportCoordinator:
             permit = self._authority.issue(reservation)
         except Exception:
             self._repository.release_gates(reservation, "failed", lease, completed_at)
-            return self._complete_failure(request, lease, completed_at, "permit_issuance_failed")
+            return TransportExecutionResult("failed", "permit_issuance_failed")
         try:
             response = self._transport.send(request, permit, transport_policy)
         except _TransportCallbackError:
             self._repository.record_unknown_outcome(reservation, lease, completed_at)
-            self._repository.complete_logical_request(
-                ProductionLogicalResult(
-                    logical_request_id=request.logical_request_id,
-                    outcome=LogicalResultOutcome.UNKNOWN,
-                    completed_at=completed_at.isoformat(),
-                    error_code="transport_outcome_unknown",
-                ),
-                lease,
-                completed_at,
-            )
             return TransportExecutionResult("unknown", "transport_outcome_unknown")
         except Exception:
             self._repository.release_gates(reservation, "failed", lease, completed_at)
-            return self._complete_failure(request, lease, completed_at, "invalid_transport_response")
+            return TransportExecutionResult("failed", "invalid_transport_response")
+        candidate = _candidate(request, response)
         if response.status_code == 429 and response.retry_after_seconds is not None:
             self._repository.record_retry_after(reservation, response.retry_after_seconds, lease, completed_at)
-            return self._complete_failure(request, lease, completed_at, "rate_limited")
+            return TransportExecutionResult("failed", "rate_limited", candidate)
         if not 200 <= response.status_code < 300:
-            self._repository.release_gates(reservation, "failed", lease, completed_at)
-            return self._complete_failure(request, lease, completed_at, "provider_error")
+            self._repository.release_gates(reservation, "failed", lease, completed_at, raw_eligible=True)
+            return TransportExecutionResult("failed", "provider_error", candidate)
         self._repository.release_gates(reservation, "succeeded", lease, completed_at)
-        self._repository.complete_logical_request(
-            ProductionLogicalResult(
-                logical_request_id=request.logical_request_id,
-                outcome=LogicalResultOutcome.SUCCEEDED,
-                completed_at=completed_at.isoformat(),
-                error_code=None,
-            ),
-            lease,
-            completed_at,
-        )
-        candidate = TemporaryRawCandidate(
-            physical_attempt_id=request.physical_attempt_id,
-            body=response.body,
-            sha256=hashlib.sha256(response.body).hexdigest(),
-            media_type=response.media_type,
-            encoding=response.encoding,
-        )
         return TransportExecutionResult("succeeded", "ok", candidate)
 
-    def _complete_failure(
-        self, request: PhysicalTransportRequest, lease: RuntimeLease, completed_at: datetime, reason: str
-    ) -> TransportExecutionResult:
-        self._repository.complete_logical_request(
+    def execute_exchange_with_callback(
+        self,
+        request: PhysicalTransportRequest,
+        attempt: ProductionPhysicalAttempt,
+        reservation_id: str,
+        keys: GateKeys,
+        gate_policy: HierarchicalGatePolicy,
+        transport_policy: TransportValidationPolicy,
+        lease: RuntimeLease,
+        started_at: datetime,
+        completion_clock: Callable[[], datetime],
+        envelope: object,
+        callback: EphemeralTransportCallback,
+    ) -> TransportExchangeResult:
+        """Execute one permit-bound ephemeral send and return only its validated opaque response."""
+        request = PhysicalTransportRequest.model_validate(request.model_dump(warnings=False))
+        if (
+            request.logical_request_id != attempt.logical_request_id
+            or request.physical_attempt_id != attempt.physical_attempt_id
+        ):
+            raise RuntimeStorageError("transport_attempt_mismatch")
+        reservation = self._repository.acquire_gates(reservation_id, attempt, keys, gate_policy, lease, started_at)
+        self._repository.mark_physical_attempt_started(attempt.physical_attempt_id, lease, started_at)
+        try:
+            permit = self._authority.issue(reservation)
+        except Exception:
+            completed_at = completion_clock()
+            self._repository.release_gates(reservation, "failed", lease, completed_at)
+            return TransportExchangeResult(TransportExecutionResult("failed", "permit_issuance_failed"), None)
+        try:
+            response, provider_response = self._transport.send_ephemeral(
+                request, permit, transport_policy, envelope, callback
+            )
+        except _TransportCallbackError:
+            completed_at = completion_clock()
+            self._repository.record_unknown_outcome(reservation, lease, completed_at)
+            return TransportExchangeResult(TransportExecutionResult("unknown", "transport_outcome_unknown"), None)
+        except Exception:
+            completed_at = completion_clock()
+            self._repository.release_gates(reservation, "failed", lease, completed_at)
+            return TransportExchangeResult(TransportExecutionResult("failed", "invalid_transport_response"), None)
+        completed_at = completion_clock()
+        candidate = _candidate(request, response)
+        if response.status_code == 429 and response.retry_after_seconds is not None:
+            self._repository.record_retry_after(reservation, response.retry_after_seconds, lease, completed_at)
+            execution = TransportExecutionResult("failed", "rate_limited", candidate)
+        elif not 200 <= response.status_code < 300:
+            self._repository.release_gates(reservation, "failed", lease, completed_at, raw_eligible=True)
+            execution = TransportExecutionResult("failed", "provider_error", candidate)
+        else:
+            self._repository.release_gates(reservation, "succeeded", lease, completed_at)
+            execution = TransportExecutionResult("succeeded", "ok", candidate)
+        return TransportExchangeResult(execution, response.status_code, provider_response)
+
+    def finalize_logical_request(
+        self,
+        logical_request_id: str,
+        outcome: LogicalResultOutcome,
+        lease: RuntimeLease,
+        completed_at: datetime,
+        error_code: str | None,
+    ) -> None:
+        """Persist the sole logical result after all physical exchanges are terminal."""
+        self._repository.finalize_logical_request(
             ProductionLogicalResult(
-                logical_request_id=request.logical_request_id,
-                outcome=LogicalResultOutcome.FAILED,
+                logical_request_id=logical_request_id,
+                outcome=outcome,
                 completed_at=completed_at.isoformat(),
-                error_code=reason,
+                error_code=error_code,
             ),
             lease,
             completed_at,
         )
-        return TransportExecutionResult("failed", reason)
+
+
+def _candidate(request: PhysicalTransportRequest, response: UntrustedTransportResponse) -> TemporaryRawCandidate:
+    return TemporaryRawCandidate(
+        physical_attempt_id=request.physical_attempt_id,
+        body=response.body,
+        sha256=hashlib.sha256(response.body).hexdigest(),
+        media_type=response.media_type,
+        encoding=response.encoding,
+    )
 
 
 def _validate_response(
@@ -248,8 +365,6 @@ def _validate_response(
     policy: TransportValidationPolicy,
 ) -> None:
     allowed_origins = {request.origin, *policy.allowed_redirect_origins}
-    if len(response.body) > policy.max_response_bytes:
-        raise RuntimeStorageError("response_too_large")
     if response.media_type.lower() not in {value.lower() for value in policy.allowed_media_types}:
         raise RuntimeStorageError("response_media_type_rejected")
     if response.encoding.lower() not in {value.lower() for value in policy.allowed_encodings}:

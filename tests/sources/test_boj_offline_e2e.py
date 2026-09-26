@@ -86,7 +86,6 @@ def test_boj_fx_runs_through_production_and_publishes_exact_raw(tmp_path: Path) 
     callback = BojPhysicalTransport(
         intent,
         BojHttpClientPolicy(
-            max_response_bytes=len(body),
             connect_timeout_seconds=1,
             read_timeout_seconds=2,
             write_timeout_seconds=1,
@@ -119,7 +118,6 @@ def test_boj_fx_runs_through_production_and_publishes_exact_raw(tmp_path: Path) 
             }
         ),
         TransportValidationPolicy(
-            max_response_bytes=len(body),
             allowed_media_types=("application/json",),
             allowed_encodings=("utf-8",),
         ),

@@ -167,6 +167,18 @@ def test_extract_preserves_fact_language() -> None:
     assert extracted.facts[-1].value == "synthetic summary"
 
 
+def test_extract_does_not_reject_long_fact_value_for_capacity() -> None:
+    """Preserve a valid lexical fact value without an arbitrary length ceiling."""
+    value = b"a" * 1_000_001
+    fact = b'<jp:Summary contextRef="CurrentYear" xml:lang="ja">' + value + b"</jp:Summary>"
+    response = _zip_response(XBRL.replace(b"</xbrli:xbrl>", fact + b"</xbrli:xbrl>"))
+
+    extracted = EdinetXbrlFactExtractor().extract(response, _inventory(response))
+
+    assert extracted.facts[-1].value is not None
+    assert len(extracted.facts[-1].value) == len(value)
+
+
 def test_extract_preserves_instant_typed_dimension_and_divide_unit() -> None:
     """Retain instant periods, simple typed members, and divided units."""
     context = b"""<xbrli:context id="InstantContext">

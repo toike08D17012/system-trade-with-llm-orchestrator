@@ -41,7 +41,6 @@ FIXTURE = Path(__file__).parents[1] / "fixtures/sources/edinet/document-list.jso
 LIMIT = GateLimit(max_concurrency=1, min_interval_seconds=60, requests_per_window=1, window_seconds=60)
 GATE_POLICY = HierarchicalGatePolicy(limits={scope: LIMIT for scope in GateScope})
 TRANSPORT_POLICY = TransportValidationPolicy(
-    max_response_bytes=32 * 1024 * 1024,
     allowed_media_types=("application/json",),
     allowed_encodings=("utf-8",),
 )

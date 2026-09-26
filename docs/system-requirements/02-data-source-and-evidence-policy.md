@@ -5,17 +5,19 @@
 | 文書状態 | Approved |
 | 文書オーナー | リポジトリ所有者 |
 | 承認者 | リポジトリ所有者 |
-| 版 | 1.1 |
+| 版 | 1.5 |
 | 作成日 | 2026-08-18 |
 | 外部条件の確認日 | 2026-08-24 |
-| 変更提案日 | 2026-09-05 |
-| 直前の承認版 | 1.0（2026-08-28承認・発効） |
-| 承認日 | 2026-09-11 |
-| 発効日 | 2026-09-11 |
+| 変更提案日 | 2026-09-26 |
+| 直前の承認版 | 1.4（2026-09-26承認・発効） |
+| 承認日 | 2026-09-26 |
+| 発効日 | 2026-09-26 |
 
 > [!IMPORTANT]
-> version 1.1は、固定上限なし方針へ同期する変更として2026-09-11に承認・発効した。
-> 直前のversion 1.0はGit履歴から取得できる。
+> version 1.5は、yfinanceの通信を標準ライブラリへ委任し、HTTP単位の制御・監査を
+> ライブラリ呼び出し単位の過剰アクセス防止へ置き換える。6.2節を参照する。
+> version 1.2の全source容量上限撤廃は維持する。
+> version 1.1で承認した再調査回数の固定上限なし方針は維持する。外部利用条件は変更しない。
 
 ## 1. 目的
 
@@ -186,6 +188,7 @@ requestはglobal、egress、provider、origin、credential、operation、task、
 すべてのrate gateを送信直前に取得する。credential gateには人間が定義した非秘密aliasだけを使い、
 秘密値またはそのhashをprofile、rate key、ログへ含めない。redirect先のoriginが変わる場合は、
 追従前にsource承認とorigin gateを再評価する。
+ただしyfinanceの標準取得には6.2節の呼び出し単位の例外を適用する。
 
 ## 5. MVPで必要な鮮度と対象期間
 
@@ -250,6 +253,38 @@ requestはglobal、egress、provider、origin、credential、operation、task、
   非秘密の認証scope alias、source Policy版、対象期間・観測条件、response形式を含める。
   同一fingerprintの実行中requestは`single-flight`で1回の物理送信へまとめ、各consumerの
   logical request ID、task、role、発見元を保持する。
+
+### 6.1 取得・展開・解析の容量上限
+
+全sourceと共通transportにおいて、応答bytes、アーカイブの展開量・圧縮率・member数、
+XBRLのfact件数・値長など、資源消費量だけを理由とするアプリケーション独自の容量上限を設けない。
+OOMの可能性は所有者が受容する。OS・実行環境のメモリ設定変更や、OOM時の自動再試行は行わない。
+
+形式・encoding・path安全性・hash・記録長との一致・意味的整合性の検証、rate・queue・timeout等の
+通信制御、秘密情報保護、live acceptanceは維持する。容量上限撤廃はlive有効化の承認ではない。
+判断理由、代替案、受容するリスク、検証条件は[ADR-0006](../decisions/0006-remove-source-response-capacity-limits.md)に記録する。
+
+### 6.2 yfinance標準取得と保存
+
+ユーザー承認に基づき、標準取得は固定版yfinanceの`Ticker.history()`へ通信を任せる。
+独自Sessionの注入、補助URLの直接呼び出し、HTTPごとの形式検証・permit・監査記録を必須にしない。
+旧profile v3の物理送信制御は互換経路だけに適用し、新しい呼び出し制御と同一視しない。
+
+過剰アクセス防止として共有provider状態を永続化し、同時取得1件、取得完了から次回まで最低10秒、
+429を含む失敗後15分停止を適用する。通信前の予約で異常終了後の即時再送も防ぐ。
+制限中の待機・自動再試行を行わず、yfinanceの一般network retryを0にする。
+認証切替等のライブラリ内部動作は許容し、HTTPごとの送信数・間隔・Retry-Afterは観測しない。
+これらはローカル運用値であり、provider公表の上限ではない。
+
+補助応答本文、cookie jar、crumb、consent tokenはメモリ内だけで扱い、rawファイル、
+一時ファイル、ログ、Agent入力、ライブラリの永続cookieキャッシュへ保存しない。
+全ヘッダー、クエリ付きURL、トークン本文のhashも保存しない。補助HTTP監査情報の保存義務を撤廃する。
+
+分析用の取得データはyfinanceの戻り値をCSVとして保存し、提供元、取得日時、取得関数・引数、
+ライブラリ版、対象期間、timezone、データhashを記録する。Yahooの原HTTP応答とは区別する。
+空データや不正な表構造は失敗とし、欠損を推定で埋めない。ソース承認と分析対象のJPX適格性検証は維持する。
+
+詳細な制限・コマンド・互換性は[標準取得への移行決定](../decision-requests/2026-09-26-yfinance-native-history-policy.md)を参照する。
 
 ## 7. 欠損・不一致・異常値
 

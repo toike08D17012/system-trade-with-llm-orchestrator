@@ -70,6 +70,31 @@ def _body() -> bytes:
     )
 
 
+def test_workbook_member_above_previous_size_limit_is_accepted() -> None:
+    """Large valid XML members are not rejected by a resource-capacity ceiling."""
+    output = io.BytesIO()
+    with (
+        zipfile.ZipFile(io.BytesIO(_body())) as original,
+        zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive,
+    ):
+        for name in original.namelist():
+            body = original.read(name)
+            if name == "xl/sharedStrings.xml":
+                body += b" " * (16 * 1024 * 1024)
+            archive.writestr(name, body)
+    body = output.getvalue()
+    parsed = JpxCurrentListAdapter().parse(
+        BoundedSourceResponse(
+            physical_attempt_id="attempt-large",
+            body=body,
+            sha256=hashlib.sha256(body).hexdigest(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            encoding="binary",
+        )
+    )
+    assert len(parsed.issues) == 2
+
+
 def test_parses_eligible_domestic_common_equity_without_guessing_other_classes() -> None:
     """Classify only the three explicitly approved domestic-equity categories."""
     body = _body()
@@ -120,7 +145,7 @@ def test_transport_uses_fixed_url_and_rejects_redirect() -> None:
 
     callback = JpxPhysicalTransport(
         intent,
-        JpxHttpClientPolicy(max_response_bytes=len(body), connect_timeout_seconds=1, read_timeout_seconds=2),
+        JpxHttpClientPolicy(connect_timeout_seconds=1, read_timeout_seconds=2),
         httpx.MockTransport(ok),
     )
     response = callback(intent.to_transport_request("logical-1", "attempt-1"))
@@ -129,7 +154,7 @@ def test_transport_uses_fixed_url_and_rejects_redirect() -> None:
 
     redirect = JpxPhysicalTransport(
         intent,
-        JpxHttpClientPolicy(max_response_bytes=len(body), connect_timeout_seconds=1, read_timeout_seconds=2),
+        JpxHttpClientPolicy(connect_timeout_seconds=1, read_timeout_seconds=2),
         httpx.MockTransport(lambda _request: httpx.Response(302, headers={"Location": "https://example.invalid"})),
     )
     with pytest.raises(JpxHttpTransportError, match="jpx_http_redirect_rejected"):
@@ -193,7 +218,7 @@ def test_jpx_runs_through_production_and_publishes_exact_raw(tmp_path: Path) -> 
     )
     callback = JpxPhysicalTransport(
         intent,
-        JpxHttpClientPolicy(max_response_bytes=len(body), connect_timeout_seconds=1, read_timeout_seconds=2),
+        JpxHttpClientPolicy(connect_timeout_seconds=1, read_timeout_seconds=2),
         httpx.MockTransport(
             lambda _request: httpx.Response(
                 200,
@@ -227,7 +252,6 @@ def test_jpx_runs_through_production_and_publishes_exact_raw(tmp_path: Path) -> 
             }
         ),
         TransportValidationPolicy(
-            max_response_bytes=len(body),
             allowed_media_types=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",),
             allowed_encodings=("binary",),
         ),

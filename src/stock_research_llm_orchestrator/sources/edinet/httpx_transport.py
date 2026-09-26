@@ -1,4 +1,4 @@
-"""Bounded HTTPX wire client for the approved EDINET API exception."""
+"""HTTPX wire client for the approved EDINET API exception."""
 
 import logging
 import math
@@ -23,9 +23,9 @@ class EdinetHttpClientError(RuntimeError):
 
 
 class EdinetHttpClientPolicy(StrictContractModel):
-    """Explicit bounds for one EDINET HTTP exchange."""
+    """Timeout policy for one EDINET exchange, without a body-size ceiling."""
 
-    max_response_bytes: int = Field(ge=1)
+    max_response_bytes: None = None
     connect_timeout_seconds: float = Field(gt=0, allow_inf_nan=False)
     read_timeout_seconds: float = Field(gt=0, allow_inf_nan=False)
     write_timeout_seconds: float = Field(gt=0, allow_inf_nan=False)
@@ -34,7 +34,7 @@ class EdinetHttpClientPolicy(StrictContractModel):
 
 @dataclass(frozen=True)
 class HttpxEdinetWireClient:
-    """Send one bounded request without exposing dependency request logs."""
+    """Send one request without exposing dependency request logs."""
 
     policy: EdinetHttpClientPolicy
     transport: httpx.BaseTransport | None = field(default=None, repr=False)
@@ -67,7 +67,7 @@ class HttpxEdinetWireClient:
             ):
                 if 300 <= response.status_code < 400:
                     raise EdinetHttpClientError("edinet_http_redirect_rejected")
-                body = _read_bounded(response, self.policy.max_response_bytes)
+                body = _read_response(response)
                 media_type = response.headers.get("Content-Type", "").partition(";")[0].strip().lower()
                 encoding = "utf-8" if target.path.endswith(".json") else "binary"
                 return UntrustedTransportResponse(
@@ -92,16 +92,14 @@ def build_httpx_edinet_transport(
     *,
     transport: httpx.BaseTransport | None = None,
 ) -> EdinetPhysicalTransport:
-    """Compose the approved credential boundary with the bounded HTTPX client."""
+    """Compose the approved credential boundary with the HTTPX client."""
     return EdinetPhysicalTransport(intent, credential_path, HttpxEdinetWireClient(policy, transport))
 
 
-def _read_bounded(response: httpx.Response, limit: int) -> bytes:
-    """Read automatically decompressed chunks while enforcing the decoded limit."""
+def _read_response(response: httpx.Response) -> bytes:
+    """Read automatically decompressed chunks without a size ceiling."""
     body = bytearray()
     for chunk in response.iter_bytes():
-        if len(body) + len(chunk) > limit:
-            raise EdinetHttpClientError("edinet_http_response_too_large")
         body.extend(chunk)
     return bytes(body)
 

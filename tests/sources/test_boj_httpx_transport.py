@@ -1,4 +1,4 @@
-"""Offline tests for the bounded anonymous BOJ HTTPX transport."""
+"""Offline tests for the anonymous BOJ HTTPX transport."""
 
 import gzip
 from pathlib import Path
@@ -17,7 +17,6 @@ from stock_research_llm_orchestrator.sources import (
 
 FIXTURE = Path(__file__).parents[1] / "fixtures/sources/boj/fxerd04.json"
 POLICY = BojHttpClientPolicy(
-    max_response_bytes=16 * 1024,
     connect_timeout_seconds=1,
     read_timeout_seconds=2,
     write_timeout_seconds=3,
@@ -81,23 +80,29 @@ def test_rejects_mismatch_before_send() -> None:
         BojPhysicalTransport(intent, POLICY, httpx.MockTransport(_unexpected_send))(request)
 
 
-@pytest.mark.parametrize(
-    ("response", "reason"),
-    [
-        (httpx.Response(302, headers={"Location": "https://example.invalid"}), "boj_http_redirect_rejected"),
-        (
-            httpx.Response(200, headers={"Content-Type": "application/json"}, content=b"x" * (16 * 1024 + 1)),
-            "boj_http_response_too_large",
-        ),
-    ],
-)
-def test_rejects_redirect_and_decompressed_oversize(response: httpx.Response, reason: str) -> None:
-    """Stop without redirect following or retaining an oversized body."""
+def test_rejects_redirect() -> None:
+    """Stop without following a redirect."""
     intent = _intent()
-    with pytest.raises(BojHttpTransportError, match=f"^{reason}$"):
+    response = httpx.Response(302, headers={"Location": "https://example.invalid"})
+    with pytest.raises(BojHttpTransportError, match="^boj_http_redirect_rejected$"):
         BojPhysicalTransport(intent, POLICY, httpx.MockTransport(lambda _request: response))(
             intent.to_transport_request("logical-boj-3", "attempt-boj-3")
         )
+
+
+def test_accepts_decompressed_body_above_former_limit() -> None:
+    """Preserve the complete decoded response without a configured size ceiling."""
+    intent = _intent()
+    body = b"x" * (16 * 1024 + 1)
+    response = httpx.Response(
+        200,
+        headers={"Content-Type": "application/json", "Content-Encoding": "gzip"},
+        content=gzip.compress(body),
+    )
+    result = BojPhysicalTransport(intent, POLICY, httpx.MockTransport(lambda _request: response))(
+        intent.to_transport_request("logical-boj-4", "attempt-boj-4")
+    )
+    assert result.body == body
 
 
 def test_boj_transport_does_not_import_edinet_credentials() -> None:

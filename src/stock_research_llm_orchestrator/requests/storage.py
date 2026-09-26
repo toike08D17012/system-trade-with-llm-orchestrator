@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import TypeAdapter
 
-from stock_research_llm_orchestrator.contracts.base import Identifier
+from stock_research_llm_orchestrator.contracts.base import Identifier, Sha256Hex
 from stock_research_llm_orchestrator.requests.production import (
     AdmissionDecision,
     CommittedRawReference,
@@ -31,7 +31,7 @@ from stock_research_llm_orchestrator.requests.production import (
 )
 
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 DATABASE_FILENAME = "request-coordinator.sqlite3"
 _SCHEMA_OWNER = "production-request-coordinator"
 _OWNER_TOKEN_ADAPTER = TypeAdapter(Identifier)
@@ -309,11 +309,14 @@ class ProductionRequestRepository:
                         "SELECT rate_domain, state FROM queue_entries WHERE logical_request_id = ?",
                         (logical_request_id,),
                     ).fetchone()
-                    attempt = connection.execute(
-                        "SELECT physical_attempt_id, state FROM physical_attempts WHERE logical_request_id = ? LIMIT 1",
+                    attempts = connection.execute(
+                        "SELECT physical_attempt_id, state FROM physical_attempts "
+                        "WHERE logical_request_id = ? ORDER BY sequence_number",
                         (logical_request_id,),
-                    ).fetchone()
-                    if attempt is not None and str(attempt[1]) == "started":
+                    ).fetchall()
+                    active = next((item for item in attempts if str(item[1]) in {"started", "reserved"}), None)
+                    already_sent = any(str(item[1]) in {"succeeded", "failed", "unknown"} for item in attempts)
+                    if active is not None and str(active[1]) == "started":
                         _cancel_started_flight(connection, fingerprint, now, reason)
                         continue_cancellation = False
                     else:
@@ -322,14 +325,17 @@ class ProductionRequestRepository:
                         return None
                     if queue is None or str(queue[1]) not in {"queued", "dequeued"}:
                         raise RuntimeStorageError("in_flight_cancellation_requires_transport_result")
-                    if attempt is not None:
-                        if str(attempt[1]) != "reserved":
+                    if active is not None:
+                        if str(active[1]) != "reserved":
                             raise RuntimeStorageError("in_flight_cancellation_requires_transport_result")
                         _release_gate_occupancy(connection, logical_request_id, now, "leader_cancelled")
                         connection.execute(
                             "UPDATE physical_attempts SET state = 'failed' WHERE physical_attempt_id = ?",
-                            (attempt[0],),
+                            (active[0],),
                         )
+                    if already_sent:
+                        _cancel_started_flight(connection, fingerprint, now, reason)
+                        return None
                     follower = connection.execute(
                         """
                         SELECT consumer.logical_request_id, consumer.rate_domain, request.task_id
@@ -466,6 +472,100 @@ class ProductionRequestRepository:
             enqueued_at=enqueued_at,
         )
 
+    def assert_claimed_logical_request(
+        self,
+        logical_request_id: str,
+        *,
+        task_id: str,
+        source_id: str,
+        operation: str,
+        source_approval_version: int,
+        source_profile_version: int,
+        credential_scope_alias: str | None,
+        egress_scope: str,
+        rate_domain: str,
+        lease: RuntimeLease,
+        now: datetime,
+        request_fingerprint: str | None = None,
+    ) -> None:
+        """Assert the exact persisted lineage and claimed queue identity under one fence."""
+        logical_request_id = _OWNER_TOKEN_ADAPTER.validate_python(logical_request_id, strict=True)
+        task_id = _OWNER_TOKEN_ADAPTER.validate_python(task_id, strict=True)
+        source_id = _OWNER_TOKEN_ADAPTER.validate_python(source_id, strict=True)
+        operation = _OWNER_TOKEN_ADAPTER.validate_python(operation, strict=True)
+        if type(source_approval_version) is not int or source_approval_version < 1:
+            raise RuntimeStorageError("invalid_source_approval_version")
+        if type(source_profile_version) is not int or source_profile_version < 1:
+            raise RuntimeStorageError("invalid_source_profile_version")
+        if credential_scope_alias is not None:
+            credential_scope_alias = _OWNER_TOKEN_ADAPTER.validate_python(credential_scope_alias, strict=True)
+        egress_scope = _OWNER_TOKEN_ADAPTER.validate_python(egress_scope, strict=True)
+        rate_domain = _OWNER_TOKEN_ADAPTER.validate_python(rate_domain, strict=True)
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        if request_fingerprint is not None:
+            request_fingerprint = TypeAdapter(Sha256Hex).validate_python(request_fingerprint, strict=True)
+        expected = (
+            task_id,
+            source_id,
+            operation,
+            source_approval_version,
+            source_profile_version,
+            credential_scope_alias,
+            egress_scope,
+            "queued",
+            rate_domain,
+            task_id,
+            "dequeued",
+        )
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN")
+                _assert_fence(connection, lease, now)
+                row = connection.execute(
+                    """
+                    SELECT request.task_id, request.source_id, request.operation,
+                           request.source_approval_version, request.source_profile_version,
+                           request.credential_scope_alias, request.egress_scope, request.state,
+                           queue.rate_domain, queue.task_id, queue.state
+                    FROM logical_requests AS request
+                    JOIN queue_entries AS queue USING (logical_request_id)
+                    WHERE request.logical_request_id = ?
+                    """,
+                    (logical_request_id,),
+                ).fetchone()
+                if row != expected:
+                    raise RuntimeStorageError("logical_request_lineage_mismatch")
+                if request_fingerprint is not None:
+                    consumer = connection.execute(
+                        """
+                        SELECT request.request_fingerprint, consumer.request_fingerprint,
+                               consumer.role, consumer.state, consumer.rate_domain,
+                               flight.leader_logical_request_id, flight.state
+                        FROM logical_requests AS request
+                        JOIN single_flight_consumers AS consumer USING (logical_request_id)
+                        JOIN single_flights AS flight
+                          ON flight.request_fingerprint = consumer.request_fingerprint
+                        WHERE request.logical_request_id = ?
+                        """,
+                        (logical_request_id,),
+                    ).fetchone()
+                    if consumer != (
+                        request_fingerprint,
+                        request_fingerprint,
+                        "leader",
+                        "active",
+                        rate_domain,
+                        logical_request_id,
+                        "active",
+                    ):
+                        raise RuntimeStorageError("logical_request_consumer_mismatch")
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("logical_request_lineage_read_failed") from error
+
     def queue_events(self, logical_request_id: str) -> tuple[tuple[str, str | None], ...]:
         """Return sanitized lifecycle events for one logical request."""
         try:
@@ -513,6 +613,12 @@ class ProductionRequestRepository:
                 ).fetchone()
                 if queue_state != ("dequeued",):
                     raise RuntimeStorageError("gate_request_not_dequeued")
+                logical_state = connection.execute(
+                    "SELECT state FROM logical_requests WHERE logical_request_id = ?",
+                    (attempt.logical_request_id,),
+                ).fetchone()
+                if logical_state != ("queued",):
+                    raise RuntimeStorageError("gate_request_not_active")
                 for scope, key_alias in keys.ordered():
                     limit = policy.limits[scope]
                     row = connection.execute(
@@ -559,21 +665,46 @@ class ProductionRequestRepository:
                         )
                         break
                 if blocked_reason is None:
-                    connection.execute(
+                    existing = connection.execute(
                         """
-                        INSERT INTO physical_attempts (
-                            physical_attempt_id, logical_request_id, sequence_number,
-                            lease_generation, created_at, state
-                        ) VALUES (?, ?, ?, ?, ?, 'reserved')
+                        SELECT logical_request_id, sequence_number, lease_generation, created_at, state
+                        FROM physical_attempts WHERE physical_attempt_id = ?
                         """,
-                        (
-                            attempt.physical_attempt_id,
-                            attempt.logical_request_id,
-                            attempt.sequence_number,
-                            attempt.lease_generation,
-                            attempt.created_at,
-                        ),
-                    )
+                        (attempt.physical_attempt_id,),
+                    ).fetchone()
+                    if existing is None:
+                        expected_sequence = int(
+                            connection.execute(
+                                "SELECT COALESCE(MAX(sequence_number), 0) + 1 "
+                                "FROM physical_attempts WHERE logical_request_id = ?",
+                                (attempt.logical_request_id,),
+                            ).fetchone()[0]
+                        )
+                        if attempt.sequence_number != expected_sequence:
+                            raise RuntimeStorageError("physical_attempt_sequence_rejected")
+                        connection.execute(
+                            """
+                            INSERT INTO physical_attempts (
+                                physical_attempt_id, logical_request_id, sequence_number,
+                                lease_generation, created_at, state
+                            ) VALUES (?, ?, ?, ?, ?, 'reserved')
+                            """,
+                            (
+                                attempt.physical_attempt_id,
+                                attempt.logical_request_id,
+                                attempt.sequence_number,
+                                attempt.lease_generation,
+                                attempt.created_at,
+                            ),
+                        )
+                    elif existing != (
+                        attempt.logical_request_id,
+                        attempt.sequence_number,
+                        attempt.lease_generation,
+                        attempt.created_at,
+                        "reserved",
+                    ):
+                        raise RuntimeStorageError("physical_attempt_reservation_mismatch")
                     connection.execute(
                         """
                         INSERT INTO gate_reservations VALUES (?, ?, ?, ?, ?, 'active')
@@ -633,11 +764,22 @@ class ProductionRequestRepository:
             acquired_at=_timestamp(now),
         )
 
-    def release_gates(self, reservation: GateReservation, outcome: str, lease: RuntimeLease, now: datetime) -> None:
+    def release_gates(
+        self,
+        reservation: GateReservation,
+        outcome: str,
+        lease: RuntimeLease,
+        now: datetime,
+        *,
+        raw_eligible: bool | None = None,
+    ) -> None:
         """Release concurrency reservations and persist a terminal attempt outcome."""
         if outcome not in {"succeeded", "failed"}:
             raise RuntimeStorageError("invalid_gate_release_outcome")
-        self._finish_gate_reservation(reservation, outcome, None, lease, now)
+        eligible = outcome == "succeeded" if raw_eligible is None else raw_eligible
+        if outcome == "succeeded" and not eligible:
+            raise RuntimeStorageError("successful_attempt_requires_raw_candidate")
+        self._finish_gate_reservation(reservation, outcome, None, eligible, lease, now)
 
     def record_retry_after(
         self,
@@ -649,17 +791,18 @@ class ProductionRequestRepository:
         """Persist provider cooldown and fail without scheduling an automatic retry."""
         if not isfinite(retry_after_seconds) or retry_after_seconds < 0:
             raise RuntimeStorageError("invalid_retry_after")
-        self._finish_gate_reservation(reservation, "failed", retry_after_seconds, lease, now)
+        self._finish_gate_reservation(reservation, "failed", retry_after_seconds, True, lease, now)
 
     def record_unknown_outcome(self, reservation: GateReservation, lease: RuntimeLease, now: datetime) -> None:
         """Release gates while preserving an indeterminate physical outcome."""
-        self._finish_gate_reservation(reservation, "unknown", None, lease, now)
+        self._finish_gate_reservation(reservation, "unknown", None, False, lease, now)
 
     def _finish_gate_reservation(
         self,
         reservation: GateReservation,
         outcome: str,
         retry_after_seconds: float | None,
+        raw_eligible: bool,
         lease: RuntimeLease,
         now: datetime,
     ) -> None:
@@ -712,10 +855,10 @@ class ProductionRequestRepository:
                 )
                 connection.execute(
                     """
-                    UPDATE physical_attempts SET state = ?
+                    UPDATE physical_attempts SET state = ?, raw_eligible = ?
                     WHERE physical_attempt_id = ? AND state IN ('reserved', 'started')
                     """,
-                    (outcome, reservation.physical_attempt_id),
+                    (outcome, int(raw_eligible), reservation.physical_attempt_id),
                 )
                 if retry_after_seconds is not None:
                     provider = next((str(key) for scope, key in scopes if scope == "provider"), None)
@@ -799,6 +942,101 @@ class ProductionRequestRepository:
         except (sqlite3.Error, OSError) as error:
             raise RuntimeStorageError("physical_attempt_persistence_failed") from error
 
+    def reserve_next_physical_attempt(
+        self,
+        physical_attempt_id: str,
+        logical_request_id: str,
+        lease: RuntimeLease,
+        now: datetime,
+    ) -> ProductionPhysicalAttempt:
+        """Transactionally allocate the next sequence for one active logical request."""
+        physical_attempt_id = _OWNER_TOKEN_ADAPTER.validate_python(physical_attempt_id, strict=True)
+        logical_request_id = _OWNER_TOKEN_ADAPTER.validate_python(logical_request_id, strict=True)
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                logical = connection.execute(
+                    "SELECT state FROM logical_requests WHERE logical_request_id = ?",
+                    (logical_request_id,),
+                ).fetchone()
+                if logical != ("queued",):
+                    raise RuntimeStorageError("physical_attempt_logical_not_active")
+                unknown = connection.execute(
+                    "SELECT 1 FROM physical_attempts WHERE logical_request_id = ? AND state = 'unknown' LIMIT 1",
+                    (logical_request_id,),
+                ).fetchone()
+                if unknown is not None:
+                    raise RuntimeStorageError("physical_attempt_already_unknown")
+                active = connection.execute(
+                    """
+                    SELECT 1 FROM physical_attempts
+                    WHERE logical_request_id = ? AND state IN ('reserved', 'started') LIMIT 1
+                    """,
+                    (logical_request_id,),
+                ).fetchone()
+                if active is not None:
+                    raise RuntimeStorageError("physical_attempt_already_active")
+                sequence_number = int(
+                    connection.execute(
+                        "SELECT COALESCE(MAX(sequence_number), 0) + 1 "
+                        "FROM physical_attempts WHERE logical_request_id = ?",
+                        (logical_request_id,),
+                    ).fetchone()[0]
+                )
+                created_at = _timestamp(now)
+                connection.execute(
+                    """
+                    INSERT INTO physical_attempts (
+                        physical_attempt_id, logical_request_id, sequence_number,
+                        lease_generation, created_at, state
+                    ) VALUES (?, ?, ?, ?, ?, 'reserved')
+                    """,
+                    (physical_attempt_id, logical_request_id, sequence_number, lease.generation, created_at),
+                )
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("physical_attempt_reservation_failed") from error
+        return ProductionPhysicalAttempt(
+            physical_attempt_id=physical_attempt_id,
+            logical_request_id=logical_request_id,
+            sequence_number=sequence_number,
+            lease_generation=lease.generation,
+            created_at=created_at,
+        )
+
+    def discard_reserved_attempt(self, physical_attempt_id: str, lease: RuntimeLease, now: datetime) -> None:
+        """Discard an unsent reservation that never acquired any durable gate reservation."""
+        physical_attempt_id = _OWNER_TOKEN_ADAPTER.validate_python(physical_attempt_id, strict=True)
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                updated = connection.execute(
+                    """
+                    DELETE FROM physical_attempts
+                    WHERE physical_attempt_id = ? AND lease_generation = ? AND state = 'reserved'
+                      AND NOT EXISTS (
+                          SELECT 1 FROM gate_reservations
+                          WHERE gate_reservations.physical_attempt_id = physical_attempts.physical_attempt_id
+                      )
+                    """,
+                    (physical_attempt_id, lease.generation),
+                )
+                if updated.rowcount != 1:
+                    raise RuntimeStorageError("physical_attempt_discard_rejected")
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("physical_attempt_discard_failed") from error
+
     def begin_raw_publication(self, intent: RawPublicationIntent, lease: RuntimeLease, now: datetime) -> None:
         """Persist a fenced publication intent before writing candidate bytes."""
         intent = RawPublicationIntent.model_validate(intent.model_dump(warnings=False))
@@ -815,7 +1053,7 @@ class ProductionRequestRepository:
                     JOIN logical_requests AS request USING (logical_request_id)
                     WHERE attempt.physical_attempt_id = ? AND attempt.logical_request_id = ?
                       AND request.task_id = ? AND request.source_id = ? AND request.operation = ?
-                      AND attempt.state = 'succeeded'
+                      AND attempt.state IN ('succeeded', 'failed') AND attempt.raw_eligible = 1
                     """,
                     (
                         intent.physical_attempt_id,
@@ -1075,6 +1313,59 @@ class ProductionRequestRepository:
         except (sqlite3.Error, OSError) as error:
             raise RuntimeStorageError("logical_result_persistence_failed") from error
 
+    def finalize_logical_request(self, result: ProductionLogicalResult, lease: RuntimeLease, now: datetime) -> None:
+        """Finalize once after validating all durable physical attempt outcomes."""
+        result = ProductionLogicalResult.model_validate(result.model_dump(warnings=False))
+        lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
+        now = _validate_utc(now)
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                _assert_fence(connection, lease, now)
+                request = connection.execute(
+                    "SELECT state FROM logical_requests WHERE logical_request_id = ?",
+                    (result.logical_request_id,),
+                ).fetchone()
+                if request != ("queued",):
+                    raise RuntimeStorageError("logical_request_not_active")
+                states = tuple(
+                    str(row[0])
+                    for row in connection.execute(
+                        "SELECT state FROM physical_attempts WHERE logical_request_id = ? ORDER BY sequence_number",
+                        (result.logical_request_id,),
+                    )
+                )
+                if any(state in {"reserved", "started"} for state in states):
+                    raise RuntimeStorageError("logical_request_has_active_attempt")
+                if result.outcome is LogicalResultOutcome.SUCCEEDED and (
+                    not states or states[-1] != "succeeded" or "unknown" in states
+                ):
+                    raise RuntimeStorageError("logical_success_attempts_invalid")
+                if result.outcome is LogicalResultOutcome.UNKNOWN and "unknown" not in states:
+                    raise RuntimeStorageError("logical_unknown_attempt_missing")
+                state = {
+                    LogicalResultOutcome.SUCCEEDED: "succeeded",
+                    LogicalResultOutcome.FAILED: "failed",
+                    LogicalResultOutcome.CANCELLED: "cancelled",
+                    LogicalResultOutcome.UNKNOWN: "failed",
+                }[result.outcome]
+                connection.execute(
+                    "UPDATE logical_requests SET state = ? WHERE logical_request_id = ?",
+                    (state, result.logical_request_id),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO logical_results (logical_request_id, outcome, completed_at, error_code)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (result.logical_request_id, result.outcome.value, result.completed_at, result.error_code),
+                )
+        except RuntimeStorageError:
+            raise
+        except (sqlite3.Error, OSError) as error:
+            raise RuntimeStorageError("logical_result_persistence_failed") from error
+
     def acquire_lease(self, owner_token: str, now: datetime, policy: RuntimeLeasePolicy) -> RuntimeLease:
         """Acquire an unowned lease while serializing competing owners."""
         owner_token = _OWNER_TOKEN_ADAPTER.validate_python(owner_token, strict=True)
@@ -1199,6 +1490,31 @@ class ProductionRequestRepository:
                         """
                         INSERT INTO logical_results (logical_request_id, outcome, completed_at, error_code)
                         VALUES (?, 'unknown', ?, 'owner_interrupted')
+                        """,
+                        (logical_request_id, _timestamp(now)),
+                    )
+                interrupted_between_attempts = connection.execute(
+                    """
+                    SELECT DISTINCT attempt.logical_request_id
+                    FROM physical_attempts AS attempt
+                    JOIN logical_requests AS request USING (logical_request_id)
+                    WHERE request.state = 'queued' AND attempt.state IN ('succeeded', 'failed')
+                      AND NOT EXISTS (
+                          SELECT 1 FROM physical_attempts AS active
+                          WHERE active.logical_request_id = attempt.logical_request_id
+                            AND active.state IN ('reserved', 'started')
+                      )
+                    """
+                ).fetchall()
+                for (logical_request_id,) in interrupted_between_attempts:
+                    connection.execute(
+                        "UPDATE logical_requests SET state = 'failed' WHERE logical_request_id = ?",
+                        (logical_request_id,),
+                    )
+                    connection.execute(
+                        """
+                        INSERT INTO logical_results (logical_request_id, outcome, completed_at, error_code)
+                        VALUES (?, 'failed', ?, 'owner_interrupted_between_attempts')
                         """,
                         (logical_request_id, _timestamp(now)),
                     )
@@ -1569,7 +1885,16 @@ def _validate_recovery_state(connection: sqlite3.Connection, previous_generation
             AND (request.state != 'queued' OR result.logical_request_id IS NOT NULL)
         ) OR (
             attempt.state IN ('succeeded', 'failed', 'unknown')
-            AND (request.state = 'queued' OR result.logical_request_id IS NULL)
+            AND request.state != 'queued' AND result.logical_request_id IS NULL
+        ) OR (
+            attempt.state = 'unknown' AND request.state = 'queued'
+        ) OR (
+            attempt.state IN ('succeeded', 'failed') AND request.state = 'queued'
+            AND NOT EXISTS (
+                SELECT 1 FROM gate_reservations AS reservation
+                WHERE reservation.physical_attempt_id = attempt.physical_attempt_id
+                  AND reservation.state = 'released'
+            )
         )
         LIMIT 1
         """
@@ -1612,6 +1937,9 @@ def initialize_runtime_storage(runtime_root: Path) -> ProductionRequestRepositor
                         current_version = 5
                     if current_version == 5:
                         _migrate_v5_to_v6(connection)
+                        current_version = 6
+                    if current_version == 6:
+                        _migrate_v6_to_v7(connection)
                 _verify_schema(connection)
         finally:
             connection.close()
@@ -1640,7 +1968,7 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             schema_owner TEXT NOT NULL,
             schema_version INTEGER NOT NULL CHECK (schema_version >= 1)
         );
-        INSERT INTO schema_metadata VALUES (1, 'production-request-coordinator', 6);
+        INSERT INTO schema_metadata VALUES (1, 'production-request-coordinator', 7);
 
         CREATE TABLE logical_requests (
             logical_request_id TEXT PRIMARY KEY,
@@ -1663,6 +1991,7 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             lease_generation INTEGER NOT NULL CHECK (lease_generation >= 1),
             created_at TEXT NOT NULL,
             state TEXT NOT NULL CHECK (state IN ('reserved', 'started', 'succeeded', 'failed', 'unknown')),
+            raw_eligible INTEGER NOT NULL DEFAULT 0 CHECK (raw_eligible IN (0, 1)),
             UNIQUE (logical_request_id, sequence_number)
         );
 
@@ -1788,7 +2117,7 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             committed_at TEXT
         );
 
-        PRAGMA user_version = 6;
+        PRAGMA user_version = 7;
         COMMIT;
         """
     )
@@ -1966,6 +2295,26 @@ def _migrate_v5_to_v6(connection: sqlite3.Connection) -> None:
         );
         UPDATE schema_metadata SET schema_version = 6 WHERE singleton = 1;
         PRAGMA user_version = 6;
+        COMMIT;
+        """
+    )
+
+
+def _migrate_v6_to_v7(connection: sqlite3.Connection) -> None:
+    """Record whether common validation produced publishable bounded bytes."""
+    metadata = connection.execute(
+        "SELECT schema_owner, schema_version FROM schema_metadata WHERE singleton = 1"
+    ).fetchone()
+    if metadata != (_SCHEMA_OWNER, 6):
+        raise RuntimeStorageError("runtime_schema_metadata_mismatch")
+    connection.executescript(
+        """
+        BEGIN IMMEDIATE;
+        ALTER TABLE physical_attempts
+            ADD COLUMN raw_eligible INTEGER NOT NULL DEFAULT 0 CHECK (raw_eligible IN (0, 1));
+        UPDATE physical_attempts SET raw_eligible = 1 WHERE state = 'succeeded';
+        UPDATE schema_metadata SET schema_version = 7 WHERE singleton = 1;
+        PRAGMA user_version = 7;
         COMMIT;
         """
     )

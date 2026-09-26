@@ -62,7 +62,9 @@ def _prepared(
     )
     repository.mark_physical_attempt_started("attempt-1", lease, NOW + timedelta(seconds=1))
     with sqlite3.connect(runtime / DATABASE_FILENAME) as connection:
-        connection.execute("UPDATE physical_attempts SET state = 'succeeded' WHERE physical_attempt_id = 'attempt-1'")
+        connection.execute(
+            "UPDATE physical_attempts SET state = 'succeeded', raw_eligible = 1 WHERE physical_attempt_id = 'attempt-1'"
+        )
     candidate = TemporaryRawCandidate("attempt-1", BODY, HASH, "application/json", "utf-8")
     intent = RawPublicationIntent(
         publication_id="publication-1",
@@ -96,6 +98,44 @@ def test_publish_exact_raw_bundle_after_source_validation(tmp_path: Path) -> Non
     assert (bundle / "body.bin").read_bytes() == BODY
     assert repository.raw_publication_state("publication-1") == ("committed", reference.relative_path)
     assert not list((runs / "task-1" / ".staging" / "acquisitions").iterdir())
+
+
+def test_publish_known_non_2xx_candidate_from_failed_attempt(tmp_path: Path) -> None:
+    """Keep bounded provider-error bytes without reclassifying the attempt as successful."""
+    repository, lease, runs, candidate, intent = _prepared(tmp_path)
+    with sqlite3.connect(tmp_path / ".runtime" / DATABASE_FILENAME) as connection:
+        connection.execute("UPDATE physical_attempts SET state = 'failed' WHERE physical_attempt_id = 'attempt-1'")
+
+    reference = RawArtifactPublisher(runs, repository).publish(
+        candidate,
+        intent,
+        lease,
+        NOW + timedelta(seconds=2),
+        NOW + timedelta(seconds=3),
+        lambda _body: None,
+    )
+
+    assert repository.physical_attempt_state("attempt-1") == ("failed", 1)
+    assert repository.raw_publication_state("publication-1") == ("committed", reference.relative_path)
+
+
+def test_failed_attempt_without_validated_response_is_not_raw_eligible(tmp_path: Path) -> None:
+    """Reject fabricated raw bytes for a failure that produced no bounded response."""
+    repository, lease, runs, candidate, intent = _prepared(tmp_path)
+    with sqlite3.connect(tmp_path / ".runtime" / DATABASE_FILENAME) as connection:
+        connection.execute(
+            "UPDATE physical_attempts SET state = 'failed', raw_eligible = 0 WHERE physical_attempt_id = 'attempt-1'"
+        )
+
+    with pytest.raises(RuntimeStorageError, match="raw_publication_attempt_mismatch"):
+        RawArtifactPublisher(runs, repository).publish(
+            candidate,
+            intent,
+            lease,
+            NOW + timedelta(seconds=2),
+            NOW + timedelta(seconds=3),
+            lambda _body: None,
+        )
 
 
 def test_source_validation_failure_never_exposes_bundle(tmp_path: Path) -> None:
