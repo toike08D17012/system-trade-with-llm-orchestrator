@@ -162,7 +162,9 @@ def _approval_valid(body: bytes, source: str, version: int, today: str, acquired
     )
 
 
-def _evaluate(files: Mapping[str, bytes], checked_at: str) -> PriceAcceptanceIndex:
+def _evaluate(
+    files: Mapping[str, bytes], checked_at: str, *, completed_through: date | None = None
+) -> PriceAcceptanceIndex:
     now = _timestamp(checked_at)
     today = now.astimezone(ZoneInfo("Asia/Tokyo")).date().isoformat()
     prepared = {
@@ -184,7 +186,9 @@ def _evaluate(files: Mapping[str, bytes], checked_at: str) -> PriceAcceptanceInd
     period = normalized.requested_period
     start = date.fromisoformat(period.start_date)
     end = date.fromisoformat(period.end_date) + timedelta(days=1)
-    if end.isoformat() > today:
+    if (completed_through is None and end.isoformat() > today) or (
+        completed_through is not None and end - timedelta(days=1) > completed_through
+    ):
         raise ValueError("price_period_includes_unfinished_day")
     if original.jpx_verification.snapshot_on > _timestamp(provenance.retrieved_at).astimezone(
         ZoneInfo("Asia/Tokyo")

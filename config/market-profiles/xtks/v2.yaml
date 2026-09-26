@@ -1,0 +1,15 @@
+# Owner-approved local schedule policy; requires hash-bound calendar bytes covering each run.
+# Applicable 2026-09-27 through 2026-12-26; not a claim of newly fetched JPX data.
+schema_id: detailed-analysis.market-profile
+schema_version: 1
+artifact_id: xtks-market-profile-v2
+profile_version: 2
+mic: XTKS
+timezone: Asia/Tokyo
+instrument_scope: domestic_cash_equity
+regular_session_close_local: "15:30:00"
+calendar_authority: JPX
+calendar_reference: https://www.jpx.co.jp/equities/trading/domestic/01.html
+calendar_reviewed_on: "2026-09-27"
+calendar_data_status: known
+enabled_for_runtime_date_resolution: true

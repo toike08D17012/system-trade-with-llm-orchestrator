@@ -91,7 +91,8 @@ flowchart LR
 
 ## 5. P0承認文書
 
-2026-09-26のFX移行承認により、要件01はversion 1.2、要件02はversion 1.7となった。
+2026-09-27の通常実行準備への接続承認により、要件01はversion 1.3、要件02はversion 1.8となった。
+[通常実行準備への接続承認](../decision-requests/2026-09-27-price-fx-run-preparation-approval.md)と、
 UTC Bid日足の採用と利用条件に関する判断は
 [移行承認記録](../decision-requests/2026-09-26-dukascopy-fx-migration-approval.md)を参照する。
 

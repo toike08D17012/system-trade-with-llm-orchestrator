@@ -8,6 +8,7 @@ from pathlib import Path
 from stock_research_llm_orchestrator.contracts.base import StrictContractModel
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.policies import (
     ApprovalStatus,
+    MarketProfileV1,
     SourceApprovalV1,
     SourceProfileV1,
 )
@@ -113,7 +114,7 @@ def _validate_layout(relative: Path, model: StrictContractModel) -> None:
     artifact_version = schema_version
     if isinstance(model, SourceApprovalV1):
         artifact_version = model.approval_version
-    elif isinstance(model, SourceProfileV1):
+    elif isinstance(model, (SourceProfileV1, MarketProfileV1)):
         artifact_version = model.profile_version
     if schema_id != expected_schema or artifact_version != version:
         raise ApplicationError(

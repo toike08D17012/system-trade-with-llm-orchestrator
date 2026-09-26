@@ -79,7 +79,7 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | 詳細解析MVP要件 | P0要件6文書とP1契約基盤文書を承認済み |
 | Pythonパッケージ・アプリケーション | 契約基盤、task入力準備、credential preflight、原子的保存、共有Coordinatorの永続制御・raw公開・single-flight終了連携を実装済み。詳細解析runtimeの統合は未完了 |
 | 実行用CLI | 公開CLIは`config validate`。市場証拠準備・オフライン再検証・価格受入・Dukascopy為替取得と価格結合は内部module CLIで実装済み。詳細解析の調査・運用commandは未実装 |
-| データソース・評価指標・閾値 | JPX銘柄検証、標準`yfinance`取得、価格正規化・保存・再検証・固定期間の受入を実装済み。通常実行の鮮度確認と、財務・為替・開示等を含む証拠集合の確定は未完了 |
+| データソース・評価指標・閾値 | JPX銘柄検証、標準`yfinance`取得、価格正規化・保存・再検証・固定期間の受入を実装済み。通常実行の価格・FX必要期間判定を実装済み。財務・開示等を含む証拠集合の確定は未完了 |
 | Pythonバージョン・依存関係 | Python 3.14、runtime・開発依存関係、品質ツール、ロックファイルを定義済み |
 | テスト・lint・型チェック | 契約、設定、CLI、logging、task準備、credential、request coordinator、市場証拠準備・再検証・価格受入のテストあり |
 | CI・Docker・devcontainer | Docker標準開発環境、GitHub Actions CI、VS Code devcontainerあり |
@@ -391,8 +391,46 @@ v2証拠にはraw・設定bytes・正規化結果とhashを保持し、保存後
 終了コード0は保存成功を示し、`incomplete`なら欠損が残っています。
 技術エラーは1で停止し、既存出力先・入力との重複・symlink・改変を拒否します。
 実rawはGit追跡しないローカル`runs/`に保存します。
-財務・開示との接続、証拠集合の凍結、通常実行の最新終端日判定は未実装で、
+財務・開示との接続、証拠集合の凍結は未実装で、
 `analysis_ready=false`を維持します。
+
+## 通常実行向けの価格・FX準備
+
+内部module CLI `preparation.price_fx_run_cli` の `plan` / `prepare` / `validate` は、
+保存済み証拠だけを使用します。`plan` は必要期間を保存し、`prepare` は価格・FXを
+その期間で評価して内部準備manifestを保存します。新規取得・自動バックフィルは行いません。
+
+```bash
+./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.price_fx_run_cli prepare \
+  --task runs/current-task.json --config config \
+  --calendar runs/current-calendar.json \
+  --calendar-metadata runs/current-calendar-metadata.json \
+  --research-note runs/current-calendar-note.md \
+  --prices runs/price-acceptance-7203-20260926 \
+  --fx runs/dukascopy-evidence/dukascopy-fx-7203-20260926 \
+  --output runs/current-price-fx-preparation
+
+./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.price_fx_run_cli validate \
+  --input runs/current-price-fx-preparation
+```
+
+`current-*` 入力は、その実行のtaskと根拠・hash付きカレンダーを事前に用意します。
+`plan` は同じ共通引数を取り、`--prices` / `--fx` は不要です。
+`--checked-at` でタイムゾーン付き評価時刻を指定できます。省略時は現在時刻です。
+価格入力には受入済みv1または保存済み市場証拠bundleを使用できます。
+
+価格終端は終了済みXTKS営業日、FX終端は同じ日付ラベルのUTC日足が終了した営業日です。
+当日のJPY価格を利用できてもFX日足が未確定なら、その日のUSD換算を保留します。
+必要終端を欠損日に合わせて下げず、利用可能終端と欠損日を別に記録します。
+カレンダーが評価日まで届かない場合は `pending` です。
+承認済みローカル市場profile v2の適用期間は2026-09-27以上・2026-12-27未満です。
+
+終了コード0は保存成功で、状態は `ready_with_limitations` または `pending` です。
+技術エラーは1です。既存宛先・改変・symlink・同一rootへの競合公開を拒否します。
+入力と公開先は同じ利用者が排他的に管理し、入力の同時変更を避けてください。
+元証拠・元taskの来歴と新しい準備generationを保持します。
+公開 `ExecutionManifestV1` / 凍結済み `EvidenceSetV1` への昇格は行わず、
+常に `analysis_ready=false` です。取得工程の当日対応と自動接続は後続作業です。
 
 ## 開発への参加
 
