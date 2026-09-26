@@ -1,0 +1,15 @@
+{
+  "provenance": "Synthetic data; weekdays are a fictional test calendar, not the XTKS calendar.",
+  "start": "2023-09-26",
+  "end_exclusive": "2026-09-26",
+  "timezone": "Asia/Tokyo",
+  "currency": "JPY",
+  "Open": 100.25,
+  "High": 110.5,
+  "Low": 90.25,
+  "Close": 105.5,
+  "Adj Close": 52.75,
+  "Volume": 1000,
+  "Dividends": 0.0,
+  "Stock Splits": 0.0
+}

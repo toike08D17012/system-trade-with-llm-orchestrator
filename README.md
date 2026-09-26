@@ -78,7 +78,7 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | 詳細解析MVP要件 | P0要件6文書とP1契約基盤文書を承認済み |
 | Pythonパッケージ・アプリケーション | 契約基盤、task入力準備、credential preflight、原子的なstaging・publish、fake transport用request coordinatorを実装済み。個別株調査アプリケーションは未実装 |
 | 実行用CLI | `config validate`によるoffline設定検証を実装済み。調査・運用commandは未実装 |
-| データソース・評価指標・閾値 | source方針承認済み。`yfinance`は許可確認済み・有効。adapterと実取得は未実装 |
+| データソース・評価指標・閾値 | JPX銘柄検証、標準`yfinance`取得、価格証拠の正規化・内部保存を実装済み。鮮度・取引日網羅性を含む実データの受入確認と、財務・為替を含む証拠一式は未完了 |
 | Pythonバージョン・依存関係 | Python 3.14、runtime・開発依存関係、品質ツール、ロックファイルを定義済み |
 | テスト・lint・型チェック | 契約、設定、CLI、logging、task準備、credential、request coordinatorの追跡対象テストあり |
 | CI・Docker・devcontainer | Docker標準開発環境、GitHub Actions CI、VS Code devcontainerあり |
@@ -209,6 +209,91 @@ stderrへ出力し、設定内容の不正は終了code 3、pathまたはfileの
 [成果物・保持・セキュリティの要件](docs/system-requirements/05-artifact-retention-and-security.md)
 で承認済みです。検証済みbytesを内部準備directoryへ原子的にpublishするprimitiveはありますが、
 manifest確定と完全な証拠一式を含む実行ディレクトリへの保存は未実装です。
+
+## 価格証拠の準備
+
+`preparation.market_evidence`は、保存済みJPX一覧の実bytesとhashを照合し、
+東証上場内国普通株として検証した銘柄だけを標準`Ticker.history()`へ渡します。
+取得メタデータ、library-returned CSV、正規化JSON、内部索引を新規directoryへ一括保存します。
+既存成果物は上書きしません。Yahooの原HTTP応答を保存したものではありません。
+
+次の内部検証用CLIは、東京日付の前日までの3暦年を取得します。出力先の親directoryは
+事前に作成した信頼できる場所を使用し、同じ場所への並行実行は行わないでください。
+
+```bash
+./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.market_evidence_cli \
+  --allow-network --code 7203 --evaluation-policy-version 1 \
+  --jpx-body runs/jpx-snapshot/body.bin \
+  --jpx-metadata runs/jpx-snapshot/provenance.json \
+  --output runs/market-evidence-001
+```
+
+JPX入力は既存の承認済みCoordinator取得経路で保存した一覧と取得記録を使用します。
+`provenance.json`は`JpxSnapshotProvenance`形式で、`physical_attempt_id`、実取得時刻の
+`retrieved_at`、本文の`sha256`を必須とします。sourceは`jpx`、承認版は1、参照先は
+承認済み公式XLSXに固定しています。取得時刻をファイル更新時刻や保存完了時刻から推測しません。
+このCLI自身はJPX一覧をダウンロードしません。
+
+正規化では価格・出来高・配当・分割の欠損を補完せず、値を丸めません。調整済みとして
+保持する値はproviderの`Adj Close`だけです。通貨は同じhistory応答のキャッシュから読み、
+追加通信やティッカーからの推測は行いません。配当ごとの原通貨は独立に検証できていません。
+
+取引日検証には、出典を確認したローカルの`TradingDates` JSONを`--calendar`で、
+`CalendarProvenance` JSONを`--calendar-metadata`で指定できます。前者には包含的な`period`と
+日付順・重複なしの`dates`、後者には`source_reference`、`retrieved_at`、本文の`sha256`を持たせます。
+取引日資料がなければ網羅性は未確認です。テストの合成平日カレンダーを実市場の検証には使いません。
+
+終了コード1は入力・取得・保存の失敗、2は不足を明示した準備結果の保存を表します。
+現時点ではJPX一覧の鮮度確認が残るため、保存成功でも`prepared_with_gaps`を返します。
+`index.json`の`price_quality_passed`と`issues`で価格の品質を確認できますが、
+`analysis_ready`は常にfalseです。これは完全な証拠集合の凍結や詳細解析の完了を意味しません。
+取得はprovider共有の間隔・cooldownを守り、自動待機・再試行はしません。
+
+[2026-09-26の実確認](docs/decision-requests/2026-09-26-jpx-market-evidence-acceptance-outcome.md)では、
+JPX一覧の5桁コードによる解析失敗を修正し、JPX検証済み`7203`で3年分731行の
+取得・正規化・保存とhash照合に成功しました。続くオフライン再検証で予定取引日731日と
+保存済み日付の一致、調査時点の最新掲載月との一致を確認しました。
+本番source承認と現在の上場適格性の確認が残り、分析向けの最終受入は未完了です。
+
+### 保存済み証拠のオフライン再検証
+
+`preparation.market_revalidation_cli`は外部通信せず、元の全ファイルと追加の調査資料を
+新規directoryへ保存します。元の価格値・索引・品質issueは変更しません。
+新しい索引には入力hash、検証方式の版、元taskの評価方針版、日付差分と月次観察の比較結果を記録します。
+保存済み結果は`validate_market_revalidation`で元入力の場所に依存せず再検証できます。
+
+```bash
+./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.market_revalidation_cli \
+  --preparation runs/market-evidence-7203-20260926 \
+  --calendar runs/calendar-research-20260926/calendar.candidate.json \
+  --calendar-metadata runs/market-revalidation-inputs-20260926/calendar-metadata.json \
+  --research-note runs/market-revalidation-inputs-20260926/research-note.md \
+  --publication-observation runs/market-revalidation-inputs-20260926/publication-observation.json \
+  --output runs/market-revalidation-7203-002
+```
+
+この例の入力はローカル調査成果物です。新しい入力は以下のモデルに従って用意します。
+
+- `--calendar`: 全対象期間を含む既存`TradingDates`形式。
+- `--calendar-metadata`: `ResearchCalendarMetadata`形式。
+  `evidence_id`、`checked_at`、`calendar_sha256`、`research_note_sha256`、
+  空でない`source_references`・`rules`を必須とし、`scope`は`research_only`です。
+- `--research-note`: 出典と算出規則・確認限界を記した調査メモの保存時点のbytes。
+- `--publication-observation`: 任意の`PublicationObservation`形式。
+  `evidence_id`、公式一覧ページの`source_reference`、確認日`observed_on`、
+  記録作成時刻`recorded_at`、`latest_published_month`（`YYYY-MM`）、
+  `research_note_sha256`を持ちます。省略すると掲載月は未確認になります。
+  確認時刻が不明な過去のWeb調査に、推測した時刻を付けません。
+
+入力と出力は同じ利用者が管理する通常ファイル・directoryを使用し、同時変更を避けます。
+symlink、入力内の出力先、既存出力先、hash不一致、カレンダーの期間不足を拒否します。
+終了コード1は入力・保存失敗、2は残る制約を含む記録の保存成功です。
+日付や掲載月の不一致も差分として保存されるため、2だけで一致を判断せず索引を確認してください。
+
+日付照合は提示された予定取引日との比較です。臨時休場や個別停止、価格値の正しさは
+独立検証していません。掲載月の一致は手動観察日に限った結果で、同月の差替え版や
+再検証日現在の上場状況を保証しません。新記録も`revalidated_with_gaps`、
+`analysis_ready=false`を維持し、本番source承認や証拠集合の凍結を代替しません。
 
 ## 開発への参加
 

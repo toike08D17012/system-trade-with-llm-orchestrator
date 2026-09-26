@@ -210,6 +210,20 @@ P0承認の阻害課題へ混在させない。
   - [x] 全sourceの応答サイズ上限撤廃は維持する。
   - [ ] JPX検証済み銘柄と証拠保存・正規化を結合した分析向けのend-to-end acceptanceを完了する。
     単一銘柄の診断成功だけで、全取得条件・品質検証・市場適格性の確認済みとはしない。
+    - [x] 標準historyの実取得メタデータを保持し、JPX実bytes照合、適格性検証、日次価格正規化、
+      内部索引・参照hash検証、一括保存を接続する。固定fixtureで3年分と失敗・欠損を検証する。
+    - [x] 公式一覧の5桁コードを適格性未確認のまま保持してパーサーの拒否を解消し、
+      JPX検証済み`7203`で3年分731行の実取得・正規化・証拠保存とhash検証を行う。
+    - [ ] 実データのJPX鮮度・出典付き取引日情報を確認して受入を完了する。
+      準備結果は`prepared_with_gaps`として不足を保持し、完全な証拠集合やmanifestの確定と区別する。
+      [2026-09-26の実確認](decision-requests/2026-09-26-jpx-market-evidence-acceptance-outcome.md)で
+      保存まで成功した。続く[公式情報調査と方針案](decision-requests/2026-09-26-jpx-freshness-and-calendar-policy.md)で、
+      最新掲載月とsnapshotの一致、予定取引日731日と保存済み日付の完全一致を確認した。
+      オフライン再検証結果は別成果物へ保存済みである。
+      source承認・判定方針の要件反映と、現在の上場適格性の確認は未完了である。
+    - [x] 保存済み証拠を変更せず、日付照合と手動調査による掲載月比較を行う内部API・CLIを追加する。
+      入力bytes・hash・判定版を含む再検証記録を保存し、731日の一致をネットワーク禁止下で確認する。
+      元のissueと`analysis_ready=false`を保持し、本番source承認と区別する。
   - 旧HTTP制御・profile v3・個別permit・監査参照は互換経路のテストを維持する。
     標準経路への必須条件とせず、通常運用で新旧経路を混在させない。
 - [ ] 東証上場内国株の代表fixtureで、銘柄識別、最低3年の日次価格・出来高、調整前後価格、
@@ -257,6 +271,8 @@ P0承認の阻害課題へ混在させない。
     pure source-native parser protocolを追加する。source固有mappingはapproval/profile承認後に追加する。
   - [ ] 本番transport、永続leaseと復旧、公平queue、cache、single-flight、全scopeのgate、
     永続cooldown、監査保存を実装する。P3-3のfake-only実装は本番Coordinatorの完成を意味しない。
+    single-flightのleader正常・失敗終了とfollowerへの結果伝播・終了確定を接続し、
+    terminalなlogical requestを参照するactive flightが次回要求を待たせないことを検証する。
 - [ ] 重要な数値と資料を共通の `evidence_id` で参照できる証拠集合を生成する。
 - [ ] タスク、指定銘柄、原データ、正規化済みデータ、計算済み指標、出典メタデータ、`manifest` を採用済みの実行ディレクトリへ原子的に保存する。
   - [x] 検証済みbytes一式を専用の内部準備directoryへ同一filesystemのrenameで原子的に公開し、
