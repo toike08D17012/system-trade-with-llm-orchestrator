@@ -1,13 +1,21 @@
 """Anonymous HTTPX transport for the approved BOJ code API."""
 
+import math
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Annotated, Literal
 
 import httpx
 from pydantic import Field, StringConstraints
 
 from stock_research_llm_orchestrator.contracts.base import Identifier, StrictContractModel
-from stock_research_llm_orchestrator.requests.transport import PhysicalTransportRequest, UntrustedTransportResponse
+from stock_research_llm_orchestrator.requests.transport import (
+    PhysicalTransportRequest,
+    ReceivedResponseValidationError,
+    UntrustedTransportResponse,
+)
 from stock_research_llm_orchestrator.sources.protocol import CredentialFreeSourceIntent, SourceParameter
 
 
@@ -17,6 +25,10 @@ _Path = Annotated[str, StringConstraints(pattern=r"^/[A-Za-z0-9/_-]+$", max_leng
 
 class BojHttpTransportError(RuntimeError):
     """Sanitized BOJ physical transport failure."""
+
+
+class _BojResponseValidationError(BojHttpTransportError, ReceivedResponseValidationError):
+    """A received response failure with the existing public BOJ exception base."""
 
 
 class BojHttpTarget(StrictContractModel):
@@ -76,6 +88,9 @@ class BojPhysicalTransport:
     policy: BojHttpClientPolicy
     transport: httpx.BaseTransport | None = field(default=None, repr=False)
 
+    clock: Callable[[], datetime] = field(default=lambda: datetime.now(UTC), repr=False)
+    on_received: Callable[[datetime], None] | None = field(default=None, repr=False)
+
     def __call__(self, request: PhysicalTransportRequest) -> UntrustedTransportResponse:
         """Validate physical identity before performing exactly one request."""
         expected = self.intent.to_transport_request(request.logical_request_id, request.physical_attempt_id)
@@ -104,8 +119,11 @@ class BojPhysicalTransport:
                 ) as response,
             ):
                 if 300 <= response.status_code < 400:
-                    raise BojHttpTransportError("boj_http_redirect_rejected")
+                    raise _BojResponseValidationError("boj_http_redirect_rejected")
                 body = _read_response(response)
+                received_at = self.clock()
+                if self.on_received is not None:
+                    self.on_received(received_at)
                 media_type = response.headers.get("Content-Type", "").partition(";")[0].strip().lower()
                 return UntrustedTransportResponse(
                     status_code=response.status_code,
@@ -114,6 +132,7 @@ class BojPhysicalTransport:
                     encoding="utf-8",
                     final_origin=response.url.host,
                     redirected=False,
+                    retry_after_seconds=_retry_after(response.headers.get("Retry-After"), received_at),
                 )
         except BojHttpTransportError:
             raise
@@ -126,3 +145,19 @@ def _read_response(response: httpx.Response) -> bytes:
     for chunk in response.iter_bytes():
         body.extend(chunk)
     return bytes(body)
+
+
+def _retry_after(value: str | None, received_at: datetime) -> float | None:
+    if value is None:
+        return None
+    try:
+        if value.isascii() and value.isdecimal():
+            seconds = float(value)
+        else:
+            deadline = parsedate_to_datetime(value)
+            if deadline.tzinfo is None:
+                return None
+            seconds = max(0.0, (deadline - received_at).total_seconds())
+        return seconds if math.isfinite(seconds) and seconds >= 0 else None
+    except ValueError, TypeError, OverflowError:
+        return None

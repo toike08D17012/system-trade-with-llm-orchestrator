@@ -172,6 +172,26 @@ class BojFxCodeAdapter:
             parameters=parameters,
         )
 
+    def parse_for_intent(self, response: BoundedSourceResponse, intent: CredentialFreeSourceIntent) -> BojFxDailySeries:
+        """Validate response semantics and exact requested month bounds before use."""
+        if intent != self.build_intent(intent.operation, intent.parameters):
+            raise BojCodeApiParseError("boj_intent_mismatch")
+        series = self.parse(response)
+        payload = json.loads(response.body)
+        parameters = payload["PARAMETER"]
+        requested = {item.name: item.value for item in intent.parameters}
+        start, end = requested["start_date"], requested["end_date"]
+        if (
+            parameters["STARTDATE"] != start
+            or parameters["ENDDATE"] != end
+            or parameters["STARTPOSITION"] != ""
+            or series.unit != "Yen per U.S. Dollar"
+            or series.name != "US.Dollar/Yen Spot Rate at 17:00 in JST, Tokyo Market"
+            or any(not start <= item.observed_on.replace("-", "")[:6] <= end for item in series.observations)
+        ):
+            raise BojCodeApiParseError("boj_response_semantics_mismatch")
+        return series
+
     def parse(self, response: BoundedSourceResponse) -> BojFxDailySeries:
         """Parse exact UTF-8 JSON while retaining explicit missing values."""
         if response.media_type != _MEDIA_TYPE or response.encoding.lower() != _ENCODING:

@@ -12,6 +12,7 @@ from stock_research_llm_orchestrator.requests.production import (
     GateKeys,
     GateLimit,
     HierarchicalGatePolicy,
+    LogicalResultOutcome,
     ProductionCachePolicy,
     ProductionLogicalRequest,
     ProductionPhysicalAttempt,
@@ -93,7 +94,8 @@ def test_boj_fx_runs_through_production_and_publishes_exact_raw(tmp_path: Path) 
         ),
         httpx.MockTransport(handler),
     )
-    result = ProductionTransportCoordinator(repository, callback, lambda: "permit-boj-fx-1").execute(
+    coordinator = ProductionTransportCoordinator(repository, callback, lambda: "permit-boj-fx-1")
+    result = coordinator.execute_exchange(
         intent.to_transport_request(logical.logical_request_id, attempt.physical_attempt_id),
         attempt,
         "reservation-boj-fx-1",
@@ -125,6 +127,7 @@ def test_boj_fx_runs_through_production_and_publishes_exact_raw(tmp_path: Path) 
         NOW + timedelta(seconds=2),
         NOW + timedelta(seconds=3),
     )
+    assert repository.logical_result(logical.logical_request_id) is None
     assert result.candidate is not None
     publication_intent = RawPublicationIntent(
         publication_id="publication-boj-fx-1",
@@ -151,6 +154,9 @@ def test_boj_fx_runs_through_production_and_publishes_exact_raw(tmp_path: Path) 
         adapter,
     )
 
+    coordinator.finalize_logical_request(
+        logical.logical_request_id, LogicalResultOutcome.SUCCEEDED, lease, NOW + timedelta(seconds=6), None
+    )
     assert tuple(item.value for item in published.value.observations) == (Decimal("147.25"), None, Decimal("148"))
     assert published.reference.content_sha256 == hashlib.sha256(body).hexdigest()
     assert (runs / "task-1" / published.reference.relative_path / "body.bin").read_bytes() == body

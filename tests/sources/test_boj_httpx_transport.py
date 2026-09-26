@@ -115,3 +115,36 @@ def test_boj_transport_does_not_import_edinet_credentials() -> None:
 
 def _unexpected_send(_request: httpx.Request) -> httpx.Response:
     raise AssertionError("HTTP send must not run")
+
+
+@pytest.mark.parametrize(
+    "header,expected",
+    [
+        ("120", 120.0),
+        ("Sat, 26 Sep 2026 00:02:00 GMT", 120.0),
+        ("Sat, 26 Sep 2026 00:00:00 GMT", 0.0),
+        ("garbage", None),
+        ("-1", None),
+        ("Infinity", None),
+    ],
+)
+def test_retry_after_and_received_time(header: str, expected: float | None) -> None:
+    """Interpret provider deadlines relative to the actual response receipt time."""
+    from datetime import UTC, datetime
+
+    now = datetime(2026, 9, 26, tzinfo=UTC)
+    received: list[datetime] = []
+    intent = _intent()
+    response = BojPhysicalTransport(
+        intent,
+        POLICY,
+        httpx.MockTransport(
+            lambda _request: httpx.Response(
+                429, headers={"Content-Type": "application/json", "Retry-After": header}, content=b"{}"
+            )
+        ),
+        lambda: now,
+        received.append,
+    )(intent.to_transport_request("logical-boj", "attempt-boj"))
+    assert response.retry_after_seconds == expected
+    assert received == [now]
