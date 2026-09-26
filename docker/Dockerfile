@@ -30,7 +30,8 @@ ARG SHELLCHECK_VERSION=0.9.0-1
 ARG SHFMT_VERSION=3.6.0-1+b2
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    TZ=Asia/Tokyo
 
 # ----------------------------------------------------------------------
 # Common development tools
@@ -47,6 +48,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         curl \
         git \
         gosu \
+        tzdata \
         ripgrep \
         jq \
         less \
@@ -58,6 +60,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         "shfmt=${SHFMT_VERSION}" \
         libatomic1 \
         libstdc++6
+
+RUN ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime \
+    && printf '%s\n' "${TZ}" > /etc/timezone
 
 # ----------------------------------------------------------------------
 # markdownlint-cli2
