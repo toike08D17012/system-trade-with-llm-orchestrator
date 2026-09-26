@@ -15,6 +15,8 @@ services:
     environment:
       CODEX_HOME: /home/${USER_NAME:-kujira}/.codex
       EDINET_API_KEY_FILE: /run/secrets/edinet_api_key
+    security_opt:
+      - seccomp:unconfined
     volumes:
       - .bash_history:/home/${USER_NAME:-kujira}/.bash_history
       - ../:/home/${USER_NAME:-kujira}/workspace/${REPO_ROOT_BASENAME:?REPO_ROOT_BASENAME is required}

@@ -50,6 +50,7 @@
                 "mypy-type-checker.importStrategy": "fromEnvironment",
                 "python.testing.pytestEnabled": true,
                 "python.defaultInterpreterPath": "/home/kujira/.venv/bin/python",
+                "todo-tree.ripgrep": "/usr/bin/rg",
                 "[python]": {
                     "editor.formatOnSave": true,
                     "editor.codeActionsOnSave": {
