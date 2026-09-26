@@ -281,8 +281,11 @@ P0承認の阻害課題へ混在させない。
     pure source-native parser protocolを追加する。source固有mappingはapproval/profile承認後に追加する。
   - [ ] 本番transport、永続leaseと復旧、公平queue、cache、single-flight、全scopeのgate、
     永続cooldown、監査保存を実装する。P3-3のfake-only実装は本番Coordinatorの完成を意味しない。
-    single-flightのleader正常・失敗終了とfollowerへの結果伝播・終了確定を接続し、
-    terminalなlogical requestを参照するactive flightが次回要求を待たせないことを検証する。
+    - [x] single-flightのleader正常・失敗・結果不明の終了をactive followerへ原子的に伝播し、
+      終了確定・監査・同fingerprintの再受付を接続する。取消済みfollowerは維持する。
+      schema v8で元取得ownerへの参照を固定し、次のflightでも過去の証拠参照を保持する。
+      lease取得・復旧・受付時に旧terminal leaderの残存flightを整合確認して修復し、
+      中断結果の伝播と自動再送しないことを検証する。
 - [ ] 重要な数値と資料を共通の `evidence_id` で参照できる証拠集合を生成する。
 - [ ] タスク、指定銘柄、原データ、正規化済みデータ、計算済み指標、出典メタデータ、`manifest` を採用済みの実行ディレクトリへ原子的に保存する。
   - [x] 検証済みbytes一式を専用の内部準備directoryへ同一filesystemのrenameで原子的に公開し、

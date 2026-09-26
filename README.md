@@ -77,7 +77,7 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | --- | --- |
 | 構想・アーキテクチャ | 設計資料あり |
 | 詳細解析MVP要件 | P0要件6文書とP1契約基盤文書を承認済み |
-| Pythonパッケージ・アプリケーション | 契約基盤、task入力準備、credential preflight、原子的保存、共有Coordinatorの永続制御・raw公開等を実装済み。Coordinatorの終了連携と詳細解析runtimeの統合は未完了 |
+| Pythonパッケージ・アプリケーション | 契約基盤、task入力準備、credential preflight、原子的保存、共有Coordinatorの永続制御・raw公開・single-flight終了連携を実装済み。詳細解析runtimeの統合は未完了 |
 | 実行用CLI | 公開CLIは`config validate`。市場証拠準備・オフライン再検証・価格受入は内部module CLIで実装済み。詳細解析の調査・運用commandは未実装 |
 | データソース・評価指標・閾値 | JPX銘柄検証、標準`yfinance`取得、価格正規化・保存・再検証・固定期間の受入を実装済み。通常実行の鮮度確認と、財務・為替・開示等を含む証拠集合の確定は未完了 |
 | Pythonバージョン・依存関係 | Python 3.14、runtime・開発依存関係、品質ツール、ロックファイルを定義済み |
@@ -89,6 +89,13 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 `7203`の2023-09-26〜2026-09-25の731行がPA-01〜PA-09を満たし、
 `accepted_with_limitations`となりました。現在の上場適格性等の制約を保持し、
 詳細解析全体の開始可否は`analysis_ready=false`です。
+
+共有Coordinatorは、leaderの論理結果を待機中のfollowerへ原子的に反映し、終了後の同じ要求を
+新規leaderとして受け付けます。取消済みfollowerは復活させず、完了したfollowerの証拠参照は
+元の取得taskに固定します。物理通信の終了だけでは論理結果を確定しません。
+旧版で残った「終了済みleaderを参照するactive flight」は、lease取得・復旧・同じ要求の受付時に
+保存済み結果と整合を確認して修復します。不整合は安全停止し、自動再送しません。
+内部SQLiteはschema v8へ移行します。旧版へ戻す場合は移行前DBの退避が必要です。
 
 ## セットアップ
 

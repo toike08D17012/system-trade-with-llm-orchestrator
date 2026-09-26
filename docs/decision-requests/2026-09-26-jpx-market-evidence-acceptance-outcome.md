@@ -70,8 +70,10 @@ JPXへの実送信は初回と診断の計2回である。
 診断補助コードには、前回の失敗後にsingle-flightの終了が未連携という問題もあった。
 その状態を参照した診断起動2回は送信前に停止し、未送信要求を取消した。
 以後の明示的な単発診断は既存の`enqueue_logical_request`を使い、同じ永続queue・lease・
-全scope gateと共有rate stateを維持した。single-flightの正常・失敗終了の連携は
-Coordinator統合の残件として保持する。
+全scope gateと共有rate stateを維持した。この時点ではsingle-flightの正常・失敗終了の連携を
+Coordinator統合の残件としていた。その後の実装で、論理結果のfollowerへの伝播、終了確定、
+同fingerprintの再受付、旧terminal leaderを参照するflightの修復を追加した。
+修復は保存済み結果と監査の整合が確認できる場合に限り、実診断の保存済みDBは本作業で変更していない。
 
 ## 価格証拠の実確認
 

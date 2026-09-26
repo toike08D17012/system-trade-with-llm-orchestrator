@@ -31,7 +31,7 @@ from stock_research_llm_orchestrator.requests.production import (
 )
 
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 DATABASE_FILENAME = "request-coordinator.sqlite3"
 _SCHEMA_OWNER = "production-request-coordinator"
 _OWNER_TOKEN_ADAPTER = TypeAdapter(Identifier)
@@ -180,6 +180,7 @@ class ProductionRequestRepository:
                 _assert_fence(connection, lease, now)
                 _insert_logical_request(connection, request)
                 _append_admission_event(connection, request.logical_request_id, f"cache_{cache_decision}", now, None)
+                _reconcile_terminal_flights(connection, now, request.request_fingerprint)
                 flight = connection.execute(
                     """
                     SELECT flight.leader_logical_request_id, consumer.rate_domain
@@ -191,10 +192,23 @@ class ProductionRequestRepository:
                     (request.request_fingerprint,),
                 ).fetchone()
                 if flight is None:
+                    if (
+                        connection.execute(
+                            "SELECT 1 FROM single_flight_consumers WHERE request_fingerprint = ? AND state = 'active'",
+                            (request.request_fingerprint,),
+                        ).fetchone()
+                        is not None
+                    ):
+                        raise RuntimeStorageError("single_flight_state_inconsistent")
                     decision = "leader"
                     leader_id = request.logical_request_id
                     connection.execute(
-                        "INSERT INTO single_flights VALUES (?, ?, 'active')",
+                        """
+                        INSERT INTO single_flights VALUES (?, ?, 'active')
+                        ON CONFLICT(request_fingerprint) DO UPDATE
+                        SET leader_logical_request_id = excluded.leader_logical_request_id, state = 'active'
+                        WHERE single_flights.state = 'terminal'
+                        """,
                         (request.request_fingerprint, leader_id),
                     )
                 else:
@@ -1169,8 +1183,11 @@ class ProductionRequestRepository:
         """Resolve all committed physical response references for one logical result."""
         logical_request_id = _OWNER_TOKEN_ADAPTER.validate_python(logical_request_id, strict=True)
         records = self._read_raw_publications(
-            "logical_request_id = ? AND state = 'committed' ORDER BY physical_attempt_id",
-            (logical_request_id,),
+            """logical_request_id = COALESCE(
+                (SELECT result_owner_id FROM single_flight_consumers
+                 WHERE logical_request_id = ? AND state = 'completed'), ?)
+                AND state = 'committed' ORDER BY physical_attempt_id""",
+            (logical_request_id, logical_request_id),
         )
         return tuple(_raw_reference(record) for record in records)
 
@@ -1286,35 +1303,24 @@ class ProductionRequestRepository:
         result = ProductionLogicalResult.model_validate(result.model_dump(warnings=False))
         lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
         now = _validate_utc(now)
-        state = {
-            LogicalResultOutcome.SUCCEEDED: "succeeded",
-            LogicalResultOutcome.FAILED: "failed",
-            LogicalResultOutcome.CANCELLED: "cancelled",
-            LogicalResultOutcome.UNKNOWN: "failed",
-        }[result.outcome]
         try:
             with _connect(self._database_path) as connection:
                 _verify_schema(connection)
                 connection.execute("BEGIN IMMEDIATE")
                 _assert_fence(connection, lease, now)
-                updated = connection.execute(
-                    "UPDATE logical_requests SET state = ? WHERE logical_request_id = ? AND state = 'queued'",
-                    (state, result.logical_request_id),
-                )
-                if updated.rowcount != 1:
-                    raise sqlite3.IntegrityError("logical request is missing or terminal")
-                connection.execute(
-                    """
-                    INSERT INTO logical_results (logical_request_id, outcome, completed_at, error_code)
-                    VALUES (?, ?, ?, ?)
-                    """,
-                    (result.logical_request_id, result.outcome.value, result.completed_at, result.error_code),
-                )
+                consumer = connection.execute(
+                    "SELECT 1 FROM single_flight_consumers WHERE logical_request_id = ?",
+                    (result.logical_request_id,),
+                ).fetchone()
+                if consumer is not None:
+                    _validate_finalization(connection, result)
+                _persist_logical_result(connection, result)
+                _finish_single_flight(connection, result, now)
         except (sqlite3.Error, OSError) as error:
             raise RuntimeStorageError("logical_result_persistence_failed") from error
 
     def finalize_logical_request(self, result: ProductionLogicalResult, lease: RuntimeLease, now: datetime) -> None:
-        """Finalize once after validating all durable physical attempt outcomes."""
+        """Finalize once and atomically deliver the terminal result to active consumers."""
         result = ProductionLogicalResult.model_validate(result.model_dump(warnings=False))
         lease = RuntimeLease.model_validate(lease.model_dump(warnings=False))
         now = _validate_utc(now)
@@ -1323,48 +1329,23 @@ class ProductionRequestRepository:
                 _verify_schema(connection)
                 connection.execute("BEGIN IMMEDIATE")
                 _assert_fence(connection, lease, now)
-                request = connection.execute(
-                    "SELECT state FROM logical_requests WHERE logical_request_id = ?",
-                    (result.logical_request_id,),
-                ).fetchone()
-                if request != ("queued",):
-                    raise RuntimeStorageError("logical_request_not_active")
-                states = tuple(
-                    str(row[0])
-                    for row in connection.execute(
-                        "SELECT state FROM physical_attempts WHERE logical_request_id = ? ORDER BY sequence_number",
-                        (result.logical_request_id,),
-                    )
-                )
-                if any(state in {"reserved", "started"} for state in states):
-                    raise RuntimeStorageError("logical_request_has_active_attempt")
-                if result.outcome is LogicalResultOutcome.SUCCEEDED and (
-                    not states or states[-1] != "succeeded" or "unknown" in states
-                ):
-                    raise RuntimeStorageError("logical_success_attempts_invalid")
-                if result.outcome is LogicalResultOutcome.UNKNOWN and "unknown" not in states:
-                    raise RuntimeStorageError("logical_unknown_attempt_missing")
-                state = {
-                    LogicalResultOutcome.SUCCEEDED: "succeeded",
-                    LogicalResultOutcome.FAILED: "failed",
-                    LogicalResultOutcome.CANCELLED: "cancelled",
-                    LogicalResultOutcome.UNKNOWN: "failed",
-                }[result.outcome]
-                connection.execute(
-                    "UPDATE logical_requests SET state = ? WHERE logical_request_id = ?",
-                    (state, result.logical_request_id),
-                )
-                connection.execute(
-                    """
-                    INSERT INTO logical_results (logical_request_id, outcome, completed_at, error_code)
-                    VALUES (?, ?, ?, ?)
-                    """,
-                    (result.logical_request_id, result.outcome.value, result.completed_at, result.error_code),
-                )
+                _validate_finalization(connection, result)
+                _persist_logical_result(connection, result)
+                _finish_single_flight(connection, result, now)
         except RuntimeStorageError:
             raise
         except (sqlite3.Error, OSError) as error:
             raise RuntimeStorageError("logical_result_persistence_failed") from error
+
+    def logical_result(self, logical_request_id: str) -> ProductionLogicalResult | None:
+        """Read a consumer's durable outcome without exposing response content."""
+        logical_request_id = _OWNER_TOKEN_ADAPTER.validate_python(logical_request_id, strict=True)
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                return _read_logical_result(connection, logical_request_id)
+        except (sqlite3.Error, OSError, ValueError) as error:
+            raise RuntimeStorageError("logical_result_read_failed") from error
 
     def acquire_lease(self, owner_token: str, now: datetime, policy: RuntimeLeasePolicy) -> RuntimeLease:
         """Acquire an unowned lease while serializing competing owners."""
@@ -1406,6 +1387,7 @@ class ProductionRequestRepository:
                         """,
                         (owner_token, generation, _timestamp(now), _timestamp(now), _timestamp(expires)),
                     )
+                _reconcile_terminal_flights(connection, now)
         except RuntimeStorageError:
             raise
         except (sqlite3.Error, OSError, TypeError, ValueError) as error:
@@ -1452,6 +1434,9 @@ class ProductionRequestRepository:
                     SELECT entry.logical_request_id, 'queued', ?, 'owner_interrupted'
                     FROM queue_entries AS entry
                     WHERE entry.state = 'dequeued'
+                      AND EXISTS (SELECT 1 FROM logical_requests AS request
+                                  WHERE request.logical_request_id = entry.logical_request_id
+                                    AND request.state = 'queued')
                       AND NOT EXISTS (
                           SELECT 1 FROM physical_attempts AS attempt
                           WHERE attempt.logical_request_id = entry.logical_request_id
@@ -1463,6 +1448,9 @@ class ProductionRequestRepository:
                     """
                     UPDATE queue_entries SET state = 'queued', dequeued_at = NULL
                     WHERE state = 'dequeued'
+                      AND EXISTS (SELECT 1 FROM logical_requests AS request
+                                  WHERE request.logical_request_id = queue_entries.logical_request_id
+                                    AND request.state = 'queued')
                       AND NOT EXISTS (
                           SELECT 1 FROM physical_attempts
                           WHERE physical_attempts.logical_request_id = queue_entries.logical_request_id
@@ -1495,18 +1483,19 @@ class ProductionRequestRepository:
                     )
                 interrupted_between_attempts = connection.execute(
                     """
-                    SELECT DISTINCT attempt.logical_request_id
+                    SELECT attempt.logical_request_id, MAX(attempt.state = 'unknown')
                     FROM physical_attempts AS attempt
                     JOIN logical_requests AS request USING (logical_request_id)
-                    WHERE request.state = 'queued' AND attempt.state IN ('succeeded', 'failed')
+                    WHERE request.state = 'queued' AND attempt.state IN ('succeeded', 'failed', 'unknown')
                       AND NOT EXISTS (
                           SELECT 1 FROM physical_attempts AS active
                           WHERE active.logical_request_id = attempt.logical_request_id
                             AND active.state IN ('reserved', 'started')
                       )
+                    GROUP BY attempt.logical_request_id
                     """
                 ).fetchall()
-                for (logical_request_id,) in interrupted_between_attempts:
+                for logical_request_id, has_unknown in interrupted_between_attempts:
                     connection.execute(
                         "UPDATE logical_requests SET state = 'failed' WHERE logical_request_id = ?",
                         (logical_request_id,),
@@ -1514,9 +1503,9 @@ class ProductionRequestRepository:
                     connection.execute(
                         """
                         INSERT INTO logical_results (logical_request_id, outcome, completed_at, error_code)
-                        VALUES (?, 'failed', ?, 'owner_interrupted_between_attempts')
+                        VALUES (?, ?, ?, 'owner_interrupted_between_attempts')
                         """,
-                        (logical_request_id, _timestamp(now)),
+                        (logical_request_id, "unknown" if has_unknown else "failed", _timestamp(now)),
                     )
                 connection.execute(
                     """
@@ -1532,6 +1521,7 @@ class ProductionRequestRepository:
                     """,
                     (generation, previous_generation),
                 )
+                _reconcile_terminal_flights(connection, now)
                 lease_updated = connection.execute(
                     """
                     UPDATE runtime_lease
@@ -1629,6 +1619,151 @@ class ProductionRequestRepository:
             raise
         except (sqlite3.Error, OSError) as error:
             raise RuntimeStorageError("runtime_fence_validation_failed") from error
+
+
+def _result_state(result: ProductionLogicalResult) -> str:
+    return "failed" if result.outcome is LogicalResultOutcome.UNKNOWN else result.outcome.value
+
+
+def _read_logical_result(connection: sqlite3.Connection, logical_request_id: str) -> ProductionLogicalResult | None:
+    row = connection.execute(
+        "SELECT outcome, completed_at, error_code FROM logical_results WHERE logical_request_id = ?",
+        (logical_request_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return ProductionLogicalResult(
+        logical_request_id=logical_request_id,
+        outcome=LogicalResultOutcome(str(row[0])),
+        completed_at=str(row[1]),
+        error_code=None if row[2] is None else str(row[2]),
+    )
+
+
+def _validate_attempt_outcome(connection: sqlite3.Connection, result: ProductionLogicalResult) -> None:
+    states = tuple(
+        str(row[0])
+        for row in connection.execute(
+            "SELECT state FROM physical_attempts WHERE logical_request_id = ? ORDER BY sequence_number",
+            (result.logical_request_id,),
+        )
+    )
+    if any(state in {"reserved", "started"} for state in states):
+        raise RuntimeStorageError("logical_request_has_active_attempt")
+    if result.outcome is LogicalResultOutcome.SUCCEEDED and (
+        not states or states[-1] != "succeeded" or "unknown" in states
+    ):
+        raise RuntimeStorageError("logical_success_attempts_invalid")
+    if result.outcome is LogicalResultOutcome.UNKNOWN and "unknown" not in states:
+        raise RuntimeStorageError("logical_unknown_attempt_missing")
+
+
+def _validate_finalization(connection: sqlite3.Connection, result: ProductionLogicalResult) -> None:
+    request = connection.execute(
+        "SELECT state FROM logical_requests WHERE logical_request_id = ?", (result.logical_request_id,)
+    ).fetchone()
+    if request != ("queued",):
+        raise RuntimeStorageError("logical_request_not_active")
+    consumer = connection.execute(
+        "SELECT role, state FROM single_flight_consumers WHERE logical_request_id = ?",
+        (result.logical_request_id,),
+    ).fetchone()
+    if consumer is not None and consumer != ("leader", "active"):
+        raise RuntimeStorageError("single_flight_leader_required")
+    _validate_attempt_outcome(connection, result)
+
+
+def _persist_logical_result(connection: sqlite3.Connection, result: ProductionLogicalResult) -> None:
+    updated = connection.execute(
+        "UPDATE logical_requests SET state = ? WHERE logical_request_id = ? AND state = 'queued'",
+        (_result_state(result), result.logical_request_id),
+    )
+    if updated.rowcount != 1:
+        raise RuntimeStorageError("logical_request_not_active")
+    connection.execute(
+        "INSERT INTO logical_results (logical_request_id, outcome, completed_at, error_code) VALUES (?, ?, ?, ?)",
+        (result.logical_request_id, result.outcome.value, result.completed_at, result.error_code),
+    )
+
+
+def _finish_single_flight(connection: sqlite3.Connection, result: ProductionLogicalResult, now: datetime) -> None:
+    """Deliver one durable leader result inside the caller's fenced transaction."""
+    leader_id = result.logical_request_id
+    consumer = connection.execute(
+        "SELECT request_fingerprint, role, state FROM single_flight_consumers WHERE logical_request_id = ?",
+        (leader_id,),
+    ).fetchone()
+    if consumer is None:
+        return
+    fingerprint = str(consumer[0])
+    flight = connection.execute(
+        "SELECT leader_logical_request_id, state FROM single_flights WHERE request_fingerprint = ?",
+        (fingerprint,),
+    ).fetchone()
+    if consumer[1:] != ("leader", "active") or flight != (leader_id, "active"):
+        raise RuntimeStorageError("single_flight_state_inconsistent")
+    consumers = connection.execute(
+        """
+        SELECT consumer.logical_request_id, consumer.role, request.request_fingerprint
+        FROM single_flight_consumers AS consumer
+        JOIN logical_requests AS request USING (logical_request_id)
+        WHERE consumer.request_fingerprint = ? AND consumer.state = 'active'
+        ORDER BY consumer.logical_request_id
+        """,
+        (fingerprint,),
+    ).fetchall()
+    for consumer_id, role, request_fingerprint in consumers:
+        audit = connection.execute(
+            """SELECT 1 FROM admission_events WHERE logical_request_id = ?
+               AND event_type IN ('single_flight_leader', 'single_flight_follower', 'leader_promoted')""",
+            (consumer_id,),
+        ).fetchone()
+        if request_fingerprint != fingerprint or audit is None or (role == "leader") != (consumer_id == leader_id):
+            raise RuntimeStorageError("single_flight_audit_gap")
+        if consumer_id != leader_id:
+            if (
+                connection.execute(
+                    "SELECT 1 FROM physical_attempts WHERE logical_request_id = ?", (consumer_id,)
+                ).fetchone()
+                is not None
+            ):
+                raise RuntimeStorageError("single_flight_follower_has_attempt")
+            _persist_logical_result(connection, result.model_copy(update={"logical_request_id": str(consumer_id)}))
+        connection.execute(
+            "UPDATE single_flight_consumers SET state = 'completed', result_owner_id = ? WHERE logical_request_id = ?",
+            (leader_id, consumer_id),
+        )
+        _append_admission_event(connection, str(consumer_id), "single_flight_completed", now, leader_id)
+    connection.execute("UPDATE single_flights SET state = 'terminal' WHERE request_fingerprint = ?", (fingerprint,))
+    connection.execute(
+        "UPDATE queue_entries SET state = 'cancelled' WHERE logical_request_id = ? AND state = 'queued'", (leader_id,)
+    )
+
+
+def _reconcile_terminal_flights(connection: sqlite3.Connection, now: datetime, fingerprint: str | None = None) -> None:
+    """Repair legacy terminal leaders and propagate recovery results without resending."""
+    flights = connection.execute(
+        """SELECT flight.leader_logical_request_id, request.state, consumer.role, consumer.state
+           FROM single_flights AS flight
+           LEFT JOIN logical_requests AS request ON request.logical_request_id = flight.leader_logical_request_id
+           LEFT JOIN single_flight_consumers AS consumer
+             ON consumer.logical_request_id = flight.leader_logical_request_id
+           WHERE flight.state = 'active' AND (? IS NULL OR flight.request_fingerprint = ?)""",
+        (fingerprint, fingerprint),
+    ).fetchall()
+    for leader_id, state, role, consumer_state in flights:
+        if role != "leader" or consumer_state != "active" or state is None:
+            raise RuntimeStorageError("single_flight_state_inconsistent")
+        try:
+            result = _read_logical_result(connection, str(leader_id))
+        except ValueError as error:
+            raise RuntimeStorageError("single_flight_audit_gap") from error
+        if state == "queued" and result is None:
+            continue
+        if result is None or state != _result_state(result):
+            raise RuntimeStorageError("single_flight_audit_gap")
+        _validate_attempt_outcome(connection, result)
+        _finish_single_flight(connection, result, now)
 
 
 def _insert_logical_request(connection: sqlite3.Connection, request: ProductionLogicalRequest) -> None:
@@ -1887,9 +2022,7 @@ def _validate_recovery_state(connection: sqlite3.Connection, previous_generation
             attempt.state IN ('succeeded', 'failed', 'unknown')
             AND request.state != 'queued' AND result.logical_request_id IS NULL
         ) OR (
-            attempt.state = 'unknown' AND request.state = 'queued'
-        ) OR (
-            attempt.state IN ('succeeded', 'failed') AND request.state = 'queued'
+            attempt.state IN ('succeeded', 'failed', 'unknown') AND request.state = 'queued'
             AND NOT EXISTS (
                 SELECT 1 FROM gate_reservations AS reservation
                 WHERE reservation.physical_attempt_id = attempt.physical_attempt_id
@@ -1940,6 +2073,9 @@ def initialize_runtime_storage(runtime_root: Path) -> ProductionRequestRepositor
                         current_version = 6
                     if current_version == 6:
                         _migrate_v6_to_v7(connection)
+                        current_version = 7
+                    if current_version == 7:
+                        _migrate_v7_to_v8(connection)
                 _verify_schema(connection)
         finally:
             connection.close()
@@ -1968,7 +2104,7 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             schema_owner TEXT NOT NULL,
             schema_version INTEGER NOT NULL CHECK (schema_version >= 1)
         );
-        INSERT INTO schema_metadata VALUES (1, 'production-request-coordinator', 7);
+        INSERT INTO schema_metadata VALUES (1, 'production-request-coordinator', 8);
 
         CREATE TABLE logical_requests (
             logical_request_id TEXT PRIMARY KEY,
@@ -2084,10 +2220,13 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             logical_request_id TEXT PRIMARY KEY REFERENCES logical_requests(logical_request_id),
             request_fingerprint TEXT NOT NULL REFERENCES single_flights(request_fingerprint),
             role TEXT NOT NULL CHECK (role IN ('leader', 'follower')),
-            state TEXT NOT NULL CHECK (state IN ('active', 'cancelled')),
+            state TEXT NOT NULL CHECK (state IN ('active', 'cancelled', 'completed')),
             cache_decision TEXT NOT NULL CHECK (cache_decision IN ('disabled', 'not_applicable')),
             rate_domain TEXT NOT NULL,
-            joined_at TEXT NOT NULL
+            joined_at TEXT NOT NULL,
+            result_owner_id TEXT REFERENCES logical_requests(logical_request_id),
+            CHECK ((state = 'completed' AND result_owner_id IS NOT NULL)
+                OR (state != 'completed' AND result_owner_id IS NULL))
         );
         CREATE TABLE admission_events (
             event_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2117,7 +2256,7 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             committed_at TEXT
         );
 
-        PRAGMA user_version = 7;
+        PRAGMA user_version = 8;
         COMMIT;
         """
     )
@@ -2315,6 +2454,41 @@ def _migrate_v6_to_v7(connection: sqlite3.Connection) -> None:
         UPDATE physical_attempts SET raw_eligible = 1 WHERE state = 'succeeded';
         UPDATE schema_metadata SET schema_version = 7 WHERE singleton = 1;
         PRAGMA user_version = 7;
+        COMMIT;
+        """
+    )
+
+
+def _migrate_v7_to_v8(connection: sqlite3.Connection) -> None:
+    """Preserve existing consumers and add immutable completed-result attribution."""
+    metadata = connection.execute(
+        "SELECT schema_owner, schema_version FROM schema_metadata WHERE singleton = 1"
+    ).fetchone()
+    if metadata != (_SCHEMA_OWNER, 7):
+        raise RuntimeStorageError("runtime_schema_metadata_mismatch")
+    connection.executescript(
+        """
+        BEGIN IMMEDIATE;
+        CREATE TABLE single_flight_consumers_v8 (
+            logical_request_id TEXT PRIMARY KEY REFERENCES logical_requests(logical_request_id),
+            request_fingerprint TEXT NOT NULL REFERENCES single_flights(request_fingerprint),
+            role TEXT NOT NULL CHECK (role IN ('leader', 'follower')),
+            state TEXT NOT NULL CHECK (state IN ('active', 'cancelled', 'completed')),
+            cache_decision TEXT NOT NULL CHECK (cache_decision IN ('disabled', 'not_applicable')),
+            rate_domain TEXT NOT NULL,
+            joined_at TEXT NOT NULL,
+            result_owner_id TEXT REFERENCES logical_requests(logical_request_id),
+            CHECK ((state = 'completed' AND result_owner_id IS NOT NULL)
+                OR (state != 'completed' AND result_owner_id IS NULL))
+        );
+        INSERT INTO single_flight_consumers_v8 (
+            logical_request_id, request_fingerprint, role, state, cache_decision, rate_domain, joined_at
+        ) SELECT logical_request_id, request_fingerprint, role, state, cache_decision, rate_domain, joined_at
+          FROM single_flight_consumers;
+        DROP TABLE single_flight_consumers;
+        ALTER TABLE single_flight_consumers_v8 RENAME TO single_flight_consumers;
+        UPDATE schema_metadata SET schema_version = 8 WHERE singleton = 1;
+        PRAGMA user_version = 8;
         COMMIT;
         """
     )

@@ -113,10 +113,10 @@ def test_initialize_runtime_storage_creates_versioned_private_database(tmp_path:
     database = root / DATABASE_FILENAME
     assert database.stat().st_mode & 0o777 == 0o600
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (8,)
         assert connection.execute("SELECT schema_owner, schema_version FROM schema_metadata").fetchone() == (
             "production-request-coordinator",
-            7,
+            8,
         )
         columns = {
             row[1]
@@ -193,7 +193,7 @@ def test_initialize_runtime_storage_migrates_phase_3a_schema(tmp_path: Path) -> 
 
     assert migrated.logical_request_state("logical-1") == "queued"
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (8,)
         columns = {row[1] for row in connection.execute("PRAGMA table_info(runtime_lease)")}
     assert "active" in columns
 
@@ -219,7 +219,7 @@ def test_initialize_runtime_storage_migrates_phase_3b_schema(tmp_path: Path) -> 
 
     assert migrated.logical_request_state("logical-1") == "queued"
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (8,)
         tables = {
             str(row[0])
             for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'queue_%'")
@@ -243,7 +243,7 @@ def test_initialize_runtime_storage_migrates_phase_4a_schema(tmp_path: Path) -> 
     initialize_runtime_storage(root)
 
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (8,)
         tables = {
             str(row[0])
             for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'gate_%'")
@@ -272,7 +272,7 @@ def test_initialize_runtime_storage_migrates_phase_4b_schema(tmp_path: Path) -> 
     initialize_runtime_storage(root)
 
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (8,)
         tables = {
             str(row[0])
             for row in connection.execute(
@@ -296,7 +296,7 @@ def test_initialize_runtime_storage_migrates_phase_5_schema(tmp_path: Path) -> N
     initialize_runtime_storage(root)
 
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (8,)
         table = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'raw_publications'"
         ).fetchone()
@@ -327,7 +327,7 @@ def test_initialize_runtime_storage_migrates_phase_6_raw_eligibility(tmp_path: P
     initialize_runtime_storage(root)
 
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone() == (7,)
+        assert connection.execute("PRAGMA user_version").fetchone() == (8,)
         assert connection.execute(
             "SELECT raw_eligible FROM physical_attempts WHERE physical_attempt_id = 'attempt-1'"
         ).fetchone() == (0,)
