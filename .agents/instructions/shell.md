@@ -89,12 +89,8 @@ cd "${script_dir}/../.."
 
 When scripts support both Docker and local execution:
 
-- Treat the repository-defined Docker workflow as the standard development
-  environment.
-- Do not describe Docker-backed commands as available until the referenced
-  Docker files and wrappers exist.
-- Use local commands only for explicit bootstrap or fallback operations that
-  are expected to work on the host.
+- Prefer the repository-defined Docker workflow when Docker is available.
+- Fall back to local commands when Docker is unavailable only if the local command is expected to work.
 - Preserve arguments when forwarding commands.
 - Avoid recursive Docker invocation if the script may run inside a container.
 
@@ -103,14 +99,13 @@ When scripts support both Docker and local execution:
 - Run ShellCheck when available.
 - Follow existing formatting style in nearby scripts.
 - Do not introduce formatting-only changes unrelated to the task.
-
-Common validation command:
+- Follow the proportional validation policy in `AGENTS.md`.
+- Start with syntax checks, ShellCheck, or repository-defined Shell checks targeted to the changed scripts.
+- Use the repository-wide command for changes that affect shared workflows, multiple scripts, or cross-language tooling:
 
 ```bash
 ./scripts/pre-commit/checks.sh
 ```
-
-If a Shell-specific validation script exists, use it.
 
 ## 10. Checklist
 
@@ -123,5 +118,5 @@ Before finishing shell script changes, confirm:
 - [ ] Script-relative paths are handled correctly.
 - [ ] Error handling is explicit.
 - [ ] Secrets are not printed.
-- [ ] ShellCheck or repository-defined checks were run when possible.
+- [ ] Shell-specific checks cover the changed behavior and are proportional to its scope and risk.
 - [ ] Any skipped checks are explained.

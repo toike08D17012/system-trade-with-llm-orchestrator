@@ -32,6 +32,10 @@ Exceptions:
 General rules:
 
 - Write readable and Pythonic code.
+- Prefer direct functions and control flow over one-use classes, factories, wrappers, registries, or strategy layers.
+- Reuse existing modules and helpers before introducing a new abstraction.
+- Introduce an abstraction only for a distinct responsibility or concrete repeated behavior, not speculative reuse.
+- Keep cohesive behavior together. Extract a module when it has an independently understandable responsibility and the extraction improves reviewability; do not use a numeric size threshold.
 - Use type annotations where practical.
 - Use built-in generic types such as `list`, `tuple`, and `dict` when supported by the target Python version defined in `pyproject.toml`.
 - Write docstrings in Google style.
@@ -54,6 +58,9 @@ General rules:
 
 - Use explicit exceptions with clear error messages.
 - Do not silently swallow exceptions unless there is a clear reason.
+- Validate untrusted or external input at the boundary where it enters trusted code.
+- Preserve required invariants and meaningful failure modes without duplicating equivalent validation in each internal layer.
+- Do not add fallback branches for failures that the task and repository contracts do not support.
 - Preserve existing exception behavior unless the task requires changing it.
 - Avoid leaking secrets or sensitive values in exception messages.
 
@@ -79,7 +86,8 @@ Do not change Ruff, Mypy, Pytest, or CI settings just to make failures disappear
 ## 8. Testing Policy
 
 - Add or update tests when changing behavior.
-- Prefer focused unit tests for small logic changes.
+- Test the changed behavior at the narrowest level that exercises the relevant contract.
+- Prefer focused unit tests for small logic changes and broader tests only for shared or cross-module behavior.
 - Follow the existing test structure and fixture style.
 - Keep test names descriptive.
 - Do not delete, skip, or weaken tests just to make the test suite pass.
@@ -88,24 +96,18 @@ Do not change Ruff, Mypy, Pytest, or CI settings just to make failures disappear
 
 ## 9. Validation
 
-After Python changes, run the relevant checks when possible.
-
-Default command:
-
-```bash
-./scripts/pre-commit/checks.sh
-```
-
-When narrower checks are appropriate, use repository-defined scripts or tool commands.
+Follow the proportional validation policy in `AGENTS.md`. Start with repository wrappers targeted to the changed files, package, or tests.
 
 Examples:
 
 ```bash
-./scripts/pre-commit/ruff-check.sh --fix
-./scripts/pre-commit/ruff-format.sh
-./scripts/pre-commit/mypy.sh .
-./scripts/pre-commit/pytest.sh
+./scripts/pre-commit/ruff-check.sh --fix src/package/module.py
+./scripts/pre-commit/ruff-format.sh src/package/module.py
+./scripts/pre-commit/mypy.sh src/package
+./scripts/pre-commit/pytest.sh tests/test_module.py -q
 ```
+
+Use `./scripts/pre-commit/checks.sh` when the change is broad or high-risk enough to require repository-wide validation.
 
 If checks cannot be run, explain why and state which commands should be run by the developer.
 
@@ -119,5 +121,5 @@ Before finishing Python changes, confirm:
 - [ ] Type annotations were added or updated where practical.
 - [ ] Comments and docstrings are written in English.
 - [ ] Tests were added or updated for behavior changes.
-- [ ] Ruff, Mypy, and Pytest were run when possible.
+- [ ] Validation covers the changed behavior and is proportional to its scope and risk.
 - [ ] Any skipped checks are explained.

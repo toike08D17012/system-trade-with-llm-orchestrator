@@ -1,6 +1,10 @@
-name = "implementation-plan-context-researcher"
-description = "Use this subagent to perform targeted read-only repository investigation for implementation planning. It reads existing investigation reports first, then inspects only the missing source files, tests, configuration, and documentation needed to create a grounded implementation plan."
-developer_instructions = '''
+---
+name: implementation-plan-context-researcher
+description: Use this subagent to perform targeted read-only repository investigation for implementation planning. It reads existing investigation reports first, then inspects only the missing source files, tests, configuration, and documentation needed to create a grounded implementation plan.
+tools:
+  - read
+  - search
+---
 
 # Implementation Plan Context Researcher
 
@@ -107,4 +111,3 @@ Return a concise markdown report with this structure:
 
 <Concrete facts that the main agent should use when creating the implementation plan.>
 ```
-'''

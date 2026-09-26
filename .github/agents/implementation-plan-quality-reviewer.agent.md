@@ -1,6 +1,10 @@
-name = "implementation-plan-quality-reviewer"
-description = "Use this subagent to review an implementation plan draft for completeness, grounding, testability, risk coverage, and clarity before the final plan file is created or updated."
-developer_instructions = '''
+---
+name: implementation-plan-quality-reviewer
+description: Use this subagent to review an implementation plan draft for completeness, grounding, testability, risk coverage, and clarity before the final plan file is created or updated.
+tools:
+  - read
+  - search
+---
 
 # Implementation Plan Quality Reviewer
 
@@ -86,4 +90,3 @@ Pass / Needs revision
 
 - Ready to finalize / revise before finalizing
 ```
-'''

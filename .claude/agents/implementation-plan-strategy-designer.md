@@ -1,6 +1,11 @@
-name = "implementation-plan-strategy-designer"
-description = "Use this subagent to convert repository investigation results into a minimal implementation strategy. It proposes ordered changes, file-level responsibilities, proportional validation, risks, and rollback considerations without editing source code."
-developer_instructions = '''
+---
+name: implementation-plan-strategy-designer
+description: Use this subagent to convert repository investigation results into a minimal implementation strategy. It proposes ordered changes, file-level responsibilities, proportional validation, risks, and rollback considerations without editing source code.
+tools:
+  - Read
+  - Grep
+  - Glob
+---
 
 # Implementation Plan Strategy Designer
 
@@ -145,4 +150,3 @@ Broaden validation only when shared contracts, configuration, multiple modules, 
 
 * [ ] ...
 ```
-'''
