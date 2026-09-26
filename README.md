@@ -3,8 +3,9 @@
 Codex、Claude Code、Antigravity CLI を組み合わせ、個別株の調査・比較・反証・レビューを支援するシステムの設計・実装リポジトリです。多数の銘柄から、中長期的な値上がり候補を人間が確認できる件数まで絞り込み、根拠と不確実性を追跡できるレポートとして出力することを目指します。
 
 > [!IMPORTANT]
-> 現在は設計と契約基盤の初期実装段階です。詳細解析MVPの承認済み要件と契約検証基盤はありますが、
-> 実装済みのCLIはoffline設定検証だけです。個別株の調査、データ取得、Agent実行はまだ実装されていません。
+> 現在は詳細解析MVPのデータ・証拠準備を実装している段階です。契約検証基盤、offline設定検証CLIに加え、
+> JPX銘柄確認、価格取得・正規化・保存、オフライン再検証、固定期間の価格証拠受入を内部API・CLIで実装済みです。
+> 財務・為替・開示等を含む証拠集合の確定と、Agent分析・レビュー・最終レポートを接続するruntimeは未完成です。
 
 ## 目的
 
@@ -76,13 +77,18 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | --- | --- |
 | 構想・アーキテクチャ | 設計資料あり |
 | 詳細解析MVP要件 | P0要件6文書とP1契約基盤文書を承認済み |
-| Pythonパッケージ・アプリケーション | 契約基盤、task入力準備、credential preflight、原子的なstaging・publish、fake transport用request coordinatorを実装済み。個別株調査アプリケーションは未実装 |
-| 実行用CLI | `config validate`によるoffline設定検証を実装済み。調査・運用commandは未実装 |
-| データソース・評価指標・閾値 | JPX銘柄検証、標準`yfinance`取得、価格証拠の正規化・内部保存を実装済み。鮮度・取引日網羅性を含む実データの受入確認と、財務・為替を含む証拠一式は未完了 |
+| Pythonパッケージ・アプリケーション | 契約基盤、task入力準備、credential preflight、原子的保存、共有Coordinatorの永続制御・raw公開等を実装済み。Coordinatorの終了連携と詳細解析runtimeの統合は未完了 |
+| 実行用CLI | 公開CLIは`config validate`。市場証拠準備・オフライン再検証・価格受入は内部module CLIで実装済み。詳細解析の調査・運用commandは未実装 |
+| データソース・評価指標・閾値 | JPX銘柄検証、標準`yfinance`取得、価格正規化・保存・再検証・固定期間の受入を実装済み。通常実行の鮮度確認と、財務・為替・開示等を含む証拠集合の確定は未完了 |
 | Pythonバージョン・依存関係 | Python 3.14、runtime・開発依存関係、品質ツール、ロックファイルを定義済み |
-| テスト・lint・型チェック | 契約、設定、CLI、logging、task準備、credential、request coordinatorの追跡対象テストあり |
+| テスト・lint・型チェック | 契約、設定、CLI、logging、task準備、credential、request coordinator、市場証拠準備・再検証・価格受入のテストあり |
 | CI・Docker・devcontainer | Docker標準開発環境、GitHub Actions CI、VS Code devcontainerあり |
 | ライセンス | MIT License |
+
+2026-09-26の[実確認](docs/decision-requests/2026-09-26-jpx-market-evidence-acceptance-outcome.md)では、
+`7203`の2023-09-26〜2026-09-25の731行がPA-01〜PA-09を満たし、
+`accepted_with_limitations`となりました。現在の上場適格性等の制約を保持し、
+詳細解析全体の開始可否は`analysis_ready=false`です。
 
 ## セットアップ
 
@@ -253,7 +259,8 @@ JPX入力は既存の承認済みCoordinator取得経路で保存した一覧と
 JPX一覧の5桁コードによる解析失敗を修正し、JPX検証済み`7203`で3年分731行の
 取得・正規化・保存とhash照合に成功しました。続くオフライン再検証で予定取引日731日と
 保存済み日付の一致、調査時点の最新掲載月との一致を確認しました。
-本番source承認と現在の上場適格性の確認が残り、分析向けの最終受入は未完了です。
+承認済み方針では、出典付きローカルカレンダーとsnapshot時点の適格性を採用します。
+現在の上場適格性の未確認を含めた制約は、新しい価格証拠受入記録で明示します。
 
 ### 保存済み証拠のオフライン再検証
 
@@ -294,6 +301,43 @@ symlink、入力内の出力先、既存出力先、hash不一致、カレンダ
 独立検証していません。掲載月の一致は手動観察日に限った結果で、同月の差替え版や
 再検証日現在の上場状況を保証しません。新記録も`revalidated_with_gaps`、
 `analysis_ready=false`を維持し、本番source承認や証拠集合の凍結を代替しません。
+
+### 承認済み方針による価格証拠の受入
+
+`preparation.price_acceptance_cli`は元CSVと正規化値をDecimal精度で照合し、
+[承認済み受入条件](docs/decision-requests/2026-09-26-price-evidence-acceptance-draft.md)の
+PA-01〜PA-09を再評価します。価格を再取得せず、入力一式と条件別の結果を別directoryへ保存します。
+
+```bash
+./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.price_acceptance_cli \
+  --preparation runs/market-evidence-7203-20260926 \
+  --calendar runs/calendar-research-20260926/calendar.candidate.json \
+  --calendar-metadata runs/market-revalidation-inputs-20260926/calendar-metadata.json \
+  --research-note runs/market-revalidation-inputs-20260926/research-note.md \
+  --output runs/price-acceptance-7203-002
+```
+
+カレンダーとメタデータ・調査メモは前節と同じ形式です。元メタデータの`research_only`は
+取得当時の区分として保持し、今回承認されたローカル照合用途で使用します。
+`--approval-root`の既定値は`config/source-approvals`です。JPX v1とyfinance v3の承認記録を
+同梱し、状態、対象source・版、内部利用の範囲、発効日と再確認期限を検証します。
+同梱した承認は判定時点の記録であり、後日の利用許可を保証するものではありません。
+
+既知の重大な矛盾を伝える場合は、`--known-conflict`と`--conflict-evidence`を対で指定します。
+前者は`KnownPriceConflict`形式で、`evidence_id`、`source_reference`、`checked_on`、
+`security_code`、`category`、後者の`evidence_sha256`を持ちます。
+区分は`delisted`、`outside_target_market`、`identity`、`currency`、`dates`、`values`、
+`provenance`です。入力がない場合も、現在の上場適格性を確認済みとはしません。
+
+終了コード0は価格証拠の受入、2は`pending`、1は技術エラーです。
+標準出力と新しい`index.json`に状態、条件別結果、制約、用途制限を記録します。
+現在のnative取得表には原HTTP未保存等の制約があるため、正常時は
+`accepted_with_limitations`です。JPYやタイムゾーンが不明な場合は受け入れません。
+配当ごとの原通貨の未確認は制約として保持し、それを必要とする計算を保留します。
+
+判定は明示した固定期間に限ります。新しい解析への利用時は必要な終端日を再確認します。
+旧索引の未確認issueは書き換えず、価格証拠を受け入れても`analysis_ready=false`を維持します。
+`validate_price_acceptance`で、同梱した入力から条件別結果と索引全体を再現・検証できます。
 
 ## 開発への参加
 

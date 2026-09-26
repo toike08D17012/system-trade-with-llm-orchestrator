@@ -109,6 +109,22 @@ def _number(value: object, on: str, field: str, issues: list[PriceQualityIssue])
     return number
 
 
+def normalize_price_row(on: str, values: tuple[object, ...], issues: list[PriceQualityIssue]) -> DailyPrice:
+    """Validate one row without rounding; share acquisition and acceptance rules."""
+    numbers = {field: _number(value, on, field, issues) for field, value in zip(FIELDS, values, strict=True)}
+    low, high = numbers["low"], numbers["high"]
+    if (
+        low is not None
+        and high is not None
+        and (
+            low > high
+            or any(value is not None and not low <= value <= high for value in (numbers["open"], numbers["close"]))
+        )
+    ):
+        issues.append(PriceQualityIssue(code="ohlc_conflict", on=on))
+    return DailyPrice(on=on, **numbers)
+
+
 def normalize_history(
     frame: pd.DataFrame,
     *,
@@ -154,18 +170,7 @@ def normalize_history(
         issues.append(PriceQualityIssue(code="empty_prices"))
     rows = []
     for day, values in zip(days, frame.loc[:, list(COLUMNS)].itertuples(index=False, name=None), strict=True):
-        numbers = {field: _number(value, day, field, issues) for field, value in zip(FIELDS, values, strict=True)}
-        low, high = numbers["low"], numbers["high"]
-        if (
-            low is not None
-            and high is not None
-            and (
-                low > high
-                or any(value is not None and not low <= value <= high for value in (numbers["open"], numbers["close"]))
-            )
-        ):
-            issues.append(PriceQualityIssue(code="ohlc_conflict", on=day))
-        rows.append(DailyPrice(on=day, **numbers))
+        rows.append(normalize_price_row(day, values, issues))
     coverage: Literal["verified", "incomplete", "unconfirmed"] = "unconfirmed"
     period = ApplicablePeriodV1(start_date=start.isoformat(), end_date=(end - timedelta(days=1)).isoformat())
     if trading_dates is None:

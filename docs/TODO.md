@@ -21,11 +21,15 @@ Python、設定、スクリプト、CI、依存関係、公開インターフェ
 
 - システムは設計段階であり、設計の責務は `docs/design/` の5文書に分割されている。
 - Dockerを標準開発環境とし、ロック済み依存関係、Git hook、既存の品質確認を実行できる。
-- `src/stock_research_llm_orchestrator/` には契約基盤とoffline設定検証CLIがあるが、
-  個別株の詳細解析runtimeは未実装である。
+- `src/stock_research_llm_orchestrator/` には契約基盤とoffline設定検証CLIに加え、
+  市場証拠の準備・再検証・固定期間の価格受入を行う内部API・CLIがある。
+  財務・為替・開示等を含む証拠集合とAgent分析を接続する詳細解析runtimeは未完成である。
 - `docs/system-requirements/` のP0要件6文書と承認済みP1契約基盤文書は`Approved`である。
   各文書の現在版は同ディレクトリのREADMEを正本とする。P1契約基盤とP2のCLI・設定検証、
-  追跡対象テスト、CIは実装済みだが、`runs/` は未作成である。
+  テスト、CIは実装済みである。ローカルの`runs/`には診断・市場証拠・再検証・価格受入の
+  成果物があるが、完全な証拠集合の凍結と実行manifestの確定は未実装である。
+- 固定期間の価格受入は実データ731行で`accepted_with_limitations`を確認済みである。
+  `analysis_ready=false`を維持し、通常実行の必要終端日・証拠集合版・他の必須証拠との接続を残す。
 - `agent-sources/detailed-analysis/v1/` には共通指示、5役割の指示、指示合成定義があり、
   対応する入出力契約も実装済みである。指示を適用してAgentを実行するruntimeは未実装である。
 - `runs/<task-id>/` を実行履歴の正本、`reports/` を任意の参照用コピーとし、いずれも
@@ -214,13 +218,19 @@ P0承認の阻害課題へ混在させない。
       内部索引・参照hash検証、一括保存を接続する。固定fixtureで3年分と失敗・欠損を検証する。
     - [x] 公式一覧の5桁コードを適格性未確認のまま保持してパーサーの拒否を解消し、
       JPX検証済み`7203`で3年分731行の実取得・正規化・証拠保存とhash検証を行う。
-    - [ ] 実データのJPX鮮度・出典付き取引日情報を確認して受入を完了する。
+    - [x] 承認済みの確認範囲で、実データの固定期間の価格証拠受入を完了する。
       準備結果は`prepared_with_gaps`として不足を保持し、完全な証拠集合やmanifestの確定と区別する。
       [2026-09-26の実確認](decision-requests/2026-09-26-jpx-market-evidence-acceptance-outcome.md)で
       保存まで成功した。続く[公式情報調査と方針案](decision-requests/2026-09-26-jpx-freshness-and-calendar-policy.md)で、
       最新掲載月とsnapshotの一致、予定取引日731日と保存済み日付の完全一致を確認した。
       オフライン再検証結果は別成果物へ保存済みである。
-      source承認・判定方針の要件反映と、現在の上場適格性の確認は未完了である。
+      [承認済み受入方針](decision-requests/2026-09-26-price-evidence-acceptance-draft.md)を要件へ反映済み。
+      出典付きローカルカレンダーとsnapshot時点の適格性を採用し、現在適格性の未確認は制約として残せる。
+      新しい受入判定でPA-01〜PA-09が成立し、731行を`accepted_with_limitations`として別保存した。
+    - [x] 価格証拠の必須条件・許容制約・受入状態を承認し、関連要件へ反映する。
+    - [x] 承認済み方針による`accepted`・`accepted_with_limitations`・`pending`の判定を実装し、
+      条件別結果を別成果物へ保存する。既存成果物を変更せず、詳細解析全体の開始可否と区別する。
+    - [ ] 固定期間の受入結果を通常実行へ接続し、必要な終端日・証拠集合版・他の必須証拠を確認する。
     - [x] 保存済み証拠を変更せず、日付照合と手動調査による掲載月比較を行う内部API・CLIを追加する。
       入力bytes・hash・判定版を含む再検証記録を保存し、731日の一致をネットワーク禁止下で確認する。
       元のissueと`analysis_ready=false`を保持し、本番source承認と区別する。
