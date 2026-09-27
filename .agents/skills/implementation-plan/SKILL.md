@@ -13,7 +13,7 @@ The plan should answer: **what changes, where, in what order, and how to verify 
 
 - Planning is read-only except for creating/updating the plan Markdown file.
 - Do not edit source code, tests, configurations, or other documentation in this skill.
-- Do not begin implementation after producing a plan. Hand it to the user for review; proceed only after explicit approval in the implementation workflow.
+- Do not begin implementation after producing a plan if there are any blocking issues. Hand it to the user for review; proceed only after solving the blocking issues.
 - Write the final plan in Japanese unless the user requests another language. Preserve identifiers, paths, and commands as written. Use English for delegated agent communication when applicable.
 - Write plans under `docs/agent-reports/plans/`, named `YYYY-MM-DD-<short-topic>-implementation-plan.md` (local date, lowercase kebab-case). Do not overwrite an existing plan unless asked to update it.
 - If the user expressly requests only an inline plan, honor that request rather than creating a file.
