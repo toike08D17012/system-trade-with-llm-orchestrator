@@ -52,7 +52,7 @@ Do not edit instruction files unless explicitly requested.
 
 Use the `implementation-plan` skill for non-trivial repository changes that may affect source code, tests, configuration, scripts, CI, dependencies, packaging, public APIs, runtime behavior, or validation behavior.
 
-After creating an implementation plan, stop and wait for user approval before implementation.
+After creating an implementation plan and there are any blocking issues, stop and wait for user approval before implementation.
 
 Markdown-only changes do not require a separate implementation plan.
 
