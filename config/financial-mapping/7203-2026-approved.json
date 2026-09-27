@@ -1,0 +1,808 @@
+{
+  "version": 1,
+  "status": "approved",
+  "approval_reference": "docs/decision-requests/2026-09-27-financial-mapping-adoption-outcome.md",
+  "security_code": "7203",
+  "edinet_code": "E02144",
+  "document_id": "S100Y8NY",
+  "archive_sha256": "6b9e1d9cd955f630bc0cf62f68f4d790b09798568004151bbe988224ae450034",
+  "proposal_sha256": "8048c166f99ac98917a04b4820b7e38193229643fcf24f4a02141f8888101dd9",
+  "start_date": "2025-04-01",
+  "end_date": "2026-03-31",
+  "taxonomy": {
+    "schema_member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd",
+    "member_hashes": {
+      "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd": "09c767607130cf932a429939b47e876e19ee2f29f2be9d4500047c24b086c10a",
+      "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml": "31bf4a64e7f372fd87de4efcc71866b18601cec00d38bc3889e32ad98b159092",
+      "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_pre.xml": "bbcf8498b2090d683a9e37d31ed4449b3e3fde990280cffb1120fc43da36484a",
+      "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_cal.xml": "80682849a144a24cd01a6b1740836595fcb7ff62a3bbabe87847b6a1ea2e555b"
+    },
+    "declarations": [
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfProfitOrLossIFRSHeading",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "ConsolidatedStatementOfProfitOrLossIFRSHeading"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSTable",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "StatementOfProfitOrLossIFRSTable"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor",
+          "local_name": "ConsolidatedOrNonConsolidatedAxis"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor",
+          "local_name": "ConsolidatedMember"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSLineItems",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "StatementOfProfitOrLossIFRSLineItems"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_SalesRevenuesIFRSAbstract",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/jpcrp030000/asr/001/E02144-000/2026-03-31/01/2026-06-10",
+          "local_name": "SalesRevenuesIFRSAbstract"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_TotalNetRevenuesIFRS",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/jpcrp030000/asr/001/E02144-000/2026-03-31/01/2026-06-10",
+          "local_name": "TotalNetRevenuesIFRS"
+        },
+        "period_type": "duration",
+        "monetary": true
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_OperatingProfitLossIFRS",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "OperatingProfitLossIFRS"
+        },
+        "period_type": "duration",
+        "monetary": true
+      },
+      {
+        "href": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_SalesOfProductsIFRS",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/jpcrp030000/asr/001/E02144-000/2026-03-31/01/2026-06-10",
+          "local_name": "SalesOfProductsIFRS"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_FinancingOperationsIFRS",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/jpcrp030000/asr/001/E02144-000/2026-03-31/01/2026-06-10",
+          "local_name": "FinancingOperationsIFRS"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_TotalCostsAndExpensesIFRS",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/jpcrp030000/asr/001/E02144-000/2026-03-31/01/2026-06-10",
+          "local_name": "TotalCostsAndExpensesIFRS"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ProfitLossAttributableToIFRSAbstract",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "ProfitLossAttributableToIFRSAbstract"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ProfitLossAttributableToOwnersOfParentIFRS",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "ProfitLossAttributableToOwnersOfParentIFRS"
+        },
+        "period_type": "duration",
+        "monetary": true
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfFinancialPositionIFRSHeading",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "ConsolidatedStatementOfFinancialPositionIFRSHeading"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfFinancialPositionIFRSTable",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "StatementOfFinancialPositionIFRSTable"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfFinancialPositionIFRSLineItems",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "StatementOfFinancialPositionIFRSLineItems"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_AssetsIFRSAbstract",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "AssetsIFRSAbstract"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_AssetsIFRS",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "AssetsIFRS"
+        },
+        "period_type": "instant",
+        "monetary": true
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_EquityIFRSAbstract",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "EquityIFRSAbstract"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_EquityIFRS",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "EquityIFRS"
+        },
+        "period_type": "instant",
+        "monetary": true
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfCashFlowsIFRSHeading",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "ConsolidatedStatementOfCashFlowsIFRSHeading"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfCashFlowsIFRSTable",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "StatementOfCashFlowsIFRSTable"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfCashFlowsIFRSLineItems",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "StatementOfCashFlowsIFRSLineItems"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_CashFlowsFromOperatingActivitiesIFRSAbstract",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "CashFlowsFromOperatingActivitiesIFRSAbstract"
+        },
+        "period_type": null,
+        "monetary": false
+      },
+      {
+        "href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_NetCashProvidedByUsedInOperatingActivitiesIFRS",
+        "concept": {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "NetCashProvidedByUsedInOperatingActivitiesIFRS"
+        },
+        "period_type": "duration",
+        "monetary": true
+      }
+    ]
+  },
+  "rules": [
+    {
+      "metric": "revenue",
+      "taxonomy": {
+        "concept_href": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_TotalNetRevenuesIFRS",
+        "arcs": [
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/all",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfProfitOrLossIFRSHeading",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSTable",
+            "weight": null,
+            "closed": "true",
+            "context_element": "scenario"
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/hypercube-dimension",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSTable",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/dimension-domain",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/dimension-default",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfProfitOrLossIFRSHeading",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSLineItems",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSLineItems",
+            "target": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_SalesRevenuesIFRSAbstract",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_SalesRevenuesIFRSAbstract",
+            "target": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_TotalNetRevenuesIFRS",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_pre.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://www.xbrl.org/2003/arcrole/parent-child",
+            "source": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_SalesRevenuesIFRSAbstract",
+            "target": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_TotalNetRevenuesIFRS",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_cal.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://www.xbrl.org/2003/arcrole/summation-item",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_OperatingProfitLossIFRS",
+            "target": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_TotalNetRevenuesIFRS",
+            "weight": "1",
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_cal.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://www.xbrl.org/2003/arcrole/summation-item",
+            "source": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_TotalNetRevenuesIFRS",
+            "target": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_SalesOfProductsIFRS",
+            "weight": "1",
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_cal.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://www.xbrl.org/2003/arcrole/summation-item",
+            "source": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_TotalNetRevenuesIFRS",
+            "target": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_FinancingOperationsIFRS",
+            "weight": "1",
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_cal.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://www.xbrl.org/2003/arcrole/summation-item",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_OperatingProfitLossIFRS",
+            "target": "jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10.xsd#jpcrp030000-asr_E02144-000_TotalCostsAndExpensesIFRS",
+            "weight": "-1",
+            "closed": null,
+            "context_element": null
+          }
+        ]
+      }
+    },
+    {
+      "metric": "operating_profit",
+      "taxonomy": {
+        "concept_href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_OperatingProfitLossIFRS",
+        "arcs": [
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/all",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfProfitOrLossIFRSHeading",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSTable",
+            "weight": null,
+            "closed": "true",
+            "context_element": "scenario"
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/hypercube-dimension",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSTable",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/dimension-domain",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/dimension-default",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfProfitOrLossIFRSHeading",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSLineItems",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSLineItems",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_OperatingProfitLossIFRS",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_pre.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://www.xbrl.org/2003/arcrole/parent-child",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSLineItems",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_OperatingProfitLossIFRS",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          }
+        ]
+      }
+    },
+    {
+      "metric": "parent_profit",
+      "taxonomy": {
+        "concept_href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ProfitLossAttributableToOwnersOfParentIFRS",
+        "arcs": [
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/all",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfProfitOrLossIFRSHeading",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSTable",
+            "weight": null,
+            "closed": "true",
+            "context_element": "scenario"
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/hypercube-dimension",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSTable",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/dimension-domain",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/dimension-default",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfProfitOrLossIFRSHeading",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSLineItems",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfProfitOrLossIFRSLineItems",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ProfitLossAttributableToIFRSAbstract",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ProfitLossAttributableToIFRSAbstract",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ProfitLossAttributableToOwnersOfParentIFRS",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_pre.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfProfitOrLossIFRS",
+            "arcrole": "http://www.xbrl.org/2003/arcrole/parent-child",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ProfitLossAttributableToIFRSAbstract",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ProfitLossAttributableToOwnersOfParentIFRS",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          }
+        ]
+      }
+    },
+    {
+      "metric": "assets",
+      "taxonomy": {
+        "concept_href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_AssetsIFRS",
+        "arcs": [
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/all",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfFinancialPositionIFRSHeading",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfFinancialPositionIFRSTable",
+            "weight": null,
+            "closed": "true",
+            "context_element": "scenario"
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/hypercube-dimension",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfFinancialPositionIFRSTable",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/dimension-domain",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/dimension-default",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfFinancialPositionIFRSHeading",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfFinancialPositionIFRSLineItems",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfFinancialPositionIFRSLineItems",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_AssetsIFRSAbstract",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_AssetsIFRSAbstract",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_AssetsIFRS",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_pre.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://www.xbrl.org/2003/arcrole/parent-child",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_AssetsIFRSAbstract",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_AssetsIFRS",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          }
+        ]
+      }
+    },
+    {
+      "metric": "equity",
+      "taxonomy": {
+        "concept_href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_EquityIFRS",
+        "arcs": [
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/all",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfFinancialPositionIFRSHeading",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfFinancialPositionIFRSTable",
+            "weight": null,
+            "closed": "true",
+            "context_element": "scenario"
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/hypercube-dimension",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfFinancialPositionIFRSTable",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/dimension-domain",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/dimension-default",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfFinancialPositionIFRSHeading",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfFinancialPositionIFRSLineItems",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfFinancialPositionIFRSLineItems",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_EquityIFRSAbstract",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_EquityIFRSAbstract",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_EquityIFRS",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_pre.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfFinancialPositionIFRS",
+            "arcrole": "http://www.xbrl.org/2003/arcrole/parent-child",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_EquityIFRSAbstract",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_EquityIFRS",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          }
+        ]
+      }
+    },
+    {
+      "metric": "operating_cash_flow",
+      "taxonomy": {
+        "concept_href": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_NetCashProvidedByUsedInOperatingActivitiesIFRS",
+        "arcs": [
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfCashFlowsIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/all",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfCashFlowsIFRSHeading",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfCashFlowsIFRSTable",
+            "weight": null,
+            "closed": "true",
+            "context_element": "scenario"
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfCashFlowsIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/hypercube-dimension",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfCashFlowsIFRSTable",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfCashFlowsIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/dimension-domain",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfCashFlowsIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/dimension-default",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedOrNonConsolidatedAxis",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jppfs/2025-11-01/jppfs_cor_2025-11-01.xsd#jppfs_cor_ConsolidatedMember",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfCashFlowsIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_ConsolidatedStatementOfCashFlowsIFRSHeading",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfCashFlowsIFRSLineItems",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfCashFlowsIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_StatementOfCashFlowsIFRSLineItems",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_CashFlowsFromOperatingActivitiesIFRSAbstract",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_def.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfCashFlowsIFRS",
+            "arcrole": "http://xbrl.org/int/dim/arcrole/domain-member",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_CashFlowsFromOperatingActivitiesIFRSAbstract",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_NetCashProvidedByUsedInOperatingActivitiesIFRS",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          },
+          {
+            "member": "XBRL/PublicDoc/jpcrp030000-asr-001_E02144-000_2026-03-31_01_2026-06-10_pre.xml",
+            "role": "http://disclosure.edinet-fsa.go.jp/role/jpigp/rol_ConsolidatedStatementOfCashFlowsIFRS",
+            "arcrole": "http://www.xbrl.org/2003/arcrole/parent-child",
+            "source": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_CashFlowsFromOperatingActivitiesIFRSAbstract",
+            "target": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor_2025-11-01.xsd#jpigp_cor_NetCashProvidedByUsedInOperatingActivitiesIFRS",
+            "weight": null,
+            "closed": null,
+            "context_element": null
+          }
+        ]
+      }
+    }
+  ]
+}

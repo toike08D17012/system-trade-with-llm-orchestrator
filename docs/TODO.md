@@ -464,7 +464,9 @@ P0承認の阻害課題へ混在させない。
 - [x] Implement the owner-approved EDINET two-request acceptance CLI and metadata export.
 - [x] Preserve the first live list parse failure and revalidate its saved bytes offline after parser corrections.
 - [x] Resume from the retained EDINET list without refetching it; acquire one target XBRL document and verify offline replay.
-- [ ] Resolve XBRL entity identity and taxonomy mappings using retained local evidence before financial acceptance.
+- [x] Resolve entity identity and approve six financial mappings for the retained 7203 annual filing.
 - [x] Add versioned offline entity matching and six-metric candidate reviews without changing legacy evidence.
 - [x] Replay retained annual evidence; retain duplicate references and exclude financial values from review output.
-- [ ] Confirm issuer-specific revenue semantics and consolidation scope before approving financial mappings.
+- [x] Confirm issuer-specific revenue semantics and consolidation scope for the retained filing.
+- [x] Implement and replay local-only adoption with a pinned policy, taxonomy proofs and six normalized metrics.
+- [ ] Connect local financial adoption references to normal-run preparation while preserving evidence gaps.

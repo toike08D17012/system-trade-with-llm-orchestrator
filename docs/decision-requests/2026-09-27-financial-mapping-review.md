@@ -85,3 +85,10 @@ dimensionがないことだけでは連結と確定しない。前記作成ガ�
 - entity、期間、dimension、通貨、scale、nil/ゼロ、重複/競合、未知追加項目を合成データで検証。
 - 旧単体identifierのbundle再生、元証拠不変、改変拒否、再公開拒否、出力の値・本文除外を検証。
 - 実証拠のprepare/validateに成功。EDINETへの追加通信・credential使用は0回。
+
+## 後続の限定採用
+
+2026-09-27に追加の構造調査とユーザー承認を経て、当該書類の6項目をローカル採用した。
+上記はv1レビュー時点の記録として残す。新しいpolicyとtaxonomy根拠に基づく判定は
+[限定採用結果](2026-09-27-financial-mapping-adoption-outcome.md)を参照。
+旧レビューの未確定理由・hash・原証拠は変更していない。

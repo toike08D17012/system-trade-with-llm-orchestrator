@@ -399,3 +399,154 @@ def test_sidecar_replay_and_legacy_compatibility(inputs: Path, capsys: pytest.Ca
     (output / "review.json").write_text("{}")
     assert mapping_main(["validate", "--source", str(source), "--input", str(output)]) == 1
     assert "123000000" not in capsys.readouterr().out
+
+
+def test_financial_adoption_roundtrip_all_six_metrics(
+    inputs: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Exercise raw ZIP through local adoption, immutable replay and diagnostic privacy."""
+    from xml.etree import ElementTree as ET
+
+    from stock_research_llm_orchestrator.preparation import financial_acceptance as adoption
+    from stock_research_llm_orchestrator.preparation.financial_acceptance_cli import main as adoption_main
+
+    policy = json.loads((ROOT / "config/financial-mapping/7203-2026-approved.json").read_bytes())
+    ns = "https://example.invalid/synthetic"
+    xlink, xbrldt = "{http://www.w3.org/1999/xlink}", "{http://xbrl.org/2005/xbrldt}"
+    linkns = "{http://www.xbrl.org/2003/linkbase}"
+    schema_path = "XBRL/PublicDoc/synthetic.xsd"
+    hrefs = {d["href"]: "synthetic.xsd#" + d["concept"]["local_name"] for d in policy["taxonomy"]["declarations"]}
+    schema = ET.Element(
+        "{http://www.w3.org/2001/XMLSchema}schema",
+        {
+            "targetNamespace": ns,
+            "xmlns:xbrli": "http://www.xbrl.org/2003/instance",
+        },
+    )
+    for declaration in policy["taxonomy"]["declarations"]:
+        declaration["href"] = hrefs[declaration["href"]]
+        declaration["concept"]["namespace"] = ns
+        name = declaration["concept"]["local_name"]
+        attributes = {"id": name, "name": name}
+        if declaration["monetary"]:
+            attributes.update(
+                {
+                    "type": "xbrli:monetaryItemType",
+                    "substitutionGroup": "xbrli:item",
+                    "{http://www.xbrl.org/2003/instance}periodType": declaration["period_type"],
+                }
+            )
+        ET.SubElement(schema, "{http://www.w3.org/2001/XMLSchema}element", attributes)
+    members = {schema_path: ET.tostring(schema)}
+    networks: dict[tuple[str, str], dict[str, dict[str, object]]] = {}
+    proposal = json.loads((ROOT / "config/financial-mapping/7203-2026-draft.json").read_bytes())
+    proposal["rules"] = []
+    # Reuse reviewed network shapes with synthetic declarations and values, not live financial data.
+    for rule in policy["rules"]:
+        taxonomy = rule["taxonomy"]
+        taxonomy["concept_href"] = hrefs[taxonomy["concept_href"]]
+        proposal["rules"].append(
+            {
+                "metric": rule["metric"],
+                "concepts": [
+                    {
+                        "namespace": ns,
+                        "local_name": taxonomy["concept_href"].split("#")[1],
+                    }
+                ],
+                "evidence_references": ["synthetic"],
+            }
+        )
+        for arc in taxonomy["arcs"]:
+            arc["member"] = "XBRL/PublicDoc/synthetic_" + arc["member"].rsplit("_", 1)[1]
+            arc["source"], arc["target"] = hrefs[arc["source"]], hrefs[arc["target"]]
+            networks.setdefault((arc["member"], arc["role"]), {})[json.dumps(arc, sort_keys=True)] = arc
+    trees: dict[str, ET.Element] = {}
+    for (member, role), required in networks.items():
+        tree = trees.setdefault(member, ET.Element(linkns + "linkbase"))
+        kind = "definition" if "_def." in member else "presentation" if "_pre." in member else "calculation"
+        network = ET.SubElement(tree, linkns + kind + "Link", {xlink + "type": "extended", xlink + "role": role})
+        endpoints = sorted({str(a[k]) for a in required.values() for k in ("source", "target")})
+        labels = {href: str(index) for index, href in enumerate(endpoints)}
+        for href, label in labels.items():
+            ET.SubElement(
+                network, linkns + "loc", {xlink + "type": "locator", xlink + "href": href, xlink + "label": label}
+            )
+        for arc in required.values():
+            attrs = {
+                xlink + "type": "arc",
+                xlink + "arcrole": str(arc["arcrole"]),
+                xlink + "from": labels[str(arc["source"])],
+                xlink + "to": labels[str(arc["target"])],
+            }
+            for field, attribute in (
+                ("weight", "weight"),
+                ("closed", xbrldt + "closed"),
+                ("context_element", xbrldt + "contextElement"),
+            ):
+                if arc[field] is not None:
+                    attrs[attribute] = str(arc[field])
+            ET.SubElement(network, linkns + kind + "Arc", attrs)
+    members.update({name: ET.tostring(tree) for name, tree in trees.items()})
+    archive_path = inputs / "raw/document/body.bin"
+    with zipfile.ZipFile(io.BytesIO(archive_path.read_bytes())) as original:
+        xml = original.read("XBRL/PublicDoc/synthetic.xbrl").decode()
+    xml = xml.replace("https://example.invalid/entity", "http://disclosure.edinet-fsa.go.jp").replace(
+        "E00001</", "E00001-000</"
+    )
+    instant = '<xbrli:context id="instant"><xbrli:entity><xbrli:identifier scheme="http://disclosure.edinet-fsa.go.jp">E00001-000</xbrli:identifier></xbrli:entity><xbrli:period><xbrli:instant>2026-03-31</xbrli:instant></xbrli:period></xbrli:context>'
+    facts = instant
+    for rule in proposal["rules"]:
+        name = rule["concepts"][0]["local_name"]
+        context = "instant" if rule["metric"] in ("assets", "equity") else "annual"
+        facts += f'<s:{name} contextRef="{context}" unitRef="JPY" decimals="-6">123000000</s:{name}>'
+    xml = xml.replace('<s:Revenue contextRef="annual" unitRef="JPY" decimals="-6">123000000</s:Revenue>', facts)
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("XBRL/PublicDoc/synthetic.xbrl", xml)
+        for name, body in members.items():
+            archive.writestr(name, body)
+    raw = buffer.getvalue()
+    archive_path.write_bytes(raw)
+    digest = hashlib.sha256(raw).hexdigest()
+    data = json.loads((inputs / "inputs.json").read_bytes())
+    item = next(i for i in data["acquisitions"] if i["key"] == "document")
+    item["publication"].update(content_sha256=digest, byte_count=len(raw))
+    _save(inputs / "inputs.json", data)
+    _save(inputs / "raw/document/receipt.json", {"body_sha256": digest, "byte_count": len(raw)})
+    response = json.loads((inputs / "raw/document/response.json").read_bytes())
+    response["byte_count"] = len(raw)
+    _save(inputs / "raw/document/response.json", response)
+    policy.update(edinet_code="E00001", document_id=item["source_intent"]["resource_key"], archive_sha256=digest)
+    policy["taxonomy"].update(
+        schema_member=schema_path, member_hashes={n: hashlib.sha256(b).hexdigest() for n, b in members.items()}
+    )
+    proposal_path, policy_path = inputs.parent / "draft.json", inputs.parent / "approved.json"
+    _save(proposal_path, proposal)
+    policy["proposal_sha256"] = hashlib.sha256(proposal_path.read_bytes()).hexdigest()
+    _save(policy_path, policy)
+    monkeypatch.setattr(adoption, "APPROVED_POLICY_SHA256", hashlib.sha256(policy_path.read_bytes()).hexdigest())
+    source, review, output = (inputs.parent / name for name in ("financial", "review", "accepted"))
+    prepare_financial(inputs, source)
+    prepare_mapping(source, proposal_path, review)
+    before = read_bundle(source)
+    result = adoption.prepare_acceptance(source, review, policy_path, output)
+    assert result.accepted_count == 6 and not result.analysis_ready
+    saved = read_bundle(output)
+    assert all(v["value"] == "123000000" for v in json.loads(saved["values.json"]))
+    assert b"123000000" not in saved["diagnostic.json"] and b"123000000" not in saved["taxonomy.json"]
+    adoption.validate_acceptance(saved, before, read_bundle(review))
+    for name in saved:
+        with pytest.raises(ValueError):
+            adoption.validate_acceptance({**saved, name: saved[name] + b" "}, before, read_bundle(review))
+    with pytest.raises(FileExistsError):
+        adoption.prepare_acceptance(source, review, policy_path, output)
+    with pytest.raises(ValueError):
+        adoption.prepare_acceptance(source, review, policy_path, source / "child")
+    with pytest.raises(ValueError):
+        adoption.validate_acceptance(saved, {**before, "raw/document/body.bin": b"bad"}, read_bundle(review))
+    assert adoption_main(["validate", "--source", str(source), "--review", str(review), "--input", str(output)]) == 0
+    (output / "values.json").write_bytes(b"bad")
+    assert adoption_main(["validate", "--source", str(source), "--review", str(review), "--input", str(output)]) == 1
+    assert "123000000" not in capsys.readouterr().out
+    assert read_bundle(source) == before

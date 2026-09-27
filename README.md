@@ -587,6 +587,30 @@ python -m stock_research_llm_orchestrator.preparation.financial_mapping_cli vali
   --source runs/financial-prepared --input runs/financial-mapping-review
 ```
 
-同梱案は7203の2026年3月期に限定した未承認mappingです。
-連結範囲と提出者独自の売上概念は確認中で、候補が見つかっても `analysis_ready=false` を維持します。
+同梱draftは候補レビュー専用です。7203の2026年3月期については、別の承認済みpolicyで
+連結範囲と提出者独自の売上概念を検証する限定採用処理を追加しました。
+候補レビュー自体は従来どおり `analysis_ready=false` を維持します。
 [対応案・検証結果](docs/decision-requests/2026-09-27-financial-mapping-review.md)を参照してください。
+
+
+### 承認済み財務6項目のローカル採用
+
+内部CLI `preparation.financial_acceptance_cli` は原bundle・候補レビュー・承認済みpolicyを照合し、
+必要なtaxonomy関係を検証して、6項目の正規化値と全fact参照を新しいローカルbundleに保存します。
+原証拠・v1候補レビューは変更しません。再検証には両方が必要です。
+出力の `values.json` はローカル専用で、標準出力や `diagnostic.json` に財務値は含めません。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.financial_acceptance_cli prepare \
+  --source runs/financial-prepared --review runs/financial-mapping-review \
+  --policy config/financial-mapping/7203-2026-approved.json \
+  --output runs/financial-accepted
+python -m stock_research_llm_orchestrator.preparation.financial_acceptance_cli validate \
+  --source runs/financial-prepared --review runs/financial-mapping-review \
+  --input runs/financial-accepted
+```
+
+同梱policyは承認された7203の書類・原archive・期間への限定適用です。
+他の書類やdraftのstatus変更では採用できません。追加通信や認証は不要です。
+個別項目が `accepted` でも、期間不足・IR等が未解決のため、全体は `pending` / `analysis_ready=false` です。
+[採用結果と残る作業](docs/decision-requests/2026-09-27-financial-mapping-adoption-outcome.md)を参照してください。
