@@ -61,7 +61,7 @@ Do not assume a documented command is available; verify that its script or confi
 
 Use the `implementation-plan` skill for non-trivial changes that may affect Python source, tests, configuration, scripts, CI, dependencies, packaging, public APIs, runtime behavior, or validation behavior.
 
-After creating the implementation plan, stop and wait for user approval before implementation.
+After creating an implementation plan and there are any blocking issues, stop and wait for user approval before implementation.
 
 Markdown-only changes do not require a separate implementation plan. If a task includes both Markdown and non-Markdown changes, include all related documentation updates in the plan for the non-Markdown change.
 
