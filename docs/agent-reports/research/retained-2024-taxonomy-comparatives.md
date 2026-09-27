@@ -65,3 +65,18 @@
 4. 2022年は同じ6項目が揃わないため、別の資料選択が必要。未使用slotを無承認の別資料取得へ転用しない。
 
 調査は既存parserとtaxonomy検証関数によるローカル診断のみ。コード・config・証拠bundleを変更していないため、テストスイートは実行していない。財務値・XBRL本文・credentialは出力していない。
+
+## 2026-09-27 公式標準定義の追加確認
+
+上記の「標準定義未確認」は以下の取得・照合で解消した。財務値の採用と訂正内容の照合は未実施のまま。
+
+| 公式schema | bytes | SHA-256 |
+| --- | --- | --- |
+| [jpigp_cor_2023-12-01.xsd](https://disclosure2.edinet-fsa.go.jp/taxonomy/jpigp/2023-12-01/jpigp_cor_2023-12-01.xsd) | 689,047 | `6db3cbbd412097a9476f2a627d258910d779deae392bbd366088fcbcb52b62f3` |
+| [jppfs_cor_2023-12-01.xsd](https://disclosure2.edinet-fsa.go.jp/taxonomy/jppfs/2023-12-01/jppfs_cor_2023-12-01.xsd) | 1,041,100 | `a509b5dfcf96d24743686b33506fd8ca5492580d97cce6859386ac0b711e331a` |
+
+Web閲覧ツールではschemaを開けなかったため、ローカルHTTP取得で確認した。元の公式HTTPS URLから `disclosure2.edinet-fsa.go.jp` の同一schemaパスへ転送され、両方HTTP 200。取得時刻はそれぞれ2026-09-27T12:42:25.777849+00:00、12:42:26.034308+00:00。原本・要求URL・最終URL・hashは `runs/taxonomy-2023-12-01/` に保存した。schema内のimportを追跡する通信はしていない。EDINET認証API送信は0回で、財務取得campaignの残りslotは未使用。
+
+採用ルールで必要な外部宣言20件（jpigp 18、jppfs 2）について、ID一意性、name、targetNamespaceを確認した。営業利益・親会社帰属利益・営業CFはmonetaryItemType/duration、資産・資本はmonetaryItemType/instant。いずれも非abstractのxbrli:item。表はhypercubeItem、連結／非連結軸はdimensionItem、連結memberはdomainItemTypeであることを確認した。
+
+これにより、前回の構造照合で仮置きした標準宣言の必要属性は、当該2023-12-01版で裏付けられた。発行体ローカル宣言は保存XSDの検証結果を使用する。全taxonomyや会計上の意味の完全検証、訂正前後の数値比較を完了したという意味ではない。
