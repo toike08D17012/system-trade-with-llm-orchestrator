@@ -479,4 +479,5 @@ P0承認の阻害課題へ混在させない。
 - [x] Revalidate the retained 2024-06-25 list offline after narrowing unused withdrawal-status validation.
 - [x] Implement bounded continuation without resetting spent slots; retain the 2024 archive and failed 2023 list.
 - [x] Review and adopt retained 2024 current/prior comparisons with pinned taxonomy evidence and unresolved amendment limitations.
-- [ ] Plan cross-report financial integration with task/check-time compatibility and preserved source-specific limitations; do not claim global 4/5 coverage before validation.
+- [x] Implement and replay cross-report financial integration with source-specific tasks, check times and limitations; aggregate coverage is 4/5 annual periods.
+- [ ] Obtain approval for the pinned 2023 annual/correction pair acquisition to inspect correction contents and possible 2022 comparisons.

@@ -679,8 +679,23 @@ python -m stock_research_llm_orchestrator.preparation.financial_acceptance_cli v
 出典は「2024年報告に掲載された値」です。`provenance.json` とmanifestに
 2023年訂正内容未照合・最新性未確認の制約を保持します。
 このbundleの年次2/5期は2020～2024年のローカル窓であり、既存runの2022～2026年窓とは異なります。
-複数報告の統合は未実装で、この受入をrun準備に渡すと拒否します。既存runの充足率は2/5期のままです。
+この受入を従来の単一報告run準備に渡すと拒否します。複数報告には下記の専用経路を使います。旧runの充足率は2/5期のままです。
 [限定採用結果](docs/decision-requests/2026-09-27-retained-2024-financial-adoption-outcome.md)を参照してください。
+
+### 複数報告の財務統合
+
+`financial_multi_report_cli prepare` は再検証した主報告と追加報告を別bundleに統合します。
+`--financial`、`--review`、`--adoption`、`--comparative`、`--price-fx`に既存2026年の入力を、
+`--additional-financial`、`--additional-review`、`--additional-adoption`、`--additional-comparative`に
+2024年の入力を指定し、`--output`に未使用の保存先を指定します。
+再検証には同じ9入力を渡し、`validate --input <保存先>`を使います。
+
+両報告の発行体・taskの対象範囲・評価policyを照合し、出典別task・確認時刻・制約を保持します。
+価格FXは主報告との従来の時刻整合を維持します。統合時点を鮮度確認時刻にはしません。
+期間・指標の重複は採用値の一致を確認し、競合時は停止します。財務数値を統合出力に転記しません。
+2022～2026年窓で24項目・4/5期を確認済みですが、2022年、訂正内容照合、最新性、interim・IR等が不足し、
+`analysis_ready=false`です。旧runは変更せず2/5期のまま保存しています。
+[統合結果](docs/decision-requests/2026-09-27-financial-multi-report-outcome.md)を参照してください。
 
 ### 過年度年次2件の限定EDINET取得
 
