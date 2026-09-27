@@ -570,3 +570,23 @@ EDINET一覧の外部応答では未知の追加項目を許容し、処理に�
 `body.bin` と元の `failure.json` をhash・要求日・取得時刻で照合し、再parse・対象選別後、
 書類だけを1回取得します。一覧を再送せず、元の失敗記録は `retained-list/` に保持します。
 この来歴を通常の成功した一覧取得へ置き換えません。
+
+### XBRL entityと財務mapping候補のレビュー
+
+内部CLI `preparation.financial_mapping_cli` は、検証済み財務bundleと6項目のQName対応案から、
+entity照合、期間・単位・dimensionによる除外、同値重複・異値競合のレビュー結果を保存します。
+旧bundleは変更せず、原manifestのhashを参照する別の出力を作成します。
+追加通信・認証は不要です。出力には財務値・本文を含めず、候補参照と診断情報だけを保存します。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.financial_mapping_cli prepare \
+  --source runs/financial-prepared \
+  --proposal config/financial-mapping/7203-2026-draft.json \
+  --output runs/financial-mapping-review
+python -m stock_research_llm_orchestrator.preparation.financial_mapping_cli validate \
+  --source runs/financial-prepared --input runs/financial-mapping-review
+```
+
+同梱案は7203の2026年3月期に限定した未承認mappingです。
+連結範囲と提出者独自の売上概念は確認中で、候補が見つかっても `analysis_ready=false` を維持します。
+[対応案・検証結果](docs/decision-requests/2026-09-27-financial-mapping-review.md)を参照してください。

@@ -11,6 +11,8 @@ import pytest
 
 from stock_research_llm_orchestrator.preparation.financial_disclosure import prepare_financial, validate_financial
 from stock_research_llm_orchestrator.preparation.financial_disclosure_cli import main
+from stock_research_llm_orchestrator.preparation.financial_mapping import METRICS, prepare_mapping, validate_mapping
+from stock_research_llm_orchestrator.preparation.financial_mapping_cli import main as mapping_main
 from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.sources.edinet.document_list import EdinetDocumentListAdapter
 from stock_research_llm_orchestrator.sources.edinet.xbrl_document import EdinetXbrlDocumentAdapter
@@ -339,3 +341,61 @@ def test_repeated_list_observation_does_not_add_financial_periods(inputs: Path) 
     assert len(result.filings) == 2
     assert len(result.annual_periods) == 1
     assert "annual_periods_insufficient" in result.reasons
+
+
+def test_sidecar_replay_and_legacy_compatibility(inputs: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Retain old synthetic bare identifiers and detect every artifact mutation."""
+    source = inputs.parent / "financial"
+    prepare_financial(inputs, source)
+    before = read_bundle(source)
+    proposal = inputs.parent / "proposal.json"
+    proposal.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "status": "draft",
+                "start_date": "2025-04-01",
+                "end_date": "2026-03-31",
+                "rules": [
+                    {
+                        "metric": metric,
+                        "concepts": [
+                            {
+                                "namespace": "https://example.invalid/synthetic",
+                                "local_name": "Revenue" if metric == "revenue" else metric,
+                            }
+                        ],
+                        "evidence_references": ["synthetic"],
+                    }
+                    for metric in METRICS
+                ],
+            }
+        )
+    )
+    output = inputs.parent / "mapping"
+    result = prepare_mapping(source, proposal, output)
+    assert result.analysis_ready is False and result.status == "pending"
+    assert result.archives[0].metrics[0].status == "excluded"
+    assert result.archives[0].entities[0].reason == "unsupported_entity_scheme"
+    assert read_bundle(source) == before
+    validate_financial(before)
+    saved = read_bundle(output)
+    validate_mapping(saved, before)
+    assert set(saved) == {"proposal.json", "review.json"}
+    assert "123000000" not in saved["review.json"].decode()
+    with pytest.raises((FileExistsError, ValueError)):
+        prepare_mapping(source, proposal, output)
+    with pytest.raises(ValueError):
+        prepare_mapping(source, proposal, source / "child")
+    for name in ("review.json", "proposal.json"):
+        altered = {**saved, name: saved[name] + b" "}
+        with pytest.raises(ValueError):
+            validate_mapping(altered, before)
+    damaged_source = {**before, "raw/document/body.bin": b"bad"}
+    with pytest.raises(ValueError):
+        validate_mapping(saved, damaged_source)
+    assert mapping_main(["validate", "--source", str(source), "--input", str(output)]) == 0
+    assert "analysis_ready=false" in capsys.readouterr().out
+    (output / "review.json").write_text("{}")
+    assert mapping_main(["validate", "--source", str(source), "--input", str(output)]) == 1
+    assert "123000000" not in capsys.readouterr().out

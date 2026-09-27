@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "status": "draft",
+  "start_date": "2025-04-01",
+  "end_date": "2026-03-31",
+  "rules": [
+    {
+      "metric": "revenue",
+      "concepts": [
+        {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/jpcrp030000/asr/001/E02144-000/2026-03-31/01/2026-06-10",
+          "local_name": "TotalNetRevenuesIFRS"
+        }
+      ],
+      "evidence_references": [
+        "docs/decision-requests/2026-09-27-financial-mapping-review.md"
+      ]
+    },
+    {
+      "metric": "operating_profit",
+      "concepts": [
+        {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "OperatingProfitLossIFRS"
+        }
+      ],
+      "evidence_references": [
+        "docs/decision-requests/2026-09-27-financial-mapping-review.md"
+      ]
+    },
+    {
+      "metric": "parent_profit",
+      "concepts": [
+        {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "ProfitLossAttributableToOwnersOfParentIFRS"
+        }
+      ],
+      "evidence_references": [
+        "docs/decision-requests/2026-09-27-financial-mapping-review.md"
+      ]
+    },
+    {
+      "metric": "assets",
+      "concepts": [
+        {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "AssetsIFRS"
+        }
+      ],
+      "evidence_references": [
+        "docs/decision-requests/2026-09-27-financial-mapping-review.md"
+      ]
+    },
+    {
+      "metric": "equity",
+      "concepts": [
+        {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "EquityIFRS"
+        }
+      ],
+      "evidence_references": [
+        "docs/decision-requests/2026-09-27-financial-mapping-review.md"
+      ]
+    },
+    {
+      "metric": "operating_cash_flow",
+      "concepts": [
+        {
+          "namespace": "http://disclosure.edinet-fsa.go.jp/taxonomy/jpigp/2025-11-01/jpigp_cor",
+          "local_name": "NetCashProvidedByUsedInOperatingActivitiesIFRS"
+        }
+      ],
+      "evidence_references": [
+        "docs/decision-requests/2026-09-27-financial-mapping-review.md"
+      ]
+    }
+  ]
+}
