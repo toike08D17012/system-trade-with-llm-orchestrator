@@ -473,7 +473,8 @@ P0承認の阻害課題へ混在させない。
 - [x] Prepare and connect real price/FX evidence for the same financial task and check time.
 - [x] Inventory retained prior-period financial candidates before planning additional acquisition.
 - [x] Adopt pinned prior-year comparisons and report annual metric coverage independently of filing counts.
-- [ ] Plan bounded acquisition for missing 2022–2024 annual periods and identify the latest eight interim periods.
+- [x] Acquire and adopt the missing 2022–2024 annual periods with explicit source limitations.
+- [ ] Identify the latest eight published interim periods and plan targeted acquisition.
 
 - [x] Implement the one-shot prior annual EDINET campaign and retain its failed list response.
 - [x] Revalidate the retained 2024-06-25 list offline after narrowing unused withdrawal-status validation.
@@ -481,4 +482,4 @@ P0承認の阻害課題へ混在させない。
 - [x] Review and adopt retained 2024 current/prior comparisons with pinned taxonomy evidence and unresolved amendment limitations.
 - [x] Implement and replay cross-report financial integration with source-specific tasks, check times and limitations; aggregate coverage is 4/5 annual periods.
 - [x] Acquire and validate the pinned 2023 annual/correction pair under standing permission for necessary, spaced requests.
-- [ ] Verify the 2022 taxonomy and adopt bounded 2022 comparisons while preserving correction and freshness limitations.
+- [x] Verify the 2022 taxonomy and adopt bounded 2022 comparisons; replay 30 metrics across five annual periods with unresolved limits retained.

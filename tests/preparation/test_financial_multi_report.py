@@ -186,6 +186,23 @@ def test_join_retains_source_limits_and_checks_compatibility(monkeypatch: pytest
         altered = {**d, "additional_financial": {**d["additional_financial"], field: replacement}}
         with pytest.raises(ValueError, match=error):
             multi.evaluate_multi_report(altered)
+    with pytest.raises(ValueError, match="dependency_set"):
+        multi.evaluate_multi_report({**d, "pair": {}})
+    monkeypatch.setattr(multi, "validate_pair_acceptance", lambda files, pair: None)
+    pair_dependencies = {
+        **d,
+        "pair": {"task.json": d["financial"]["task.json"], "evaluation-policy.yaml": b"same"},
+        "pair_adoption": {
+            "manifest.json": json.dumps(
+                {"security_code": "7203", "edinet_code": "E02144", "limitations": ["pair_limit"]}
+            ).encode(),
+            "values.json": d["comparative"]["values.json"],
+        },
+    }
+    extended = json.loads(multi.evaluate_multi_report(pair_dependencies)["manifest.json"])
+    assert extended["accepted_count"] == 6 and len(extended["sources"]) == 3
+    assert "pair_limit" in extended["limitations"]
+    assert multi.evaluate_multi_report(d) == files
     policy = json.loads(d["additional_adoption"]["policy.json"])
     policy["edinet_code"] = "E00001"
     with pytest.raises(ValueError, match="issuer_mismatch"):

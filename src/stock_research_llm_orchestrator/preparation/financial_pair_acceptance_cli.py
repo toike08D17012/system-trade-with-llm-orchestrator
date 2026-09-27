@@ -1,0 +1,38 @@
+"""Prepare or replay pinned comparative adoption from an original/amended pair."""
+
+import argparse
+from pathlib import Path
+
+from stock_research_llm_orchestrator.preparation.financial_pair_acceptance import (
+    prepare_pair_acceptance,
+    validate_pair_acceptance,
+)
+from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Print status only; preserve local financial values."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    prepare = commands.add_parser("prepare")
+    prepare.add_argument("--pair", type=Path, required=True)
+    prepare.add_argument("--policy", type=Path, required=True)
+    prepare.add_argument("--output", type=Path, required=True)
+    validate = commands.add_parser("validate")
+    validate.add_argument("--pair", type=Path, required=True)
+    validate.add_argument("--input", type=Path, required=True)
+    args = parser.parse_args(argv)
+    try:
+        if args.command == "prepare":
+            prepare_pair_acceptance(args.pair, args.policy, args.output)
+        else:
+            validate_pair_acceptance(read_bundle(args.input), read_bundle(args.pair))
+        print("financial_pair_adoption: valid; accepted_count=6; analysis_ready=false; offline_replay")
+    except (ValueError, OSError, RuntimeError, KeyError) as error:
+        print(f"financial_pair_adoption_failed: {type(error).__name__}; no network or retry")
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

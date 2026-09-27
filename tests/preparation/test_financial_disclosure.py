@@ -732,6 +732,48 @@ def test_financial_adoption_roundtrip_all_six_metrics(
         for name in ("provenance.json", "manifest.json", "policy.json"):
             with pytest.raises(ValueError):
                 validator({**files, name: b"{}"})
+    from stock_research_llm_orchestrator.preparation import financial_pair_acceptance as pair_adoption
+
+    pair_policies = []
+    for doc_id in ("S100QZHY", "S100RAR0"):
+        selected_policy = adoption.FinancialAdoptionPolicy.model_validate_json(
+            json.dumps({**policy, "document_id": doc_id})
+        )
+        proposal_hash = hashlib.sha256(
+            pair_adoption.pair_proposal(selected_policy).model_dump_json(indent=2).encode()
+        ).hexdigest()
+        pair_policies.append(selected_policy.model_copy(update={"proposal_sha256": proposal_hash}))
+    pair_policy = (
+        pair_adoption.PairAdoptionPolicy(
+            version=1,
+            original=pair_policies[0],
+            amended=pair_policies[1],
+            adopted_period=comparative.AnnualPeriod.model_validate_json(json.dumps(comparative_policy["periods"][0])),
+        )
+        .model_dump_json()
+        .encode()
+    )
+    pair_source = {
+        "raw/S100QZHY/body.bin": raw,
+        "raw/S100RAR0/body.bin": raw,
+        "task.json": before["task.json"],
+        "acquisitions.json": json.dumps(
+            [{"key": doc, "retrieved_at": "2026-09-27T00:00:00Z"} for doc in ("S100QZHY", "S100RAR0")]
+        ).encode(),
+    }
+    with monkeypatch.context() as pair_patch:
+        # Pair envelope/transport validation has separate real-coordinator tests.
+        pair_patch.setattr(pair_adoption, "validate_pair_bundle", lambda files: None)
+        pair_patch.setattr(pair_adoption, "PAIR_POLICY_SHA256", hashlib.sha256(pair_policy).hexdigest())
+        accepted_pair = pair_adoption.evaluate_pair_acceptance(pair_source, pair_policy)
+        pair_adoption.validate_pair_acceptance(accepted_pair, pair_source)
+        assert json.loads(accepted_pair["manifest.json"])["accepted_count"] == 6
+        assert b"98000000" not in accepted_pair["manifest.json"]
+        for name in accepted_pair:
+            with pytest.raises(ValueError):
+                pair_adoption.validate_pair_acceptance({**accepted_pair, name: accepted_pair[name] + b" "}, pair_source)
+        with pytest.raises(ValueError, match="archive_mismatch"):
+            pair_adoption.evaluate_pair_acceptance({**pair_source, "raw/S100RAR0/body.bin": b"bad"}, pair_policy)
     adoption.validate_acceptance(saved, before, read_bundle(review))
     comparative.validate_comparative(comparative_files, before, read_bundle(review), saved)
     validate_financial_run(run_files, before, read_bundle(review), saved)

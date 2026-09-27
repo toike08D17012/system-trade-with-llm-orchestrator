@@ -728,6 +728,18 @@ python -m stock_research_llm_orchestrator.preparation.edinet_evidence_cli \
 新しいfinancial入力version 2はこの固定失敗一覧と元approval v3を保持し、通常の一覧再検証と区別します。
 既存version 1の再検証は変更していません。実行済みかどうかはcampaign記録と受入結果を確認してください。
 
+### 2022年比較値と年次5期間の統合
+
+`financial_pair_acceptance_cli prepare --pair <取得pair> --policy config/financial-mapping/7203-2022-pair-approved.json --output <新規保存先>`
+で、固定した訂正報告の2022年6指標を採用します。原報告・訂正の2022/2023年12組が一致し、
+両方のtaxonomy検証が成功することが条件です。`validate --pair <取得pair> --input <採用bundle>`で再検証します。
+
+複数報告CLIの`prepare`/`validate`に`--pair`と`--pair-adoption`を両方追加すると、
+既存2023～2026年と合わせて2022～2026年の30項目・5/5期を統合できます。
+片方のみの指定は拒否します。省略時の4/5期bundleは不変です。
+訂正本文の定性的内容・最新性、四半期/半期・IR等の不足は残り、`analysis_ready=false`です。
+[限定採用結果](docs/decision-requests/2026-09-27-corrected-2022-comparative-outcome.md)を参照してください。
+
 ### 必要な追加EDINET取得
 
 ユーザーは進行に必要な取得を許可しています。対象・必要性・送信上限を実行単位で記録し、

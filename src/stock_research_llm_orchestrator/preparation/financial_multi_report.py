@@ -21,6 +21,7 @@ from stock_research_llm_orchestrator.preparation.financial_comparative import (
 )
 from stock_research_llm_orchestrator.preparation.financial_disclosure import FinancialManifest
 from stock_research_llm_orchestrator.preparation.financial_mapping import METRICS
+from stock_research_llm_orchestrator.preparation.financial_pair_acceptance import validate_pair_acceptance
 from stock_research_llm_orchestrator.preparation.financial_run import (
     FinancialComparativeRunManifest,
     evaluate_financial_run,
@@ -83,7 +84,9 @@ def merge_coverage(
 
 def evaluate_multi_report(dependencies: Mapping[str, Mapping[str, bytes]]) -> dict[str, bytes]:
     """Revalidate every source and retain per-source task, time and limitations."""
-    if set(dependencies) != set(DEPENDENCIES):
+    pair_keys = {"pair", "pair_adoption"}
+    has_pair = pair_keys <= dependencies.keys()
+    if set(dependencies) != set(DEPENDENCIES) | (pair_keys if has_pair else set()):
         raise ValueError("multi_report_dependency_set_invalid")
     d = dependencies
     primary = evaluate_financial_run(d["financial"], d["review"], d["adoption"], d["price_fx"], d["comparative"])
@@ -140,6 +143,42 @@ def evaluate_multi_report(dependencies: Mapping[str, Mapping[str, bytes]]) -> di
                         "reasons": v.reasons,
                     }
                     for r in records
+                    for v in r.values
+                ],
+            }
+        )
+    if has_pair:
+        validate_pair_acceptance(d["pair_adoption"], d["pair"])
+        pair_task = DetailedAnalysisTaskV1.model_validate_json(d["pair"]["task.json"])
+        pair_manifest = json.loads(d["pair_adoption"]["manifest.json"])
+        if any(getattr(tasks[0], field) != getattr(pair_task, field) for field in scope):
+            raise ValueError("multi_report_pair_task_scope_mismatch")
+        if d["financial"]["evaluation-policy.yaml"] != d["pair"]["evaluation-policy.yaml"]:
+            raise ValueError("multi_report_pair_policy_mismatch")
+        if (pair_manifest["security_code"], pair_manifest["edinet_code"]) != (
+            policies[0].security_code,
+            policies[0].edinet_code,
+        ):
+            raise ValueError("multi_report_pair_issuer_mismatch")
+        pair_records = tuple(
+            ComparativePeriodValues.model_validate_json(json.dumps(r))
+            for r in json.loads(d["pair_adoption"]["values.json"])
+        )
+        reports.append(pair_records)
+        limitations.update(pair_manifest["limitations"])
+        sources.append(
+            {
+                "dependency": "pair",
+                "adoption": pair_manifest,
+                "metrics": [
+                    {
+                        "period": r.period.model_dump(mode="json"),
+                        "metric": v.metric,
+                        "status": v.status,
+                        "reference_count": len(v.references),
+                        "reasons": v.reasons,
+                    }
+                    for r in pair_records
                     for v in r.values
                 ],
             }
