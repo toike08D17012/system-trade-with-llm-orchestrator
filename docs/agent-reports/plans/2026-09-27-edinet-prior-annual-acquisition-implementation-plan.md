@@ -79,3 +79,7 @@ Pythonパスは `src/stock_research_llm_orchestrator/` 配下。新規campaign m
 - 排他campaign markerは共有runtimeのlease取得より前にatomic mkdirで作成し、親ディレクトリもfsyncする。これによりlease取得前の同時起動も排除する。各slotは送信callback内で永続化する。
 - 上限は同一共有runtime内で永続化される。別runtimeへの切替や管理者による記録削除を予算回復として認めない。読み取り再検証は既存financial CLIを用い、campaign自身にオンライン再開機能は設けない。
 - 2件は独立のfinancial bundleとし、それぞれのsurvey_periodを提出日1日に限定する。
+
+### 実取得後の限定parser修正計画
+
+最初の一覧は対象外（docTypeCode=null）の2行のwithdrawalStatus="2"でparseに失敗した。追加送信せず、rawモデルの当該区分を文字列として保持し、処理対象書類への変換時に既存0/1検証を適用する。対象外行の未使用区分に意味を付与しない。内部契約は変更しない。対象外行を許容するテストと対象行の不明区分を拒否するテストを追加し、保存済み応答の件数・hash・対象選別をオフライン確認する。オンライン再開は本修正に含めない。ブロッキングな設計判断はなし。

@@ -474,3 +474,7 @@ P0承認の阻害課題へ混在させない。
 - [x] Inventory retained prior-period financial candidates before planning additional acquisition.
 - [x] Adopt pinned prior-year comparisons and report annual metric coverage independently of filing counts.
 - [ ] Plan bounded acquisition for missing 2022–2024 annual periods and identify the latest eight interim periods.
+
+- [x] Implement the one-shot prior annual EDINET campaign and retain its failed list response.
+- [x] Revalidate the retained 2024-06-25 list offline after narrowing unused withdrawal-status validation.
+- [ ] Design a bounded continuation using the retained list without resetting the spent campaign slot.

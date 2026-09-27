@@ -167,3 +167,19 @@ def test_null_event_metadata_does_not_invent_a_filing() -> None:
     raw["results"][0]["filerName"] = None
     with pytest.raises(EdinetDocumentListParseError):
         EdinetDocumentListAdapter().parse(_response(json.dumps(raw).encode()))
+
+
+@pytest.mark.parametrize("document_type", [None, "999", "120"])
+def test_unused_withdrawal_code_does_not_block_other_filings(document_type: str | None) -> None:
+    """Only supported filing types require interpreted withdrawal status."""
+    value = json.loads(FIXTURE.read_bytes())
+    value["results"][1].update(docTypeCode=document_type, withdrawalStatus="2")
+    response = _response(json.dumps(value).encode())
+    if document_type == "120":
+        with pytest.raises(EdinetDocumentListParseError):
+            EdinetDocumentListAdapter().parse(response)
+    else:
+        result = EdinetDocumentListAdapter().parse(response)
+        assert result.provider_result_count == 2
+        assert len(result.documents) == 1
+        assert result.documents[0].withdrawal_status == "0"

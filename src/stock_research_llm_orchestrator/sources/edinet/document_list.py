@@ -140,7 +140,7 @@ class _RawDocument(StrictContractModel):
     submitDateTime: str | None  # noqa: N815 - exact provider field
     docDescription: str | None  # noqa: N815 - exact provider field
     parentDocID: Identifier | None  # noqa: N815 - exact provider field
-    withdrawalStatus: Literal["0", "1"]  # noqa: N815 - exact provider field
+    withdrawalStatus: str  # noqa: N815 - exact provider field
     xbrlFlag: Literal["0", "1"]  # noqa: N815 - exact provider field
 
 
@@ -229,6 +229,8 @@ class EdinetDocumentListAdapter:
 
     @staticmethod
     def _to_document(raw: _RawDocument) -> EdinetDocument:
+        if raw.withdrawalStatus not in {"0", "1"}:
+            raise ValueError("edinet_supported_withdrawal_status_unknown")
         if raw.filerName is None or raw.docTypeCode is None or raw.submitDateTime is None or raw.docDescription is None:
             raise ValueError("edinet_supported_filing_metadata_missing")
         return EdinetDocument(
@@ -243,6 +245,6 @@ class EdinetDocumentListAdapter:
             submitted_at=raw.submitDateTime,
             description=raw.docDescription,
             parent_document_id=raw.parentDocID,
-            withdrawal_status=raw.withdrawalStatus,
+            withdrawal_status="0" if raw.withdrawalStatus == "0" else "1",
             xbrl_available=raw.xbrlFlag == "1",
         )
