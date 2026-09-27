@@ -16,6 +16,7 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence imp
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
 from stock_research_llm_orchestrator.credentials.models import CredentialFilePolicy
 from stock_research_llm_orchestrator.credentials.preflight import preflight_credential_file
+from stock_research_llm_orchestrator.preparation.edinet_campaign import TARGETS, AnnualCampaign
 from stock_research_llm_orchestrator.preparation.edinet_revalidation import revalidate_list, select_target
 from stock_research_llm_orchestrator.preparation.financial_disclosure import (
     FilingInput,
@@ -51,8 +52,6 @@ from stock_research_llm_orchestrator.sources.edinet.httpx_transport import (
     build_httpx_edinet_transport,
 )
 from stock_research_llm_orchestrator.sources.edinet.production_policy import (
-    APPROVAL_SHA256,
-    PROFILE_SHA256,
     gate_keys,
     gate_policy,
     load_edinet_binding,
@@ -75,8 +74,16 @@ def acquire_edinet_acceptance(
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     sleep: Callable[[float], None] = time.sleep,
     transport: httpx.BaseTransport | None = None,
+    _campaign: AnnualCampaign | None = None,
+    _target: str | None = None,
 ) -> Path:
     """Acquire the fixed list and, only if unique, its target annual archive once."""
+    version = 2 if _campaign is None else 3
+    if _campaign is None and _target is not None or _campaign is not None and (_target not in TARGETS or retained_list):
+        raise ValueError("edinet_campaign_scope_invalid")
+    list_date, period_start, period_end = (
+        TARGETS[_target] if _target is not None else ("2026-06-10", "2025-04-01", "2026-03-31")
+    )
     if not allow_network or not allow_credential:
         raise ValueError("edinet_explicit_opt_in_required")
     if task.security.security_code != "7203" or task.security.mic != "XTKS":
@@ -95,7 +102,7 @@ def acquire_edinet_acceptance(
         select_target(retained["body.bin"], listing)
         if _timestamp(recovered.received_at) > clock():
             raise ValueError("edinet_retained_list_from_future")
-    binding = load_edinet_binding(config, clock().astimezone(TOKYO).date())
+    binding = load_edinet_binding(config, clock().astimezone(TOKYO).date(), version)
     for path in (runtime, runs):
         path.mkdir(mode=0o700, parents=True, exist_ok=True)
         if path.stat().st_uid != os.geteuid() or stat.S_IMODE(path.stat().st_mode) != 0o700:
@@ -105,7 +112,9 @@ def acquire_edinet_acceptance(
     lease_policy = RuntimeLeasePolicy(lease_duration_seconds=120, heartbeat_interval_seconds=30)
     lease = repo.acquire_lease(f"edinet-owner-{uid}", clock(), lease_policy)
     release_allowed = True
-    approval = (config / "source-approvals/edinet/v2.yaml").read_bytes()
+    approval = (config / f"source-approvals/edinet/v{version}.yaml").read_bytes()
+    approval_hash = binding.approval_reference.sha256
+    profile_hash = binding.profile_reference.sha256
     files = {
         "task.json": task.model_dump_json(indent=2).encode(),
         "approval.yaml": approval,
@@ -116,7 +125,7 @@ def acquire_edinet_acceptance(
     acquisitions: list[FilingInput] = []
     selected = None
     source_intent = EdinetDocumentListAdapter().build_intent(
-        "document-list", (SourceParameter(name="date", value="2026-06-10"), SourceParameter(name="type", value="2"))
+        "document-list", (SourceParameter(name="date", value=list_date), SourceParameter(name="type", value="2"))
     )
     if retained:
         selected = select_target(retained["body.bin"], listing)
@@ -133,17 +142,17 @@ def acquire_edinet_acceptance(
                 for _ in range(3):
                     sleep(21)
                     lease = repo.heartbeat_lease(lease, clock(), lease_policy)
-            load_edinet_binding(config, clock().astimezone(TOKYO).date())
+            load_edinet_binding(config, clock().astimezone(TOKYO).date(), version)
             logical = ProductionLogicalRequest(
                 logical_request_id=f"edinet-{uid}-{key}",
                 task_id=task.task_id,
                 source_id="edinet",
                 operation=source_intent.operation,
                 request_fingerprint=sha256(
-                    (source_intent.model_dump_json() + APPROVAL_SHA256 + PROFILE_SHA256).encode()
+                    (source_intent.model_dump_json() + approval_hash + profile_hash).encode()
                 ).hexdigest(),
-                source_approval_version=2,
-                source_profile_version=2,
+                source_approval_version=version,
+                source_profile_version=version,
                 credential_scope_alias="edinet-api-key",
                 egress_scope="default-egress",
                 created_at=clock().isoformat(),
@@ -186,8 +195,12 @@ def acquire_edinet_acceptance(
                 _envelope: object,
                 physical: EdinetPhysicalTransport = physical,
                 received: list[datetime] = received,
+                sequence: int = sequence,
+                attempt_id: str = attempt.physical_attempt_id,
             ) -> tuple[UntrustedTransportResponse, object]:
-                load_edinet_binding(config, clock().astimezone(TOKYO).date())
+                load_edinet_binding(config, clock().astimezone(TOKYO).date(), version)
+                if _campaign is not None and _target is not None:
+                    _campaign.before_send(_target, sequence, clock(), attempt_id)
                 response = physical(request)
                 received.append(clock())
                 return response, None
@@ -303,14 +316,16 @@ def acquire_edinet_acceptance(
                     publication=publication,
                     source_intent=source_intent,
                     retrieved_at=received[0].isoformat(),
-                    acquisition_approval_sha256=APPROVAL_SHA256,
+                    acquisition_approval_sha256=approval_hash,
                 )
             )
             if sequence == 0:
                 listing = EdinetDocumentListAdapter().parse(BoundedSourceResponse.from_candidate(candidate))
-                if listing.requested_date != "2026-06-10":
+                if listing.requested_date != list_date:
                     raise ValueError("edinet_acceptance_list_date_mismatch")
-                selected = select_target(candidate.body, listing)
+                selected = select_target(
+                    candidate.body, listing, period_start, period_end, "E02144" if version == 3 else None
+                )
                 source_intent = EdinetXbrlDocumentAdapter().build_intent(
                     "document-retrieval",
                     (
@@ -323,12 +338,12 @@ def acquire_edinet_acceptance(
         day = clock().astimezone(TOKYO).date().isoformat()
         inputs = FinancialInput(
             checked_at=checked,
-            survey_period=ApplicablePeriodV1(start_date="2026-06-10", end_date="2026-06-10"),
+            survey_period=ApplicablePeriodV1(start_date=list_date, end_date=list_date),
             issuer=IssuerBinding(
                 security_code="7203",
                 edinet_code=selected.edinet_code,
                 provider_security_code="72030",
-                applicable_period=ApplicablePeriodV1(start_date="2026-06-10", end_date=day),
+                applicable_period=ApplicablePeriodV1(start_date=list_date, end_date=day),
                 list_key="list",
                 list_sha256=recovered.sha256 if recovered is not None else acquisitions[0].publication.content_sha256,
             ),
@@ -344,3 +359,59 @@ def acquire_edinet_acceptance(
     finally:
         if release_allowed and clock() < _timestamp(lease.expires_at):
             repo.release_lease(lease, clock())
+
+
+def acquire_prior_annual_campaign(
+    *,
+    task: DetailedAnalysisTaskV1,
+    config: Path,
+    runtime: Path,
+    runs: Path,
+    credential: Path,
+    allow_network: bool = False,
+    allow_credential: bool = False,
+    clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    sleep: Callable[[float], None] = time.sleep,
+    transport: httpx.BaseTransport | None = None,
+) -> tuple[Path, ...]:
+    """Execute a single persistent four-slot campaign; never resume online."""
+    if not allow_network or not allow_credential:
+        raise ValueError("edinet_explicit_opt_in_required")
+    runtime, runs, config = map(_safe_path, (runtime, runs, config))
+    if runtime == runs or runtime in runs.parents or runs in runtime.parents:
+        raise ValueError("edinet_storage_overlap")
+    if task.security.security_code != "7203" or task.security.mic != "XTKS":
+        raise ValueError("edinet_acceptance_task_out_of_scope")
+    if _timestamp(task.task_accepted_at) > clock():
+        raise ValueError("edinet_task_from_future")
+    if preflight_credential_file(credential, policy=CredentialFilePolicy(required_mode=0o600)).status != "ready":
+        raise ValueError("edinet_credential_preflight_failed")
+    binding = load_edinet_binding(config, clock().astimezone(TOKYO).date(), 3)
+    for path in (runtime, runs):
+        path.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if path.stat().st_uid != os.geteuid() or stat.S_IMODE(path.stat().st_mode) != 0o700:
+            raise ValueError("edinet_storage_requires_private_permissions")
+    # Atomic mkdir excludes simultaneous invocations even before the runtime lease.
+    campaign = AnnualCampaign(runtime, binding.approval_reference.sha256, task.task_id, clock())
+    outputs = []
+    for index, target in enumerate(TARGETS):
+        if index:
+            for _ in range(3):
+                sleep(21)
+        output = acquire_edinet_acceptance(
+            task=task,
+            config=config,
+            runtime=runtime,
+            runs=runs,
+            credential=credential,
+            allow_network=True,
+            allow_credential=True,
+            clock=clock,
+            sleep=sleep,
+            transport=transport,
+            _campaign=campaign,
+            _target=target,
+        )
+        campaign.record_result(target, output)
+        outputs.append(output)
+    return tuple(outputs)

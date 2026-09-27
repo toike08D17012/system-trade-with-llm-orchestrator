@@ -72,3 +72,10 @@ Pythonパスは `src/stock_research_llm_orchestrator/` 配下。新規campaign m
 ## 互換性・ロールバック
 
 既存v2設定・保存bundleは変更しない。新campaignを使用しなければ旧経路のまま。送信済み状態・取得記録はロールバックでも削除・リセットしない。コードの差し戻しをAPI要求予算の回復として扱わない。
+
+## Implementation Notes
+
+- ユーザーが限定4要求を承認。v3を追加し、既存の取得処理を固定対象に再利用した。
+- 排他campaign markerは共有runtimeのlease取得より前にatomic mkdirで作成し、親ディレクトリもfsyncする。これによりlease取得前の同時起動も排除する。各slotは送信callback内で永続化する。
+- 上限は同一共有runtime内で永続化される。別runtimeへの切替や管理者による記録削除を予算回復として認めない。読み取り再検証は既存financial CLIを用い、campaign自身にオンライン再開機能は設けない。
+- 2件は独立のfinancial bundleとし、それぞれのsurvey_periodを提出日1日に限定する。

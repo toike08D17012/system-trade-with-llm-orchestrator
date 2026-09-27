@@ -4,7 +4,10 @@ import argparse
 from pathlib import Path
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
-from stock_research_llm_orchestrator.preparation.edinet_evidence import acquire_edinet_acceptance
+from stock_research_llm_orchestrator.preparation.edinet_evidence import (
+    acquire_edinet_acceptance,
+    acquire_prior_annual_campaign,
+)
 from stock_research_llm_orchestrator.preparation.market_revalidation import _read_file
 
 
@@ -14,6 +17,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-network", action="store_true")
     parser.add_argument("--allow-credential", action="store_true")
     parser.add_argument("--retained-list", type=Path)
+    parser.add_argument("--prior-annual-campaign", action="store_true")
     parser.add_argument("--task", type=Path, required=True)
     parser.add_argument("--config", type=Path, default=Path("config"))
     parser.add_argument("--runtime", type=Path, required=True)
@@ -21,13 +25,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--credential-file", type=Path, default=Path("/run/secrets/edinet_api_key"))
     args = parser.parse_args(argv)
     try:
-        output = acquire_edinet_acceptance(
+        if args.prior_annual_campaign and args.retained_list is not None:
+            raise ValueError("edinet_campaign_retained_list_unsupported")
+        acquire = acquire_prior_annual_campaign if args.prior_annual_campaign else acquire_edinet_acceptance
+        extra = {} if args.prior_annual_campaign else {"retained_list": args.retained_list}
+        output = acquire(
             task=DetailedAnalysisTaskV1.model_validate_json(_read_file(args.task)),
             config=args.config,
             runtime=args.runtime,
             runs=args.runs,
             credential=args.credential_file,
-            retained_list=args.retained_list,
+            **extra,
             allow_network=args.allow_network,
             allow_credential=args.allow_credential,
         )

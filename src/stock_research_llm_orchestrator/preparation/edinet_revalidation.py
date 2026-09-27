@@ -63,7 +63,13 @@ def revalidate_list(files: Mapping[str, bytes]) -> tuple[RetainedListFailure, Ed
     return failure, listing
 
 
-def select_target(body: bytes, listing: EdinetDocumentList) -> EdinetDocument:
+def select_target(
+    body: bytes,
+    listing: EdinetDocumentList,
+    start: str = "2025-04-01",
+    end: str = "2026-03-31",
+    expected_code: str | None = None,
+) -> EdinetDocument:
     """Select only the unique authorized, available annual report."""
     raw = {d["docID"]: d for d in json.loads(body)["results"]}
     matches = [
@@ -71,14 +77,23 @@ def select_target(body: bytes, listing: EdinetDocumentList) -> EdinetDocument:
         for d in listing.documents
         if d.security_code == "72030"
         and d.edinet_code is not None
+        and (expected_code is None or d.edinet_code == expected_code)
         and d.document_type.value == "120"
-        and d.period_start == "2025-04-01"
-        and d.period_end == "2026-03-31"
+        and d.period_start == start
+        and d.period_end == end
         and d.withdrawal_status == "0"
         and d.xbrl_available
         and raw[d.document_id].get("legalStatus") in {"1", "2"}
         and raw[d.document_id].get("disclosureStatus") == "0"
     ]
+    if expected_code is not None and any(
+        d.edinet_code == expected_code
+        and d.period_start == start
+        and d.period_end == end
+        and d.document_type.value == "130"
+        for d in listing.documents
+    ):
+        raise ValueError("edinet_amendment_selection_unresolved")
     if len(matches) != 1:
         raise ValueError("edinet_acceptance_target_not_unique")
     return matches[0]

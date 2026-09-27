@@ -668,3 +668,20 @@ python -m stock_research_llm_orchestrator.preparation.financial_acceptance_cli v
 6項目すべてが採用された期間だけを完全期間として数え、提出書類の期間数とは区別します。
 現在は年次2/5期で、2022～2024年3月期と四半期・半期、IR・最新性の確認が不足しています。
 [前期比較値の受入結果](docs/decision-requests/2026-09-27-financial-comparative-period-outcome.md)を参照してください。
+
+### 過年度年次2件の限定EDINET取得
+
+承認済みv3は、2024-06-25と2023-06-30の一覧、および各一覧から一意に選別した
+7203／E02144の年次XBRLに限定します。最大4要求、同時1・60秒間隔、retryなしです。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.edinet_evidence_cli \
+  --prior-annual-campaign --allow-network --allow-credential \
+  --task runs/prior-annual-task.json --config config \
+  --runtime runs/dukascopy-shared-runtime --runs runs/edinet-evidence
+```
+
+campaign開始記録を共有runtime配下に永続保存します。完了・失敗・中断後とも再実行は拒否し、
+別taskや別出力先でも予算をリセットしません。同じ共有runtimeを使用し、記録の削除や
+別runtimeへの切替で再送しないでください。途中失敗時は保存済み原証拠のローカル検証だけを行います。
+旧 `--retained-list` とは併用できません。取得は候補保存までで、過年度財務値の採用ではありません。

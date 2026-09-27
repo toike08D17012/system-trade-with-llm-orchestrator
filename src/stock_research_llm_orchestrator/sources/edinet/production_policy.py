@@ -13,29 +13,39 @@ APPROVAL_SHA256 = "91100f98512569f612348f0e0d2d8e300d256af6886e880148e0832374288
 PROFILE_SHA256 = "36679945bb6969a9214c2a88f02687c8880050cf893ca934bfb63b1defddf5c7"
 
 
-def load_edinet_binding(config: Path, evaluation_date: date) -> SourceBinding:
+def load_edinet_binding(config: Path, evaluation_date: date, version: int = 2) -> SourceBinding:
     """Read exact configuration bytes again immediately before admission/send."""
-    for relative in ("source-approvals/edinet/v2.yaml", "source-profiles/edinet/v2.yaml"):
+    if version not in {2, 3}:
+        raise ValueError("unsupported_edinet_version")
+    approval_hash, profile_hash = (
+        (APPROVAL_SHA256, PROFILE_SHA256)
+        if version == 2
+        else (
+            "c6ee8fe3da245c9b7ee741ff03ba90a58999d251e96079f2d9252de6480ed153",
+            "6ee813d1f40b638b34aa18c026711ac1ec81164639a62606a5e6cc57bae7b28a",
+        )
+    )
+    for relative in (f"source-approvals/edinet/v{version}.yaml", f"source-profiles/edinet/v{version}.yaml"):
         path = config / relative
         if any(part.is_symlink() for part in (path, *path.parents)):
             raise ValueError("edinet_configuration_symlink")
     binding = bind_source(
         validate_configuration(config),
         source_id="edinet",
-        profile_version=2,
-        policy_version=2,
+        profile_version=version,
+        policy_version=version,
         evaluation_date=evaluation_date,
     )
     if not isinstance(binding, SourceBinding):
         raise ValueError("invalid_edinet_binding")
     a, p = binding.approval, binding.profile
     if not (
-        binding.approval_reference.sha256 == APPROVAL_SHA256
-        and binding.profile_reference.sha256 == PROFILE_SHA256
-        and a.artifact_id == "edinet-source-approval-v2"
-        and a.approval_version == 2
-        and p.artifact_id == "edinet-source-profile-v2"
-        and p.profile_version == p.policy_version == 2
+        binding.approval_reference.sha256 == approval_hash
+        and binding.profile_reference.sha256 == profile_hash
+        and a.artifact_id == f"edinet-source-approval-v{version}"
+        and a.approval_version == version
+        and p.artifact_id == f"edinet-source-profile-v{version}"
+        and p.profile_version == p.policy_version == version
         and a.source_id == p.source_id == "edinet"
         and p.rate_domain == "edinet-api"
         and p.egress_scope == "default-egress"
