@@ -139,3 +139,32 @@ def test_only_exact_owner_approved_policy_is_loaded() -> None:
     for candidate in (body + b" ", body.replace(b'"approved"', b'"draft"'), b"{}"):
         with pytest.raises(ValueError, match="not_approved"):
             evaluate_acceptance({}, {}, candidate)
+
+
+def test_prior_policy_pins_schema_evidence_and_unresolved_amendment() -> None:
+    """The reviewed prior report has a separate exact policy and explicit limits."""
+    from stock_research_llm_orchestrator.preparation.financial_acceptance import PRIOR_APPROVED_POLICY_SHA256
+    from stock_research_llm_orchestrator.preparation.financial_comparative import (
+        PRIOR_COMPARATIVE_POLICY_SHA256,
+        ComparativePolicy,
+        evaluate_comparative,
+    )
+
+    root = Path("config/financial-mapping")
+    body = (root / "7203-2024-approved.json").read_bytes()
+    assert sha256(body).hexdigest() == PRIOR_APPROVED_POLICY_SHA256
+    policy = FinancialAdoptionPolicy.model_validate_json(body)
+    assert policy.document_id == "S100TR7I" and policy.end_date == date(2024, 3, 31)
+    assert policy.reporting_basis == "as_reported_in_source"
+    assert len(policy.standard_schema_sha256) == 2
+    assert "prior_2023_amendment_content_unchecked" in policy.limitations
+    comparative_body = (root / "7203-2024-comparative-approved.json").read_bytes()
+    assert sha256(comparative_body).hexdigest() == PRIOR_COMPARATIVE_POLICY_SHA256
+    comparative = ComparativePolicy.model_validate_json(comparative_body)
+    assert comparative.base_policy_sha256 == PRIOR_APPROVED_POLICY_SHA256
+    assert [p.end_date.year for p in comparative.periods] == [2023, 2024]
+    assert [p.end_date.year for p in comparative.required_annual_periods] == list(range(2020, 2025))
+    with pytest.raises(ValueError, match="not_approved"):
+        evaluate_acceptance({}, {}, body.replace(b"2023-12-01", b"2025-11-01"))
+    with pytest.raises(ValueError, match="not_approved"):
+        evaluate_comparative({}, {}, {}, comparative_body + b" ")

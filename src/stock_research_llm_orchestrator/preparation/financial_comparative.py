@@ -26,6 +26,8 @@ from stock_research_llm_orchestrator.sources.edinet.xbrl_taxonomy import Taxonom
 
 APPROVED_COMPARATIVE_POLICY_SHA256 = "eaf1740c4c717eefcc82921ce6ffb1b98bcbb0804aafb775fa26c34ecfe5790e"
 
+PRIOR_COMPARATIVE_POLICY_SHA256 = "33ff10cf1a87be6f7b0ef1dd706155eb1a77a6c0f5bdb1b7d9dd6d0ce39d33fe"
+
 
 class AnnualPeriod(StrictContractModel):
     """Explicit annual coverage target, independent of instant fact dates."""
@@ -156,7 +158,7 @@ def evaluate_comparative(
     policy_bytes: bytes,
 ) -> dict[str, bytes]:
     """Replay current-period eligibility and taxonomy before considering comparisons."""
-    if sha256(policy_bytes).hexdigest() != APPROVED_COMPARATIVE_POLICY_SHA256:
+    if sha256(policy_bytes).hexdigest() not in {APPROVED_COMPARATIVE_POLICY_SHA256, PRIOR_COMPARATIVE_POLICY_SHA256}:
         raise ValueError("comparative_policy_not_approved")
     policy = ComparativePolicy.model_validate_json(policy_bytes)
     validate_acceptance(adoption, source, review)
@@ -210,6 +212,11 @@ def evaluate_comparative(
         "diagnostic.json": _json(diagnostics),
         "taxonomy.json": adoption["taxonomy.json"],
     }
+    if base.reporting_basis is not None:
+        provenance = json.loads(adoption["provenance.json"])
+        provenance["fact_periods"] = [record.period.model_dump(mode="json") for record in records]
+        provenance["coverage_basis"] = "source_reporting_period_window"
+        files["provenance.json"] = _json(provenance)
     manifest = ComparativeManifest(
         accepted_count=sum(c.accepted_count for c in coverage),
         annual_coverage=coverage,
@@ -221,6 +228,8 @@ def evaluate_comparative(
             for label, dependency in (("financial", source), ("review", review), ("adoption", adoption))
         },
     )
+    if base.limitations:
+        manifest = manifest.model_copy(update={"limitations": (*manifest.limitations, *base.limitations)})
     files["manifest.json"] = manifest.model_dump_json(indent=2).encode()
     return files
 

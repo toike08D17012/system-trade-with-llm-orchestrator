@@ -8,7 +8,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from stock_research_llm_orchestrator.contracts.base import Sha256Hex, StrictContractModel
 from stock_research_llm_orchestrator.preparation.financial_disclosure import FinancialInput, FinancialManifest
@@ -37,6 +37,8 @@ from stock_research_llm_orchestrator.sources.protocol import BoundedSourceRespon
 
 APPROVED_POLICY_SHA256 = "7874467ef5032e5dcfa58a7403259f08c93222b7fb91ac73d95856c944c4d46f"
 
+PRIOR_APPROVED_POLICY_SHA256 = "6c9e1e2793cfbaba7fef5b96052727ba0105c2a63510946f9cdd6ab47e6eae0e"
+
 
 class AcceptedMappingRule(StrictContractModel):
     """One metric's policy-reviewed taxonomy requirements."""
@@ -60,6 +62,9 @@ class FinancialAdoptionPolicy(StrictContractModel):
     end_date: date
     taxonomy: TaxonomySpec
     rules: tuple[AcceptedMappingRule, ...]
+    standard_schema_sha256: dict[str, Sha256Hex] = Field(default_factory=dict)
+    reporting_basis: Literal["as_reported_in_source"] | None = None
+    limitations: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def require_six_metrics(self) -> FinancialAdoptionPolicy:
@@ -176,7 +181,7 @@ def evaluate_acceptance(
     source: Mapping[str, bytes], review_files: Mapping[str, bytes], policy_bytes: bytes
 ) -> dict[str, bytes]:
     """Recompute adoption from raw evidence and an exact, explicitly approved policy."""
-    if sha256(policy_bytes).hexdigest() != APPROVED_POLICY_SHA256:
+    if sha256(policy_bytes).hexdigest() not in {APPROVED_POLICY_SHA256, PRIOR_APPROVED_POLICY_SHA256}:
         raise ValueError("financial_adoption_policy_not_approved")
     policy = FinancialAdoptionPolicy.model_validate_json(policy_bytes)
     validate_mapping(review_files, source)
@@ -237,6 +242,20 @@ def evaluate_acceptance(
             ]
         ),
     }
+    if policy.reporting_basis is not None:
+        files["provenance.json"] = _json(
+            {
+                "source_document_id": policy.document_id,
+                "source_archive_sha256": policy.archive_sha256,
+                "reporting_period": {
+                    "start_date": policy.start_date.isoformat(),
+                    "end_date": policy.end_date.isoformat(),
+                },
+                "reporting_basis": policy.reporting_basis,
+                "standard_schema_sha256": policy.standard_schema_sha256,
+                "limitations": policy.limitations,
+            }
+        )
     result = FinancialAcceptanceManifest(
         archive_sha256=policy.archive_sha256,
         source_manifest_sha256=sha256(source["manifest.json"]).hexdigest(),
@@ -245,6 +264,8 @@ def evaluate_acceptance(
         inherited_reasons=manifest.reasons,
         hashes={name: sha256(body).hexdigest() for name, body in files.items()},
     )
+    if policy.limitations:
+        result = result.model_copy(update={"limitations": (*result.limitations, *policy.limitations)})
     files["manifest.json"] = result.model_dump_json(indent=2).encode()
     return files
 

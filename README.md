@@ -669,6 +669,19 @@ python -m stock_research_llm_orchestrator.preparation.financial_acceptance_cli v
 現在は年次2/5期で、2022～2024年3月期と四半期・半期、IR・最新性の確認が不足しています。
 [前期比較値の受入結果](docs/decision-requests/2026-09-27-financial-comparative-period-outcome.md)を参照してください。
 
+### 2024年報告の当期・比較値の限定採用
+
+保存済みS100TR7Iには、`7203-2024-draft.json`、`7203-2024-approved.json`、
+`7203-2024-comparative-approved.json`（いずれも `config/financial-mapping/` 配下）を
+順に使い、上記と同じmapping・当期受入・比較受入CLIで2023・2024年3月期の各6項目を採用できます。
+入力には対応する2024年sourceとreviewを指定し、出力は既存bundleとは別のディレクトリに保存します。
+
+出典は「2024年報告に掲載された値」です。`provenance.json` とmanifestに
+2023年訂正内容未照合・最新性未確認の制約を保持します。
+このbundleの年次2/5期は2020～2024年のローカル窓であり、既存runの2022～2026年窓とは異なります。
+複数報告の統合は未実装で、この受入をrun準備に渡すと拒否します。既存runの充足率は2/5期のままです。
+[限定採用結果](docs/decision-requests/2026-09-27-retained-2024-financial-adoption-outcome.md)を参照してください。
+
 ### 過年度年次2件の限定EDINET取得
 
 承認済みv3は、2024-06-25と2023-06-30の一覧、および各一覧から一意に選別した

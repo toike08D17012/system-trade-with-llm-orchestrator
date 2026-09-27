@@ -39,3 +39,9 @@ Pythonパスは `src/stock_research_llm_orchestrator/` 配下。新規policy名�
 ## 互換性
 
 既存policy・hash・保存成果物・runは不変。新経路の利用を停止すれば従来状態へ戻れる。原本と失敗履歴は削除しない。
+
+## Implementation Notes
+
+ユーザーの継続指示により上記限定採用を承認済みとして実装した。2組のpolicy hashのみを許可し、新bundleの`provenance.json`とmanifestに制約を保持する。公式schema hashは事前検証済みの根拠をpolicyに固定するもので、実行時の再取得は行わない。
+
+既存run経路への誤投入で出典固有の制約が失われないよう、`financial_run.py`に新source-report受入の拒否を追加した。複数報告統合は後続作業とする。対象テスト28件、型検査、Ruffを通過。実データのprepareで当期6項目、比較込み12項目を採用した。詳細は[受入結果](../../decision-requests/2026-09-27-retained-2024-financial-adoption-outcome.md)を参照。

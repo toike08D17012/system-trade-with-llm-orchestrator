@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "status": "approved",
+  "approval_reference": "docs/agent-reports/plans/2026-09-27-retained-2024-financial-adoption-implementation-plan.md",
+  "base_policy_sha256": "6c9e1e2793cfbaba7fef5b96052727ba0105c2a63510946f9cdd6ab47e6eae0e",
+  "security_code": "7203",
+  "edinet_code": "E02144",
+  "document_id": "S100TR7I",
+  "archive_sha256": "fa53ae6f2b86ed9aff183c95466df69e6f4bef4253cf044cc48ae28cc35cdfb1",
+  "proposal_sha256": "365747f47d3044ed3dc44eea1b8996d0f8bf62f27858275429cff7e84780c6b6",
+  "reporting_period": {
+    "start_date": "2023-04-01",
+    "end_date": "2024-03-31"
+  },
+  "periods": [
+    {
+      "start_date": "2022-04-01",
+      "end_date": "2023-03-31"
+    },
+    {
+      "start_date": "2023-04-01",
+      "end_date": "2024-03-31"
+    }
+  ],
+  "required_annual_periods": [
+    {
+      "start_date": "2019-04-01",
+      "end_date": "2020-03-31"
+    },
+    {
+      "start_date": "2020-04-01",
+      "end_date": "2021-03-31"
+    },
+    {
+      "start_date": "2021-04-01",
+      "end_date": "2022-03-31"
+    },
+    {
+      "start_date": "2022-04-01",
+      "end_date": "2023-03-31"
+    },
+    {
+      "start_date": "2023-04-01",
+      "end_date": "2024-03-31"
+    }
+  ]
+}

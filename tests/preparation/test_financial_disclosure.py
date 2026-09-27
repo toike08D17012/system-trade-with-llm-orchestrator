@@ -683,6 +683,57 @@ def test_financial_adoption_roundtrip_all_six_metrics(
         ("validate-run", "--input", combined),
     ):
         assert main([command, *arguments, "--comparative", str(comparative_output), flag, str(destination)]) == 0
+    # A separate approved source-report policy carries limitations through both layers.
+    scoped_policy = {
+        **policy,
+        "reporting_basis": "as_reported_in_source",
+        "standard_schema_sha256": {"https://example.invalid/standard.xsd": "a" * 64},
+        "limitations": ["prior_2023_amendment_content_unchecked", "local_coverage_not_current_run_coverage"],
+    }
+    scoped_path = inputs.parent / "scoped-policy.json"
+    _save(scoped_path, scoped_policy)
+    scoped_hash = hashlib.sha256(scoped_path.read_bytes()).hexdigest()
+    monkeypatch.setattr(adoption, "PRIOR_APPROVED_POLICY_SHA256", scoped_hash)
+    scoped_output = inputs.parent / "scoped-adoption"
+    scoped_result = adoption.prepare_acceptance(source, review, scoped_path, scoped_output)
+    assert "prior_2023_amendment_content_unchecked" in scoped_result.limitations
+    scoped_files = read_bundle(scoped_output)
+    assert json.loads(scoped_files["provenance.json"])["source_document_id"] == policy["document_id"]
+    assert b"123000000" not in scoped_files["provenance.json"]
+    with pytest.raises(ValueError, match="integration_unapproved"):
+        prepare_financial_run(source, review, scoped_output, inputs.parent / "unapproved-run")
+    with pytest.raises(ValueError, match="binding_mismatch"):
+        comparative.evaluate_comparative(
+            before, read_bundle(review), scoped_files, comparative_policy_path.read_bytes()
+        )
+    scoped_comparative_policy = {**comparative_policy, "base_policy_sha256": scoped_hash}
+    scoped_comparative_path = inputs.parent / "scoped-comparative-policy.json"
+    _save(scoped_comparative_path, scoped_comparative_policy)
+    monkeypatch.setattr(
+        comparative, "PRIOR_COMPARATIVE_POLICY_SHA256", hashlib.sha256(scoped_comparative_path.read_bytes()).hexdigest()
+    )
+    scoped_comparative_output = inputs.parent / "scoped-comparative"
+    scoped_comparative_result = comparative.prepare_comparative(
+        source, review, scoped_output, scoped_comparative_path, scoped_comparative_output
+    )
+    assert scoped_comparative_result.accepted_count == 12
+    assert "prior_2023_amendment_content_unchecked" in scoped_comparative_result.limitations
+    scoped_comparative_files = read_bundle(scoped_comparative_output)
+    provenance = json.loads(scoped_comparative_files["provenance.json"])
+    assert len(provenance["fact_periods"]) == 2
+    assert provenance["coverage_basis"] == "source_reporting_period_window"
+    for files, validator in (
+        (scoped_files, lambda f: adoption.validate_acceptance(f, before, read_bundle(review))),
+        (
+            scoped_comparative_files,
+            lambda f: comparative.validate_comparative(f, before, read_bundle(review), scoped_files),
+        ),
+    ):
+        for name in ("provenance.json", "manifest.json", "policy.json"):
+            with pytest.raises(ValueError):
+                validator({**files, name: b"{}"})
+    adoption.validate_acceptance(saved, before, read_bundle(review))
+    comparative.validate_comparative(comparative_files, before, read_bundle(review), saved)
     validate_financial_run(run_files, before, read_bundle(review), saved)
     assert read_bundle(output) == saved
     (output / "values.json").write_bytes(b"bad")

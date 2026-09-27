@@ -125,6 +125,8 @@ def evaluate_financial_run(
         validate_acceptance(adoption, financial, review)
     else:
         validate_comparative(comparative, financial, review, adoption)
+    if "provenance.json" in adoption:
+        raise ValueError("financial_source_report_run_integration_unapproved")
     original = FinancialManifest.model_validate_json(financial["manifest.json"])
     task = DetailedAnalysisTaskV1.model_validate_json(financial["task.json"])
     values = tuple(
