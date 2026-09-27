@@ -474,7 +474,8 @@ P0承認の阻害課題へ混在させない。
 - [x] Inventory retained prior-period financial candidates before planning additional acquisition.
 - [x] Adopt pinned prior-year comparisons and report annual metric coverage independently of filing counts.
 - [x] Acquire and adopt the missing 2022–2024 annual periods with explicit source limitations.
-- [ ] Identify the latest eight published interim periods and plan targeted acquisition.
+- [x] Inventory official IR links for the latest eight non-annual reporting candidates; record a provisional five-document comparison strategy.
+- [ ] Inspect the latest IR summary format and implement bounded PDF evidence intake before accepting interim metrics.
 
 - [x] Implement the one-shot prior annual EDINET campaign and retain its failed list response.
 - [x] Revalidate the retained 2024-06-25 list offline after narrowing unused withdrawal-status validation.

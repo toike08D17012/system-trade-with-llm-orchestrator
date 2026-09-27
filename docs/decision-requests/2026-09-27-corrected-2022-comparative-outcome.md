@@ -21,3 +21,7 @@
 - status=pending、analysis_ready=false。期間充足を分析可能性に読み替えない。
 
 実データprepare/replayと改ざん拒否を確認した。合成テストでtaxonomyを含む受入、policy/archive/output改ざん、欠落・nil・値競合、任意pair接続と従来出力維持を検証した。
+
+受入manifest SHA-256: `59c7d0b0ba8a735a4ad314bb9673e90cce9a36ec369340e1e18e294e89863782`。統合manifest SHA-256: `a0f8a4010c59253417c80c34a893c80937f2923656846b8a5edef17625e55376`。コミット時の全体Pytest・Mypy・Ruffが成功した。
+
+次の[四半期・半期資料の候補調査](../agent-reports/research/2026-09-27-interim-source-inventory.md)も実施した。PDFの期間・比較欄・抽出方式は受入前に確認する。
