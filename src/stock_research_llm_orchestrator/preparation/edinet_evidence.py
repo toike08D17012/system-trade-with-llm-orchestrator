@@ -17,6 +17,12 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import 
 from stock_research_llm_orchestrator.credentials.models import CredentialFilePolicy
 from stock_research_llm_orchestrator.credentials.preflight import preflight_credential_file
 from stock_research_llm_orchestrator.preparation.edinet_campaign import TARGETS, AnnualCampaign
+from stock_research_llm_orchestrator.preparation.edinet_pair import (
+    PAIR_IDS,
+    PairCampaign,
+    validate_pair_bundle,
+    validate_pair_list,
+)
 from stock_research_llm_orchestrator.preparation.edinet_revalidation import revalidate_list, select_target
 from stock_research_llm_orchestrator.preparation.financial_disclosure import (
     FilingInput,
@@ -69,16 +75,19 @@ def acquire_edinet_acceptance(
     runs: Path,
     credential: Path,
     retained_list: Path | None = None,
+    amendment_pair: bool = False,
     allow_network: bool = False,
     allow_credential: bool = False,
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     sleep: Callable[[float], None] = time.sleep,
     transport: httpx.BaseTransport | None = None,
-    _campaign: AnnualCampaign | None = None,
+    _campaign: AnnualCampaign | PairCampaign | None = None,
     _target: str | None = None,
 ) -> Path:
     """Acquire the fixed list and, only if unique, its target annual archive once."""
-    version = 2 if _campaign is None else _campaign.version
+    version = 5 if amendment_pair else 2 if _campaign is None else _campaign.version
+    if amendment_pair and (_campaign is not None or retained_list is None or _target is not None):
+        raise ValueError("edinet_pair_scope_invalid")
     if (
         _campaign is None
         and _target is not None
@@ -104,7 +113,9 @@ def acquire_edinet_acceptance(
     if retained and version == 4:
         retained["original-approval.yaml"] = (config / "source-approvals/edinet/v3.yaml").read_bytes()
     recovered = None
-    if retained:
+    if amendment_pair:
+        validate_pair_list(retained, clock())
+    elif retained:
         recovered, listing = revalidate_list(retained, prior=version == 4)
         select_target(retained["body.bin"], listing, period_start, period_end, "E02144" if version >= 3 else None)
         if _timestamp(recovered.received_at) > clock():
@@ -114,6 +125,8 @@ def acquire_edinet_acceptance(
         path.mkdir(mode=0o700, parents=True, exist_ok=True)
         if path.stat().st_uid != os.geteuid() or stat.S_IMODE(path.stat().st_mode) != 0o700:
             raise ValueError("edinet_storage_requires_private_permissions")
+    if amendment_pair:
+        _campaign = PairCampaign(runtime, binding.approval_reference.sha256, task.task_id, clock())
     repo = initialize_runtime_storage(runtime)
     uid = uuid4().hex
     lease_policy = RuntimeLeasePolicy(lease_duration_seconds=120, heartbeat_interval_seconds=30)
@@ -134,7 +147,9 @@ def acquire_edinet_acceptance(
     source_intent = EdinetDocumentListAdapter().build_intent(
         "document-list", (SourceParameter(name="date", value=list_date), SourceParameter(name="type", value="2"))
     )
-    if retained:
+    if amendment_pair:
+        files.update({f"retained-list/{name}": body for name, body in retained.items()})
+    elif retained:
         selected = select_target(
             retained["body.bin"], listing, period_start, period_end, "E02144" if version >= 3 else None
         )
@@ -144,8 +159,14 @@ def acquire_edinet_acceptance(
             (SourceParameter(name="document_id", value=selected.document_id), SourceParameter(name="type", value="1")),
         )
     try:
-        for sequence in range(1 if retained else 0, 2):
-            key = "list" if sequence == 0 else "document"
+        for sequence in range(0 if amendment_pair else 1 if retained else 0, 2):
+            key = PAIR_IDS[sequence] if amendment_pair else "list" if sequence == 0 else "document"
+            is_list = sequence == 0 and not amendment_pair
+            if amendment_pair:
+                source_intent = EdinetXbrlDocumentAdapter().build_intent(
+                    "document-retrieval",
+                    (SourceParameter(name="document_id", value=key), SourceParameter(name="type", value="1")),
+                )
             if sequence:
                 # Keep the lease alive while respecting all shared 60-second gates.
                 for _ in range(3):
@@ -205,10 +226,13 @@ def acquire_edinet_acceptance(
                 physical: EdinetPhysicalTransport = physical,
                 received: list[datetime] = received,
                 sequence: int = sequence,
+                key: str = key,
                 attempt_id: str = attempt.physical_attempt_id,
             ) -> tuple[UntrustedTransportResponse, object]:
                 load_edinet_binding(config, clock().astimezone(TOKYO).date(), version)
-                if _campaign is not None and _target is not None:
+                if amendment_pair and _campaign is not None:
+                    _campaign.before_send(key, sequence, clock(), attempt_id)
+                elif _campaign is not None and _target is not None:
                     _campaign.before_send(_target, sequence, clock(), attempt_id)
                 response = physical(request)
                 received.append(clock())
@@ -223,8 +247,8 @@ def acquire_edinet_acceptance(
                     gate_keys(task.task_id, source_intent.operation),
                     gate_policy(),
                     TransportValidationPolicy(
-                        allowed_media_types=("application/json",) if sequence == 0 else ("application/octet-stream",),
-                        allowed_encodings=("utf-8",) if sequence == 0 else ("binary",),
+                        allowed_media_types=("application/json",) if is_list else ("application/octet-stream",),
+                        allowed_encodings=("utf-8",) if is_list else ("binary",),
                     ),
                     lease,
                     clock(),
@@ -248,7 +272,7 @@ def acquire_edinet_acceptance(
                 raise ValueError("edinet_exchange_failed")
             candidate = result.candidate
 
-            def validate(body: bytes, candidate: TemporaryRawCandidate = candidate, sequence: int = sequence) -> None:
+            def validate(body: bytes, candidate: TemporaryRawCandidate = candidate, is_list: bool = is_list) -> None:
                 response = BoundedSourceResponse(
                     physical_attempt_id=candidate.physical_attempt_id,
                     body=body,
@@ -256,7 +280,7 @@ def acquire_edinet_acceptance(
                     media_type=candidate.media_type,
                     encoding=candidate.encoding,
                 )
-                if sequence == 0:
+                if is_list:
                     EdinetDocumentListAdapter().parse(response)
                 else:
                     EdinetXbrlDocumentAdapter().parse(response)
@@ -301,7 +325,7 @@ def acquire_edinet_acceptance(
                 byte_count=len(candidate.body),
                 media_type=candidate.media_type,
                 encoding=candidate.encoding,
-                raw_schema_id="edinet-document-list-raw" if sequence == 0 else "edinet-xbrl-zip-raw",
+                raw_schema_id="edinet-document-list-raw" if is_list else "edinet-xbrl-zip-raw",
                 raw_schema_version=1,
                 publication_generation=lease.generation,
             )
@@ -328,7 +352,7 @@ def acquire_edinet_acceptance(
                     acquisition_approval_sha256=approval_hash,
                 )
             )
-            if sequence == 0:
+            if is_list:
                 listing = EdinetDocumentListAdapter().parse(BoundedSourceResponse.from_candidate(candidate))
                 if listing.requested_date != list_date:
                     raise ValueError("edinet_acceptance_list_date_mismatch")
@@ -342,6 +366,23 @@ def acquire_edinet_acceptance(
                         SourceParameter(name="type", value="1"),
                     ),
                 )
+        if amendment_pair:
+            files["acquisitions.json"] = json.dumps(
+                [a.model_dump(mode="json") for a in acquisitions], indent=2
+            ).encode()
+            files["manifest.json"] = json.dumps(
+                {
+                    "kind": "edinet-pinned-amendment-pair",
+                    "analysis_ready": False,
+                    "document_ids": PAIR_IDS,
+                    "whole_list_accepted": False,
+                    "hashes": {name: sha256(body).hexdigest() for name, body in files.items()},
+                },
+                indent=2,
+            ).encode()
+            name = f"edinet-pair-{uid}"
+            publish_preparation(runs, name, files, validator=validate_pair_bundle)
+            return runs / name
         assert selected is not None and selected.edinet_code is not None
         checked = clock().isoformat()
         day = clock().astimezone(TOKYO).date().isoformat()

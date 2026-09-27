@@ -23,7 +23,9 @@ def test_validate_configuration_accepts_repository_config_in_path_order(tmp_path
     root = _copy_config(tmp_path)
     artifacts = validate_configuration(root)
     paths = [artifact.path.as_posix() for artifact in artifacts]
-    assert len(paths) == 28
+    assert len(paths) == 30
+    assert "source-approvals/edinet/v5.yaml" in paths
+    assert "source-profiles/edinet/v5.yaml" in paths
     assert "source-approvals/edinet/v4.yaml" in paths
     assert "source-profiles/edinet/v4.yaml" in paths
     assert "source-approvals/edinet/v3.yaml" in paths

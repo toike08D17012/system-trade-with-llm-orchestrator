@@ -727,3 +727,13 @@ python -m stock_research_llm_orchestrator.preparation.edinet_evidence_cli \
 このコマンドは初回一覧の再送を行わず、残り3要求に限定します。続行開始後は再実行できません。
 新しいfinancial入力version 2はこの固定失敗一覧と元approval v3を保持し、通常の一覧再検証と区別します。
 既存version 1の再検証は変更していません。実行済みかどうかはcampaign記録と受入結果を確認してください。
+
+### 必要な追加EDINET取得
+
+ユーザーは進行に必要な取得を許可しています。対象・必要性・送信上限を実行単位で記録し、
+間隔を確保し、不要な一覧・文書取得を避けます。許可済みの同じ取得判断を繰り返し求めません。
+v5の`edinet_evidence_cli --amendment-pair --retained-list <固定一覧bundle>`は、
+2023年原報告S100QZHYと訂正S100RAR0だけを各1回取得します。通常のtask/runtime/runs指定と
+network/credential opt-inも必要です。元一覧全体のparse成功とは扱わず、raw pairとして保存します。
+60秒以上の間隔、共有Coordinator、一回限りの送信slot、失敗時停止を維持します。
+[取得結果](docs/decision-requests/2026-09-27-edinet-2023-pair-outcome.md)を参照してください。
