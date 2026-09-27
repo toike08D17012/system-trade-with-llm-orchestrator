@@ -409,3 +409,84 @@ def test_competing_publication_rejected(case: Path) -> None:
         assert not (case / "result").exists()
     finally:
         os.close(descriptor)
+
+
+def test_financial_run_price_fx_binding(case: Path) -> None:
+    """Join real price/FX evidence only at the same full task and recorded instant."""
+    from stock_research_llm_orchestrator.preparation.financial_disclosure import FinancialManifest
+    from stock_research_llm_orchestrator.preparation.financial_run import resolve_price_fx
+
+    price = run(case)
+    saved = read_bundle(case / "result")
+    manifest = FinancialManifest(
+        task_id=price.task_id,
+        checked_at=price.checked_at,
+        generation="financial",
+        reasons=(),
+        filings=(),
+        observed_list_dates=(),
+        missing_list_dates=(),
+        annual_periods=(),
+        interim_periods=(),
+        price_fx_status=None,
+        hashes={},
+    )
+    financial = {"task.json": saved["task.json"], "manifest.json": manifest.model_dump_json().encode()}
+    assert resolve_price_fx(financial, saved) == saved
+    embedded = {**financial, **{f"price-fx/{name}": body for name, body in saved.items()}}
+    assert resolve_price_fx(embedded, None) == saved
+    assert resolve_price_fx(embedded, saved) == saved
+    with pytest.raises(ValueError, match="conflict"):
+        resolve_price_fx(embedded, {**saved, "conversion.json": b"bad"})
+    with pytest.raises(ValueError, match="empty"):
+        resolve_price_fx(financial, {})
+    altered = json.loads(financial["task.json"])
+    altered["task_id"] = "different-task"
+    with pytest.raises(ValueError, match="task_or_time"):
+        resolve_price_fx({**financial, "task.json": json.dumps(altered).encode()}, saved)
+    altered["task_id"] = price.task_id
+    altered["security"]["security_code"] = "9999"
+    with pytest.raises(ValueError, match="task_or_time"):
+        resolve_price_fx({**financial, "task.json": json.dumps(altered).encode()}, saved)
+    other_time = manifest.model_copy(update={"checked_at": "2026-09-28T00:00:00+00:00"})
+    with pytest.raises(ValueError, match="task_or_time"):
+        resolve_price_fx({**financial, "manifest.json": other_time.model_dump_json().encode()}, saved)
+
+
+@pytest.mark.parametrize("checked", [CHECKED, CHECKED + timedelta(days=2)])
+def test_financial_run_preserves_price_layer_state(
+    case: Path, checked: datetime, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Use real price replay while isolating financial validation to test aggregation."""
+    from stock_research_llm_orchestrator.preparation import financial_run
+    from stock_research_llm_orchestrator.preparation.financial_disclosure import FinancialManifest
+
+    price = run(case, checked=checked)
+    saved = read_bundle(case / "result")
+    original = FinancialManifest(
+        task_id=price.task_id,
+        checked_at=price.checked_at,
+        generation="financial",
+        reasons=("price_fx_not_connected", "issuer_ir_unchecked"),
+        filings=(),
+        observed_list_dates=(),
+        missing_list_dates=(),
+        annual_periods=(),
+        interim_periods=(),
+        price_fx_status=None,
+        hashes={},
+    )
+    source = {"task.json": saved["task.json"], "manifest.json": original.model_dump_json().encode()}
+    monkeypatch.setattr(financial_run, "validate_acceptance", lambda *args: None)
+    result = financial_run.evaluate_financial_run(source, {}, {"values.json": b"[]"}, saved)
+    summary = financial_run.FinancialRunManifest.model_validate_json(result["manifest.json"])
+    assert summary.price_fx is not None and summary.price_fx.status == price.status
+    assert summary.price_fx.fx == price.fx and summary.price_fx.price == price.price
+    assert summary.price_fx.conversion == price.conversion
+    assert summary.price_fx.restricted_uses == price.restricted_uses
+    assert "price_fx_not_connected" not in summary.reasons
+    assert "price_fx_not_connected" in summary.historical_reasons
+    assert ("price_fx_pending" in summary.reasons) == (price.status == "pending")
+    assert "issuer_ir_unchecked" in summary.reasons and not summary.analysis_ready
+    with pytest.raises(ValueError):
+        financial_run.validate_financial_run(result, source, {}, {"values.json": b"[]"})

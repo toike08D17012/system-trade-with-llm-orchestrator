@@ -614,3 +614,29 @@ python -m stock_research_llm_orchestrator.preparation.financial_acceptance_cli v
 他の書類やdraftのstatus変更では採用できません。追加通信や認証は不要です。
 個別項目が `accepted` でも、期間不足・IR等が未解決のため、全体は `pending` / `analysis_ready=false` です。
 [採用結果と残る作業](docs/decision-requests/2026-09-27-financial-mapping-adoption-outcome.md)を参照してください。
+
+### 財務採用結果を実行準備へ接続する
+
+`financial_disclosure_cli prepare-run` は、原財務bundle・mappingレビュー・採用結果を再検証し、
+採用項目、対象期間、未解決事項を一つの内部実行準備結果にまとめます。
+出力は値を含まないsummaryと依存ファイルのhash参照のみです。
+再検証時にも依存bundleを明示的に指定します。旧 `prepare` / `validate` は従来どおり利用できます。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.financial_disclosure_cli prepare-run \
+  --financial runs/financial-prepared --mapping-review runs/financial-mapping-review \
+  --adoption runs/financial-accepted --output runs/financial-run
+python -m stock_research_llm_orchestrator.preparation.financial_disclosure_cli validate-run \
+  --financial runs/financial-prepared --mapping-review runs/financial-mapping-review \
+  --adoption runs/financial-accepted --input runs/financial-run
+```
+
+価格・FXは任意の `--price-fx` で接続できます。原財務bundleに同梱済みならそれを使用します。
+task全体と確認時刻の一致が必要で、同梱分と別指定分が異なる場合は拒否します。
+別指定して保存した場合、再検証にも同じ依存bundleが必要です。
+準備状態がpendingなら、価格・FXの不足理由と利用制約も保持します。
+
+現在の不足は `reasons`、旧財務準備の理由は `historical_reasons` で区別します。
+限定採用があっても期間・IR等の不足は解消せず、全体は `analysis_ready=false` です。
+これは内部準備CLIの接続であり、公開CLIの分析実行コマンドはまだ未実装です。
+[実行準備への接続結果](docs/decision-requests/2026-09-27-financial-adoption-run-connection-outcome.md)を参照してください。

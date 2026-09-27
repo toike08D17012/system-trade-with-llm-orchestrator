@@ -546,6 +546,41 @@ def test_financial_adoption_roundtrip_all_six_metrics(
     with pytest.raises(ValueError):
         adoption.validate_acceptance(saved, {**before, "raw/document/body.bin": b"bad"}, read_bundle(review))
     assert adoption_main(["validate", "--source", str(source), "--review", str(review), "--input", str(output)]) == 0
+    from stock_research_llm_orchestrator.preparation.financial_run import (
+        prepare_financial_run,
+        validate_financial_run,
+    )
+
+    run_output = inputs.parent / "financial-run"
+    result_run = prepare_financial_run(source, review, output, run_output)
+    assert result_run.accepted_count == 6 and not result_run.analysis_ready
+    assert "financial_mapping_partial" in result_run.reasons
+    run_files = read_bundle(run_output)
+    assert set(run_files) == {"inputs.json", "manifest.json"}
+    assert b"123000000" not in b"".join(run_files.values())
+    validate_financial_run(run_files, before, read_bundle(review), saved)
+    for name in run_files:
+        with pytest.raises(ValueError):
+            validate_financial_run({**run_files, name: run_files[name] + b" "}, before, read_bundle(review), saved)
+    for dependency in ("financial", "review", "adoption"):
+        financial_files, mapping_files, adoption_files = dict(before), read_bundle(review), dict(saved)
+        selected = {"financial": financial_files, "review": mapping_files, "adoption": adoption_files}[dependency]
+        name = "task.json" if dependency == "financial" else "review.json" if dependency == "review" else "policy.json"
+        selected[name] = b"{}"
+        with pytest.raises(ValueError):
+            validate_financial_run(run_files, financial_files, mapping_files, adoption_files)
+    with pytest.raises(FileExistsError):
+        prepare_financial_run(source, review, output, run_output)
+    with pytest.raises(ValueError):
+        prepare_financial_run(source, review, output, output / "child")
+    linked = inputs.parent / "linked-financial"
+    linked.symlink_to(source, target_is_directory=True)
+    with pytest.raises(ValueError):
+        prepare_financial_run(linked, review, output, inputs.parent / "invalid")
+    arguments = ["--financial", str(source), "--mapping-review", str(review), "--adoption", str(output)]
+    assert main(["prepare-run", *arguments, "--output", str(inputs.parent / "cli-run")]) == 0
+    assert main(["validate-run", *arguments, "--input", str(run_output)]) == 0
+    assert read_bundle(output) == saved
     (output / "values.json").write_bytes(b"bad")
     assert adoption_main(["validate", "--source", str(source), "--review", str(review), "--input", str(output)]) == 1
     assert "123000000" not in capsys.readouterr().out

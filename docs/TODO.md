@@ -469,4 +469,5 @@ P0承認の阻害課題へ混在させない。
 - [x] Replay retained annual evidence; retain duplicate references and exclude financial values from review output.
 - [x] Confirm issuer-specific revenue semantics and consolidation scope for the retained filing.
 - [x] Implement and replay local-only adoption with a pinned policy, taxonomy proofs and six normalized metrics.
-- [ ] Connect local financial adoption references to normal-run preparation while preserving evidence gaps.
+- [x] Connect local financial adoption references to internal run preparation while preserving evidence gaps.
+- [ ] Prepare and connect real price/FX evidence for the same financial task and check time.
