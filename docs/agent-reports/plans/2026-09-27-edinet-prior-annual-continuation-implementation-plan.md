@@ -38,3 +38,7 @@
 - ユーザーが本限定続行を承認。approval/profile v4を追加し、旧v2/v3は保持した。
 - 原本・failure・元approvalのhashに加え、元campaignのstarted.jsonとslot-0.jsonを固定hashで確認する。続行markerは排他的に作成し、slot-1〜3を使用する。
 - financial入力version 2だけがこの固定保存一覧を受け入れ、元の失敗・取得日時・approval v3を保存する。旧version 1出力を変更しない。
+
+### 実取得結果と追加修正
+
+2024年XBRL取得は成功、続く2023年一覧は別発行体の文書ID重複で停止した。通算3/4要求。診断で対象年次への訂正報告（期間null・parentDocIDあり）を確認したため、選別の訂正停止条件に親文書ID照合を追加し、回帰テストを実施する。既存の同一期間による停止を維持し、取得許可を広げる変更はしない。重複一覧のparser制約は変更せず、続行は停止したままとする。詳細は[結果](../../decision-requests/2026-09-27-edinet-prior-annual-continuation-outcome.md)を参照。

@@ -108,8 +108,10 @@ def select_target(
     ]
     if expected_code is not None and any(
         d.edinet_code == expected_code
-        and d.period_start == start
-        and d.period_end == end
+        and (
+            (d.period_start == start and d.period_end == end)
+            or d.parent_document_id in {m.document_id for m in matches}
+        )
         and d.document_type.value == "130"
         for d in listing.documents
     ):

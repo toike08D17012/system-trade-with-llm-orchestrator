@@ -16,7 +16,9 @@ from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from .test_financial_disclosure import inputs as financial_inputs  # noqa: F401
 
 
-@pytest.mark.parametrize("case", ["success", "timeout", "wrong_entity", "duplicate", "amendment", "bad_zip"])
+@pytest.mark.parametrize(
+    "case", ["success", "timeout", "wrong_entity", "duplicate", "amendment", "amendment_parent", "bad_zip"]
+)
 def test_campaign_budget_and_scope(tmp_path: Path, request: pytest.FixtureRequest, case: str) -> None:
     """A fresh task or output path cannot restart the campaign's physical slots."""
     source = request.getfixturevalue("financial_inputs")
@@ -53,10 +55,12 @@ def test_campaign_budget_and_scope(tmp_path: Path, request: pytest.FixtureReques
             listing["results"] = [item]
             if case == "wrong_entity":
                 item["edinetCode"] = "E99999"
-            if case in {"duplicate", "amendment"}:
+            if case in {"duplicate", "amendment", "amendment_parent"}:
                 other = {**item, "docID": "OTHER", "seqNumber": 2}
-                if case == "amendment":
+                if case in {"amendment", "amendment_parent"}:
                     other["docTypeCode"] = "130"
+                if case == "amendment_parent":
+                    other.update(periodStart=None, periodEnd=None, parentDocID=item["docID"])
                 listing["results"].append(other)
             listing["metadata"]["resultset"]["count"] = len(listing["results"])
             return httpx.Response(200, headers={"Content-Type": "application/json"}, json=listing)

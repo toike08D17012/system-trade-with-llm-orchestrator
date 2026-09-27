@@ -477,4 +477,5 @@ P0承認の阻害課題へ混在させない。
 
 - [x] Implement the one-shot prior annual EDINET campaign and retain its failed list response.
 - [x] Revalidate the retained 2024-06-25 list offline after narrowing unused withdrawal-status validation.
-- [ ] Design a bounded continuation using the retained list without resetting the spent campaign slot.
+- [x] Implement bounded continuation without resetting spent slots; retain the 2024 archive and failed 2023 list.
+- [ ] Review the retained 2024 taxonomy and 2023 comparisons before proposing local adoption; preserve amendment uncertainty.
