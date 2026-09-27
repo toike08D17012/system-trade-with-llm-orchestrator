@@ -27,7 +27,8 @@ from stock_research_llm_orchestrator.preparation.financial_run import (
     evaluate_financial_run,
 )
 from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
-from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path
+from stock_research_llm_orchestrator.preparation.interim_ir import InterimPolicy, validate_interim
+from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path, _timestamp
 from stock_research_llm_orchestrator.preparation.price_fx_run import publish_run_preparation
 
 
@@ -86,7 +87,11 @@ def evaluate_multi_report(dependencies: Mapping[str, Mapping[str, bytes]]) -> di
     """Revalidate every source and retain per-source task, time and limitations."""
     pair_keys = {"pair", "pair_adoption"}
     has_pair = pair_keys <= dependencies.keys()
-    if set(dependencies) != set(DEPENDENCIES) | (pair_keys if has_pair else set()):
+    interim_keys = {"interim", "interim_source"}
+    has_interim = interim_keys <= dependencies.keys()
+    if set(dependencies) != set(DEPENDENCIES) | (pair_keys if has_pair else set()) | (
+        interim_keys if has_interim else set()
+    ):
         raise ValueError("multi_report_dependency_set_invalid")
     d = dependencies
     primary = evaluate_financial_run(d["financial"], d["review"], d["adoption"], d["price_fx"], d["comparative"])
@@ -189,6 +194,7 @@ def evaluate_multi_report(dependencies: Mapping[str, Mapping[str, bytes]]) -> di
         sort_keys=True,
         indent=2,
     ).encode()
+    limitations.update({"source_specific_check_times", "no_combined_freshness_check", "not_a_frozen_evidence_set"})
     result = {
         "version": 1,
         "kind": "internal-multi-report-financial-run-preparation",
@@ -201,15 +207,26 @@ def evaluate_multi_report(dependencies: Mapping[str, Mapping[str, bytes]]) -> di
         "complete_annual_count": sum(c.status == "complete" for c in coverage),
         "partial_annual_count": sum(c.status == "partial" for c in coverage),
         "inputs_sha256": sha256(inputs).hexdigest(),
-        "limitations": sorted(
-            limitations
-            | {
-                "source_specific_check_times",
-                "no_combined_freshness_check",
-                "not_a_frozen_evidence_set",
-            }
-        ),
+        "limitations": sorted(limitations),
     }
+    if has_interim:
+        validate_interim(d["interim"], d["interim_source"])
+        interim_policy = InterimPolicy.model_validate_json(d["interim"]["policy.json"])
+        if (interim_policy.security_code, interim_policy.edinet_code) != (
+            policies[0].security_code,
+            policies[0].edinet_code,
+        ):
+            raise ValueError("multi_report_interim_issuer_mismatch")
+        if any(doc.published_on > _timestamp(base_run.checked_at).date() for doc in interim_policy.documents):
+            raise ValueError("multi_report_interim_future_publication")
+        interim_manifest = json.loads(d["interim"]["manifest.json"])
+        result["interim_coverage"] = interim_manifest["interim_coverage"]
+        result["interim_accepted_count"] = interim_manifest["accepted_count"]
+        result["complete_interim_count"] = interim_manifest["complete_interim_count"]
+        sources.append({"dependency": "interim", "adoption": interim_manifest})
+        result["limitations"] = sorted(
+            limitations | set(interim_manifest["limitations"]) | {"interim_operator_evidence_not_task_bound"}
+        )
     return {"inputs.json": inputs, "manifest.json": json.dumps(result, sort_keys=True, indent=2).encode()}
 
 

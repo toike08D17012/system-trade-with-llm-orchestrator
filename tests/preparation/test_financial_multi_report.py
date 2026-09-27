@@ -203,6 +203,50 @@ def test_join_retains_source_limits_and_checks_compatibility(monkeypatch: pytest
     assert extended["accepted_count"] == 6 and len(extended["sources"]) == 3
     assert "pair_limit" in extended["limitations"]
     assert multi.evaluate_multi_report(d) == files
+    with pytest.raises(ValueError, match="dependency_set"):
+        multi.evaluate_multi_report({**d, "interim": {}})
+    monkeypatch.setattr(multi, "validate_interim", lambda files, source: calls.append("interim"))
+    interim_dependencies = {
+        **pair_dependencies,
+        "interim_source": {"raw.pdf": b"synthetic"},
+        "interim": {
+            "policy.json": Path("config/financial-mapping/7203-interim-ir-approved.json").read_bytes(),
+            "manifest.json": json.dumps(
+                {
+                    "accepted_count": 48,
+                    "complete_interim_count": 8,
+                    "interim_coverage": [],
+                    "limitations": ["operator_acquisition_metadata_not_runtime_verified"],
+                }
+            ).encode(),
+        },
+    }
+    joined = multi.evaluate_multi_report(interim_dependencies)
+    joined_manifest = json.loads(joined["manifest.json"])
+    assert joined_manifest["accepted_count"] == 6 and joined_manifest["interim_accepted_count"] == 48
+    assert joined_manifest["complete_interim_count"] == 8 and len(joined_manifest["sources"]) == 4
+    assert "interim" in calls
+    assert "interim_operator_evidence_not_task_bound" in joined_manifest["limitations"]
+    assert b'"value"' not in joined["manifest.json"]
+    multi.validate_multi_report(joined, interim_dependencies)
+    assert multi.evaluate_multi_report(d) == files
+    older_base = base.model_copy(update={"checked_at": "2026-01-01T00:00:00Z"})
+    monkeypatch.setattr(
+        multi, "evaluate_financial_run", lambda *args: {"manifest.json": older_base.model_dump_json().encode()}
+    )
+    with pytest.raises(ValueError, match="future_publication"):
+        multi.evaluate_multi_report(interim_dependencies)
+    monkeypatch.setattr(multi, "evaluate_financial_run", primary)
+    mismatched = {**interim_dependencies}
+    for key in ("adoption", "additional_adoption"):
+        changed_policy = json.loads(d[key]["policy.json"])
+        changed_policy["edinet_code"] = "E00001"
+        mismatched[key] = {**d[key], "policy.json": json.dumps(changed_policy).encode()}
+    mismatched.pop("pair")
+    mismatched.pop("pair_adoption")
+    with pytest.raises(ValueError, match="interim_issuer_mismatch"):
+        multi.evaluate_multi_report(mismatched)
+
     policy = json.loads(d["additional_adoption"]["policy.json"])
     policy["edinet_code"] = "E00001"
     with pytest.raises(ValueError, match="issuer_mismatch"):

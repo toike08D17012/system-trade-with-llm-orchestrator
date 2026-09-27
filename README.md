@@ -749,3 +749,33 @@ v5の`edinet_evidence_cli --amendment-pair --retained-list <固定一覧bundle>`
 network/credential opt-inも必要です。元一覧全体のparse成功とは扱わず、raw pairとして保存します。
 60秒以上の間隔、共有Coordinator、一回限りの送信slot、失敗時停止を維持します。
 [取得結果](docs/decision-requests/2026-09-27-edinet-2023-pair-outcome.md)を参照してください。
+
+### 四半期・半期IRのローカル受入と年次接続
+
+公式IR一覧で確認した固定8資料に対して、各期の売上・営業利益・親会社帰属利益・資産・資本・営業CFを受け入れます。
+損益・CFは期首からの累計で、単独四半期へ換算しません。資産・資本は期末残高です。
+PDFの単位・連結見出し・対象日付・比較列・親会社帰属を確認し、金額を百万JPYからJPYへ正規化します。
+未知のレイアウト・欠落・競合は未受入として記録します。pypdf 6.19.0を固定し、PDF抽出は資源制限付きの独立プロセスで行います。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.interim_ir_cli prepare \
+  --source runs/toyota-ir-prepared-input-20260927 \
+  --policy config/financial-mapping/7203-interim-ir-approved.json \
+  --output runs/toyota-ir-interim-accepted-20260927
+python -m stock_research_llm_orchestrator.preparation.interim_ir_cli validate \
+  --source runs/toyota-ir-prepared-input-20260927 \
+  --input runs/toyota-ir-interim-accepted-20260927
+```
+
+例の出力は既に作成済みです。prepareは未使用の保存先が必要で、再検証はvalidateを使用します。
+入力には`index/latest.html`、`index/archive.html`と各`*-receipt.json`、各資料key配下の`body.pdf`と`receipt.json`を置きます。
+policyは原本・取得記録・一覧をhashで固定し、原文と`values.json`はローカルのみ、manifestは値を含みません。
+このCLIは取得を行わず、operator取得の証拠をruntime検証済みと扱いません。
+
+既存`financial_multi_report_cli prepare`/`validate`の入力へ`--interim <採用bundle>`と
+`--interim-source <原証拠bundle>`を両方追加すると、再検証後に年次runへ接続します。
+年次の`accepted_count`と`complete_annual_count`は従来どおり年次だけを数えます。
+IRは`interim_accepted_count`・`complete_interim_count`・`interim_coverage`として別集計します。
+省略時の既存成果物は不変です。確認日より後に公表された資料は拒否し、取得日を一括鮮度確認日へ置き換えません。
+原文・数値を統合出力へ転記せず、残る開示・訂正・鮮度・runtime接続の制約と`analysis_ready=false`を維持します。
+[受入・接続結果](docs/decision-requests/2026-09-27-interim-ir-acceptance-outcome.md)を参照してください。

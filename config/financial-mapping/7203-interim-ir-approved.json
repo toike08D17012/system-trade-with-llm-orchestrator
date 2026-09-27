@@ -1,0 +1,112 @@
+{
+  "approval_reference": "docs/decision-requests/2026-09-27-interim-ir-acceptance-outcome.md",
+  "documents": [
+    {
+      "end_date": "2026-06-30",
+      "fiscal_year": 2027,
+      "key": "2027_1q",
+      "published_on": "2026-08-04",
+      "quarter": 1,
+      "sha256": "a28b4e5a37b626a24ad7028e2e9245f90297a6b4089556638862e379cd4446ed",
+      "start_date": "2026-04-01",
+      "url": "https://global.toyota/pages/global_toyota/ir/financial-results/2027_1q_summary_en.pdf"
+    },
+    {
+      "end_date": "2025-12-31",
+      "fiscal_year": 2026,
+      "key": "2026_3q",
+      "published_on": "2026-02-06",
+      "quarter": 3,
+      "sha256": "9ad69a57f1b96a2d87fd69a3051a1e5a9f701e0a47ca8187543cd4c942afc582",
+      "start_date": "2025-04-01",
+      "url": "https://global.toyota/pages/global_toyota/ir/financial-results/2026_3q_summary_en.pdf"
+    },
+    {
+      "end_date": "2025-09-30",
+      "fiscal_year": 2026,
+      "key": "2026_2q",
+      "published_on": "2025-11-05",
+      "quarter": 2,
+      "sha256": "ce3bcb33acfe26a33bc10f0969cde403a4be2d5c128658de9b84556c20304917",
+      "start_date": "2025-04-01",
+      "url": "https://global.toyota/pages/global_toyota/ir/financial-results/2026_2q_summary_en.pdf"
+    },
+    {
+      "end_date": "2025-06-30",
+      "fiscal_year": 2026,
+      "key": "2026_1q",
+      "published_on": "2025-08-07",
+      "quarter": 1,
+      "sha256": "4db8f4ed1a9474ed39b0e825053882624332cf7d567353d7ab885a70e0b4add7",
+      "start_date": "2025-04-01",
+      "url": "https://global.toyota/pages/global_toyota/ir/financial-results/2026_1q_summary_en.pdf"
+    },
+    {
+      "end_date": "2024-12-31",
+      "fiscal_year": 2025,
+      "key": "2025_3q",
+      "published_on": "2025-02-05",
+      "quarter": 3,
+      "sha256": "cf91bb80cc898f96036cd96868b29284efcee351e5af73f2597019b0c0877941",
+      "start_date": "2024-04-01",
+      "url": "https://global.toyota/pages/global_toyota/ir/financial-results/2025_3q_summary_en.pdf"
+    },
+    {
+      "end_date": "2024-09-30",
+      "fiscal_year": 2025,
+      "key": "2025_2q",
+      "published_on": "2024-11-06",
+      "quarter": 2,
+      "sha256": "c6947ad27fa39d290d6d27994ee58e39bebcb9d8dbdb435c8977896c961ce006",
+      "start_date": "2024-04-01",
+      "url": "https://global.toyota/pages/global_toyota/ir/financial-results/2025_2q_summary_en.pdf"
+    },
+    {
+      "end_date": "2024-06-30",
+      "fiscal_year": 2025,
+      "key": "2025_1q",
+      "published_on": "2024-08-01",
+      "quarter": 1,
+      "sha256": "d7da711dc9ebfdaae6933ef91ad80ce900b7e4ecb6b6c63cdb3d3e38da31699c",
+      "start_date": "2024-04-01",
+      "url": "https://global.toyota/pages/global_toyota/ir/financial-results/2025_1q_summary_en.pdf"
+    },
+    {
+      "end_date": "2023-12-31",
+      "fiscal_year": 2024,
+      "key": "2024_3q",
+      "published_on": "2024-02-06",
+      "quarter": 3,
+      "sha256": "58d5dc36154fd6ea8311b5575b6f85538b0872305c3a2c0405eb217815b10a28",
+      "start_date": "2023-04-01",
+      "url": "https://global.toyota/pages/global_toyota/ir/financial-results/2024_3q_summary_en.pdf"
+    }
+  ],
+  "edinet_code": "E02144",
+  "limitations": [
+    "local_only",
+    "no_external_agent_transfer",
+    "not_a_frozen_evidence_set",
+    "operator_acquisition_metadata_not_runtime_verified",
+    "english_translation",
+    "latest_other_disclosures_unchecked",
+    "correction_completeness_unverified",
+    "flow_metrics_are_fiscal_year_to_date_not_standalone_quarters"
+  ],
+  "metadata_hashes": {
+    "2024_3q/receipt.json": "5d126f01c787e149d4fccb4cbfbe84e05ae7d7886fc66b24f0ea903281213e67",
+    "2025_1q/receipt.json": "ab89149f03d89926809379a334875395e2f999f8b3a4bbbae1b2451d39e8b556",
+    "2025_2q/receipt.json": "b0e2dfd0526f5a326d337aa63d7cf4c2b2ccdc63b954a716ae9807cd08a7fa88",
+    "2025_3q/receipt.json": "434682055716724abc62e9cf5b80d611fdfa8e902271afbc47c53590aa4f72f9",
+    "2026_1q/receipt.json": "a1d4bc270a0bb940f880bb40f36081cb55033c229879b3c66aee4395c7243997",
+    "2026_2q/receipt.json": "74318c60a84bd2b3b93584acea1c7a1a635d9e38e34de194c950227e4225ca39",
+    "2026_3q/receipt.json": "2a98e7a95aa77943d450278cb354e35a0b3b860815749bc11fd63dca4b6ef727",
+    "2027_1q/receipt.json": "c96bde640dd705fef7c06f4765a9c8db204f3acf3ae95a329fbe0ff6a145ff3d",
+    "index/archive-receipt.json": "9d11dc3ecb0ca8ca2d94a767a67d20bdc7ce4f86954a60bb54664e1633f96581",
+    "index/archive.html": "60d49d00494bf24bc8c5c69b792e123e552a926fea1b4ce2c6750012c24d7642",
+    "index/latest-receipt.json": "c4f12d3049e62fa44e1c95c5f7dfa65a1fdf7a526142b30e91cd93b2cba4ca4b",
+    "index/latest.html": "449b5822d5ff15a892377e472dfa50b7983268488712089864e4867343d202c2"
+  },
+  "security_code": "7203",
+  "version": 1
+}

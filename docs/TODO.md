@@ -476,7 +476,13 @@ P0承認の阻害課題へ混在させない。
 - [x] Acquire and adopt the missing 2022–2024 annual periods with explicit source limitations.
 - [x] Inventory official IR links for the latest eight non-annual reporting candidates; record a provisional five-document comparison strategy.
 - [x] Inspect the latest IR summary: income/CF prior-year columns and balance-sheet prior-year-end columns differ.
-- [ ] Decide required interim metrics (six per period versus four flow metrics plus latest balance sheet), then implement bounded PDF intake.
+- [x] Adopt six required metrics per interim period and implement bounded, isolated PDF intake with pinned source hashes.
+- [x] Acquire only the remaining seven official IR PDFs with spaced, single-send requests; reuse the latest retained PDF.
+- [x] Replay 48 local metrics across eight interim periods and connect metadata-only coverage to the five-year annual run.
+- [ ] Implement task-bound issuer IR runtime source binding and shared acquisition metadata export.
+- [ ] Verify correction narratives and latest important disclosures before freezing financial evidence.
+- [x] Locate the retained amendment HTML without displaying narrative text; inventory exact TextBlock keys.
+- [ ] Resolve the owner decision on limited narrative review versus local human review; preserve the existing raw-transfer prohibition.
 
 - [x] Implement the one-shot prior annual EDINET campaign and retain its failed list response.
 - [x] Revalidate the retained 2024-06-25 list offline after narrowing unused withdrawal-status validation.
