@@ -470,4 +470,5 @@ P0承認の阻害課題へ混在させない。
 - [x] Confirm issuer-specific revenue semantics and consolidation scope for the retained filing.
 - [x] Implement and replay local-only adoption with a pinned policy, taxonomy proofs and six normalized metrics.
 - [x] Connect local financial adoption references to internal run preparation while preserving evidence gaps.
-- [ ] Prepare and connect real price/FX evidence for the same financial task and check time.
+- [x] Prepare and connect real price/FX evidence for the same financial task and check time.
+- [ ] Inventory retained prior-period financial candidates before planning additional acquisition.
