@@ -15,7 +15,7 @@ PROFILE_SHA256 = "36679945bb6969a9214c2a88f02687c8880050cf893ca934bfb63b1defddf5
 
 def load_edinet_binding(config: Path, evaluation_date: date, version: int = 2) -> SourceBinding:
     """Read exact configuration bytes again immediately before admission/send."""
-    if version not in {2, 3}:
+    if version not in {2, 3, 4}:
         raise ValueError("unsupported_edinet_version")
     approval_hash, profile_hash = (
         (APPROVAL_SHA256, PROFILE_SHA256)
@@ -25,6 +25,9 @@ def load_edinet_binding(config: Path, evaluation_date: date, version: int = 2) -
             "6ee813d1f40b638b34aa18c026711ac1ec81164639a62606a5e6cc57bae7b28a",
         )
     )
+    if version == 4:
+        approval_hash = "7b2e34dfd68a2514af8d9637e3ff87b4f229cd9ec465df855ca5114e09bb41ad"
+        profile_hash = "f43f1963550365275338a8ff8080f56537fcc7ddb98f449f00196444a3209a52"
     for relative in (f"source-approvals/edinet/v{version}.yaml", f"source-profiles/edinet/v{version}.yaml"):
         path = config / relative
         if any(part.is_symlink() for part in (path, *path.parents)):

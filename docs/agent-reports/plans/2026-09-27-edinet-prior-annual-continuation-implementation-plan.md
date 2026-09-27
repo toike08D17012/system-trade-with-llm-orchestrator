@@ -32,3 +32,9 @@
 ## ロールバック
 
 続行経路を使用しなければ元campaignは停止したまま。コードを戻しても消費済みslot・失敗記録・続行markerは削除しない。
+
+## Implementation Notes
+
+- ユーザーが本限定続行を承認。approval/profile v4を追加し、旧v2/v3は保持した。
+- 原本・failure・元approvalのhashに加え、元campaignのstarted.jsonとslot-0.jsonを固定hashで確認する。続行markerは排他的に作成し、slot-1〜3を使用する。
+- financial入力version 2だけがこの固定保存一覧を受け入れ、元の失敗・取得日時・approval v3を保存する。旧version 1出力を変更しない。

@@ -78,8 +78,13 @@ def acquire_edinet_acceptance(
     _target: str | None = None,
 ) -> Path:
     """Acquire the fixed list and, only if unique, its target annual archive once."""
-    version = 2 if _campaign is None else 3
-    if _campaign is None and _target is not None or _campaign is not None and (_target not in TARGETS or retained_list):
+    version = 2 if _campaign is None else _campaign.version
+    if (
+        _campaign is None
+        and _target is not None
+        or _campaign is not None
+        and (_target not in TARGETS or (retained_list is not None and (version != 4 or _target != "2024")))
+    ):
         raise ValueError("edinet_campaign_scope_invalid")
     list_date, period_start, period_end = (
         TARGETS[_target] if _target is not None else ("2026-06-10", "2025-04-01", "2026-03-31")
@@ -96,10 +101,12 @@ def acquire_edinet_acceptance(
     if preflight_credential_file(credential, policy=CredentialFilePolicy(required_mode=0o600)).status != "ready":
         raise ValueError("edinet_credential_preflight_failed")
     retained = read_bundle(_safe_path(retained_list)) if retained_list is not None else {}
+    if retained and version == 4:
+        retained["original-approval.yaml"] = (config / "source-approvals/edinet/v3.yaml").read_bytes()
     recovered = None
     if retained:
-        recovered, listing = revalidate_list(retained)
-        select_target(retained["body.bin"], listing)
+        recovered, listing = revalidate_list(retained, prior=version == 4)
+        select_target(retained["body.bin"], listing, period_start, period_end, "E02144" if version >= 3 else None)
         if _timestamp(recovered.received_at) > clock():
             raise ValueError("edinet_retained_list_from_future")
     binding = load_edinet_binding(config, clock().astimezone(TOKYO).date(), version)
@@ -128,7 +135,9 @@ def acquire_edinet_acceptance(
         "document-list", (SourceParameter(name="date", value=list_date), SourceParameter(name="type", value="2"))
     )
     if retained:
-        selected = select_target(retained["body.bin"], listing)
+        selected = select_target(
+            retained["body.bin"], listing, period_start, period_end, "E02144" if version >= 3 else None
+        )
         files.update({f"retained-list/{name}": body for name, body in retained.items()})
         source_intent = EdinetXbrlDocumentAdapter().build_intent(
             "document-retrieval",
@@ -324,7 +333,7 @@ def acquire_edinet_acceptance(
                 if listing.requested_date != list_date:
                     raise ValueError("edinet_acceptance_list_date_mismatch")
                 selected = select_target(
-                    candidate.body, listing, period_start, period_end, "E02144" if version == 3 else None
+                    candidate.body, listing, period_start, period_end, "E02144" if version >= 3 else None
                 )
                 source_intent = EdinetXbrlDocumentAdapter().build_intent(
                     "document-retrieval",
@@ -337,6 +346,7 @@ def acquire_edinet_acceptance(
         checked = clock().isoformat()
         day = clock().astimezone(TOKYO).date().isoformat()
         inputs = FinancialInput(
+            version=2 if retained and version == 4 else 1,
             checked_at=checked,
             survey_period=ApplicablePeriodV1(start_date=list_date, end_date=list_date),
             issuer=IssuerBinding(
@@ -368,6 +378,7 @@ def acquire_prior_annual_campaign(
     runtime: Path,
     runs: Path,
     credential: Path,
+    continuation_list: Path | None = None,
     allow_network: bool = False,
     allow_credential: bool = False,
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
@@ -386,13 +397,24 @@ def acquire_prior_annual_campaign(
         raise ValueError("edinet_task_from_future")
     if preflight_credential_file(credential, policy=CredentialFilePolicy(required_mode=0o600)).status != "ready":
         raise ValueError("edinet_credential_preflight_failed")
-    binding = load_edinet_binding(config, clock().astimezone(TOKYO).date(), 3)
+    version = 4 if continuation_list is not None else 3
+    binding = load_edinet_binding(config, clock().astimezone(TOKYO).date(), version)
+    if continuation_list is not None:
+        retained = read_bundle(_safe_path(continuation_list))
+        retained["original-approval.yaml"] = (config / "source-approvals/edinet/v3.yaml").read_bytes()
+        failure, _ = revalidate_list(retained, prior=True)
+        if _timestamp(failure.received_at) > clock():
+            raise ValueError("edinet_retained_list_from_future")
     for path in (runtime, runs):
         path.mkdir(mode=0o700, parents=True, exist_ok=True)
         if path.stat().st_uid != os.geteuid() or stat.S_IMODE(path.stat().st_mode) != 0o700:
             raise ValueError("edinet_storage_requires_private_permissions")
     # Atomic mkdir excludes simultaneous invocations even before the runtime lease.
-    campaign = AnnualCampaign(runtime, binding.approval_reference.sha256, task.task_id, clock())
+    campaign = (
+        AnnualCampaign.continue_prior(runtime, binding.approval_reference.sha256, task.task_id, clock())
+        if continuation_list is not None
+        else AnnualCampaign(runtime, binding.approval_reference.sha256, task.task_id, clock())
+    )
     outputs = []
     for index, target in enumerate(TARGETS):
         if index:
@@ -411,6 +433,7 @@ def acquire_prior_annual_campaign(
             transport=transport,
             _campaign=campaign,
             _target=target,
+            retained_list=continuation_list if index == 0 else None,
         )
         campaign.record_result(target, output)
         outputs.append(output)

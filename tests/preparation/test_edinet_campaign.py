@@ -113,3 +113,125 @@ def test_durable_slots_and_exclusive_marker(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="slot_invalid"):
         campaign.before_send("2024", 0, now, "fifth")
     assert len(list(campaign.path.glob("slot-*.json"))) == 4
+
+
+@pytest.mark.parametrize("case", ["success", "body_tamper", "state_tamper", "already_spent", "bad_zip"])
+def test_fixed_continuation_never_resends_list(
+    tmp_path: Path, request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch, case: str
+) -> None:
+    """Revalidate pinned failed metadata and use exactly the remaining three slots."""
+    from hashlib import sha256
+
+    from stock_research_llm_orchestrator.preparation import edinet_campaign as campaign_module
+    from stock_research_llm_orchestrator.preparation import edinet_revalidation as revalidation
+    from stock_research_llm_orchestrator.sources.edinet.document_list import EdinetDocumentListAdapter
+    from stock_research_llm_orchestrator.sources.protocol import SourceParameter
+
+    source = request.getfixturevalue("financial_inputs")
+    task = DetailedAnalysisTaskV1.model_validate_json((source / "task.json").read_bytes())
+    original = json.loads((source / "raw/list/body.bin").read_bytes())
+    archive = (source / "raw/document/body.bin").read_bytes()
+    current = [datetime(2026, 9, 27, tzinfo=UTC)]
+    original["metadata"]["parameter"]["date"] = "2024-06-25"
+    item = original["results"][0]
+    item.update(
+        docID="S100TR7I",
+        edinetCode="E02144",
+        periodStart="2023-04-01",
+        periodEnd="2024-03-31",
+        submitDateTime="2024-06-25 10:00",
+        legalStatus="1",
+        disclosureStatus="0",
+    )
+    original["results"] = [item]
+    original["metadata"]["resultset"]["count"] = 1
+    original["metadata"]["processDateTime"] = "2026-09-27 08:00"
+    retained = tmp_path / "retained"
+    retained.mkdir()
+    raw = json.dumps(original).encode()
+    (retained / "body.bin").write_bytes(raw)
+    intent = EdinetDocumentListAdapter().build_intent(
+        "document-list", (SourceParameter(name="date", value="2024-06-25"), SourceParameter(name="type", value="2"))
+    )
+    failure = json.dumps(
+        dict(
+            reason="source_validation_failed",
+            key="list",
+            sha256=sha256(raw).hexdigest(),
+            received_at=current[0].isoformat(),
+            source_intent=intent.model_dump(mode="json"),
+        )
+    ).encode()
+    (retained / "failure.json").write_bytes(failure)
+    monkeypatch.setattr(revalidation, "PRIOR_BODY_SHA256", sha256(raw).hexdigest())
+    monkeypatch.setattr(revalidation, "PRIOR_FAILURE_SHA256", sha256(failure).hexdigest())
+    runtime = tmp_path / "runtime"
+    runtime.mkdir(mode=0o700)
+    old = campaign_module.AnnualCampaign(runtime, revalidation.PRIOR_APPROVAL_SHA256, task.task_id, current[0])
+    old.before_send("2024", 0, current[0], "old-attempt")
+    original_state = {p.name: p.read_bytes() for p in old.path.iterdir()}
+    monkeypatch.setattr(
+        campaign_module, "PRIOR_STATE_HASHES", {name: sha256(body).hexdigest() for name, body in original_state.items()}
+    )
+    if case == "body_tamper":
+        (retained / "body.bin").write_bytes(raw + b" ")
+    if case == "state_tamper":
+        (old.path / "slot-0.json").write_text("{}")
+    if case == "already_spent":
+        old.before_send("2024", 1, current[0], "already-sent")
+    credential = tmp_path / "key"
+    credential.write_text("synthetic-continuation-key")
+    credential.chmod(0o600)
+    sends = []
+
+    def sleep(seconds: float) -> None:
+        current[0] += timedelta(seconds=seconds)
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        sends.append((current[0], req.url.path))
+        if req.url.path.endswith("documents.json"):
+            assert req.url.params["date"] == "2023-06-30"
+            listing = json.loads(json.dumps(original))
+            listing["metadata"]["parameter"]["date"] = "2023-06-30"
+            listing["results"][0].update(
+                docID="PRIOR2023", periodStart="2022-04-01", periodEnd="2023-03-31", submitDateTime="2023-06-30 10:00"
+            )
+            return httpx.Response(200, headers={"Content-Type": "application/json"}, json=listing)
+        assert req.url.path.endswith("S100TR7I" if len(sends) == 1 else "PRIOR2023")
+        return httpx.Response(
+            200, headers={"Content-Type": "application/octet-stream"}, content=b"bad" if case == "bad_zip" else archive
+        )
+
+    def run() -> tuple[Path, ...]:
+        return acquire_prior_annual_campaign(
+            task=task,
+            config=Path("config"),
+            runtime=runtime,
+            runs=tmp_path / "runs",
+            credential=credential,
+            continuation_list=retained,
+            allow_network=True,
+            allow_credential=True,
+            clock=lambda: current[0],
+            sleep=sleep,
+            transport=httpx.MockTransport(handler),
+        )
+
+    if case == "success":
+        outputs = run()
+        assert len(sends) == 3
+        assert json.loads((outputs[0] / "inputs.json").read_bytes())["version"] == 2
+        for output in outputs:
+            validate_financial(read_bundle(output))
+        for name, body in original_state.items():
+            assert (old.path / name).read_bytes() == body
+        assert len(list(old.path.glob("slot-*.json"))) == 4
+    else:
+        with pytest.raises(ValueError):
+            run()
+        assert len(sends) == (1 if case == "bad_zip" else 0)
+    previous = len(sends)
+    with pytest.raises((ValueError, FileExistsError)):
+        run()
+    assert len(sends) == previous
+    assert all((b[0] - a[0]).total_seconds() >= 60 for a, b in zip(sends, sends[1:], strict=False))

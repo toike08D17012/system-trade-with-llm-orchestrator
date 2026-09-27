@@ -18,6 +18,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-credential", action="store_true")
     parser.add_argument("--retained-list", type=Path)
     parser.add_argument("--prior-annual-campaign", action="store_true")
+    parser.add_argument("--continue-prior-list", type=Path)
     parser.add_argument("--task", type=Path, required=True)
     parser.add_argument("--config", type=Path, default=Path("config"))
     parser.add_argument("--runtime", type=Path, required=True)
@@ -25,10 +26,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--credential-file", type=Path, default=Path("/run/secrets/edinet_api_key"))
     args = parser.parse_args(argv)
     try:
+        if args.continue_prior_list is not None and not args.prior_annual_campaign:
+            raise ValueError("edinet_continuation_requires_campaign")
         if args.prior_annual_campaign and args.retained_list is not None:
             raise ValueError("edinet_campaign_retained_list_unsupported")
         acquire = acquire_prior_annual_campaign if args.prior_annual_campaign else acquire_edinet_acceptance
-        extra = {} if args.prior_annual_campaign else {"retained_list": args.retained_list}
+        extra = (
+            {"continuation_list": args.continue_prior_list}
+            if args.prior_annual_campaign
+            else {"retained_list": args.retained_list}
+        )
         output = acquire(
             task=DetailedAnalysisTaskV1.model_validate_json(_read_file(args.task)),
             config=args.config,

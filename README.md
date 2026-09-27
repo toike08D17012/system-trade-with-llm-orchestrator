@@ -685,3 +685,17 @@ campaign開始記録を共有runtime配下に永続保存します。完了・�
 別taskや別出力先でも予算をリセットしません。同じ共有runtimeを使用し、記録の削除や
 別runtimeへの切替で再送しないでください。途中失敗時は保存済み原証拠のローカル検証だけを行います。
 旧 `--retained-list` とは併用できません。取得は候補保存までで、過年度財務値の採用ではありません。
+
+2024-06-25の初回一覧parse失敗については、固定原本と元のcampaign状態をhashで束縛した
+v4限定続行を実装しています。所有者承認に基づく一度限りの例外で、元の送信済みslotは保持します。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.edinet_evidence_cli \
+  --prior-annual-campaign --continue-prior-list runs/edinet-evidence/edinet-unaccepted-380f3b97d39e41b9803b46e3d53df0b3-list \
+  --allow-network --allow-credential --task runs/edinet-prior-annual-task.json \
+  --config config --runtime runs/dukascopy-shared-runtime --runs runs/edinet-evidence
+```
+
+このコマンドは初回一覧の再送を行わず、残り3要求に限定します。続行開始後は再実行できません。
+新しいfinancial入力version 2はこの固定失敗一覧と元approval v3を保持し、通常の一覧再検証と区別します。
+既存version 1の再検証は変更していません。実行済みかどうかはcampaign記録と受入結果を確認してください。

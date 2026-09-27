@@ -16,6 +16,11 @@ from stock_research_llm_orchestrator.sources.edinet.document_list import (
 from stock_research_llm_orchestrator.sources.protocol import BoundedSourceResponse, CredentialFreeSourceIntent
 
 
+PRIOR_BODY_SHA256 = "5ceafc9ee61ee61ef3de8cf6911d7af26d3f8fa1cea875cb3865f1c770a3eca5"
+PRIOR_FAILURE_SHA256 = "113bb3a9c90f30ee02b2f7c355dfd571b00e348de151b6c20580b0f79e5b6540"
+PRIOR_APPROVAL_SHA256 = "c6ee8fe3da245c9b7ee741ff03ba90a58999d251e96079f2d9252de6480ed153"
+
+
 class RetainedListFailure(StrictContractModel):
     """Original failure metadata remains a failure after successful offline parsing."""
 
@@ -26,12 +31,23 @@ class RetainedListFailure(StrictContractModel):
     source_intent: CredentialFreeSourceIntent
 
 
-def revalidate_list(files: Mapping[str, bytes]) -> tuple[RetainedListFailure, EdinetDocumentList]:
+def revalidate_list(
+    files: Mapping[str, bytes], *, prior: bool = False
+) -> tuple[RetainedListFailure, EdinetDocumentList]:
     """Verify retained bytes, fixed request scope and parse result without network."""
+    requested = "2024-06-25" if prior else "2026-06-10"
+    if prior and (
+        sha256(files["body.bin"]).hexdigest() != PRIOR_BODY_SHA256
+        or sha256(files["failure.json"]).hexdigest() != PRIOR_FAILURE_SHA256
+        or sha256(files["original-approval.yaml"]).hexdigest() != PRIOR_APPROVAL_SHA256
+    ):
+        raise ValueError("edinet_prior_retained_hash_mismatch")
+    extras = {"offline-prior-revalidation.json", "original-approval.yaml"} if prior else set()
     if not {"body.bin", "failure.json"} <= files.keys() or set(files) - {
         "body.bin",
         "failure.json",
         "offline-revalidation.json",
+        *extras,
     }:
         raise ValueError("edinet_retained_list_inventory_invalid")
     failure = RetainedListFailure.model_validate_json(files["failure.json"])
@@ -41,7 +57,7 @@ def revalidate_list(files: Mapping[str, bytes]) -> tuple[RetainedListFailure, Ed
         failure.reason != "source_validation_failed"
         or failure.key != "list"
         or intent != adapter.build_intent(intent.operation, intent.parameters)
-        or dict((p.name, p.value) for p in intent.parameters) != {"date": "2026-06-10", "type": "2"}
+        or dict((p.name, p.value) for p in intent.parameters) != {"date": requested, "type": "2"}
         or sha256(files["body.bin"]).hexdigest() != failure.sha256
     ):
         raise ValueError("edinet_retained_list_binding_invalid")
@@ -58,8 +74,12 @@ def revalidate_list(files: Mapping[str, bytes]) -> tuple[RetainedListFailure, Ed
     processed = datetime.strptime(listing.processed_at, "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo("Asia/Tokyo"))
     if processed > received:
         raise ValueError("edinet_retained_list_processed_after_receipt")
-    if listing.requested_date != "2026-06-10":
+    if listing.requested_date != requested:
         raise ValueError("edinet_retained_list_date_invalid")
+    if prior:
+        target = select_target(files["body.bin"], listing, "2023-04-01", "2024-03-31", "E02144")
+        if target.document_id != "S100TR7I":
+            raise ValueError("edinet_prior_document_mismatch")
     return failure, listing
 
 

@@ -57,7 +57,7 @@ class IssuerBinding(StrictContractModel):
 class FinancialInput(StrictContractModel):
     """Input inventory for an offline preparation, with no credential fields."""
 
-    version: Literal[1] = 1
+    version: Literal[1, 2] = 1
     checked_at: str
     survey_period: ApplicablePeriodV1
     issuer: IssuerBinding | None
@@ -187,7 +187,7 @@ def evaluate_financial(files: Mapping[str, bytes]) -> tuple[FinancialManifest, b
         if "list" in keys:
             raise ValueError("financial_duplicate_retained_list")
         retained = _subset(files, "retained-list/")
-        recovered, listing = revalidate_list(retained)
+        recovered, listing = revalidate_list(retained, prior=inputs.version == 2)
         if _timestamp(recovered.received_at) > checked:
             raise ValueError("financial_retained_list_from_future")
         expected.update(f"retained-list/{name}" for name in retained)
