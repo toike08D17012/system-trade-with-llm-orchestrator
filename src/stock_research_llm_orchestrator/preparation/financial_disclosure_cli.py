@@ -23,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
         run.add_argument("--mapping-review", type=Path, required=True)
         run.add_argument("--adoption", type=Path, required=True)
         run.add_argument("--price-fx", type=Path)
+        run.add_argument("--comparative", type=Path)
         run.add_argument("--output" if command == "prepare-run" else "--input", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
@@ -34,7 +35,7 @@ def main(argv: list[str] | None = None) -> int:
             print("financial_disclosure: valid; offline_replay; analysis_ready=false")
         elif args.command == "prepare-run":
             result_run = prepare_financial_run(
-                args.financial, args.mapping_review, args.adoption, args.output, args.price_fx
+                args.financial, args.mapping_review, args.adoption, args.output, args.price_fx, args.comparative
             )
             print(result_run.model_dump_json())
         else:
@@ -44,6 +45,7 @@ def main(argv: list[str] | None = None) -> int:
                 read_bundle(args.mapping_review),
                 read_bundle(args.adoption),
                 read_bundle(args.price_fx) if args.price_fx is not None else None,
+                read_bundle(args.comparative) if args.comparative is not None else None,
             )
             print("financial_run: valid; offline_replay; analysis_ready=false")
     except (ValueError, OSError, RuntimeError, KeyError) as error:

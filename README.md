@@ -640,3 +640,31 @@ task全体と確認時刻の一致が必要で、同梱分と別指定分が異�
 限定採用があっても期間・IR等の不足は解消せず、全体は `analysis_ready=false` です。
 これは内部準備CLIの接続であり、公開CLIの分析実行コマンドはまだ未実装です。
 [実行準備への接続結果](docs/decision-requests/2026-09-27-financial-adoption-run-connection-outcome.md)を参照してください。
+
+
+### 保存済み前期比較値の受入
+
+7203の固定archiveについて、承認済みpolicyに列挙した2025年3月期と2026年3月期の
+各6項目をオフラインで受け入れます。元の当期受入・taxonomy証明を再検証し、
+比較期間の候補と当期結果の一致を検証します。他年度・他文書へ自動拡張しません。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.financial_acceptance_cli prepare-comparative \
+  --source runs/financial-prepared --review runs/financial-mapping-review \
+  --adoption runs/financial-accepted \
+  --policy config/financial-mapping/7203-2026-comparative-approved.json \
+  --output runs/financial-comparative
+python -m stock_research_llm_orchestrator.preparation.financial_acceptance_cli validate-comparative \
+  --source runs/financial-prepared --review runs/financial-mapping-review \
+  --adoption runs/financial-accepted --input runs/financial-comparative
+```
+
+上記の入力例は、承認policyに一致する保存済みbundleを配置した場合のものです。
+`values.json` はローカル専用で、CLIには採用件数だけを表示します。
+`financial_disclosure_cli prepare-run` / `validate-run` の両方に
+`--comparative runs/financial-comparative` を渡すと、version 2の期間別要約を生成・再検証します。
+`--price-fx` も併用できます。比較入力を省略した従来のversion 1は変更していません。
+
+6項目すべてが採用された期間だけを完全期間として数え、提出書類の期間数とは区別します。
+現在は年次2/5期で、2022～2024年3月期と四半期・半期、IR・最新性の確認が不足しています。
+[前期比較値の受入結果](docs/decision-requests/2026-09-27-financial-comparative-period-outcome.md)を参照してください。

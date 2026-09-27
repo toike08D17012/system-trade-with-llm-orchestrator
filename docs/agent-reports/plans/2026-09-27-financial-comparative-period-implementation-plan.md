@@ -88,3 +88,10 @@ run version 2には次を出力する。
 実装方針上の未解決事項はなし。本計画の承認は、同一保存archiveから前期比較値6項目をローカル採用する新policyの作成を含む。追加API取得、外部エージェントへの数値送信、最新性確認の省略、全体の分析可能判定への昇格は含めない。
 
 `src/AGENTS.md` §6 とimplementation-plan skillの最終手順に従い、計画レビュー後に実装へ進む。
+
+## Implementation Notes
+
+- 2026-09-27にユーザーが本計画を承認。実装・保存証拠のprepare/validateを完了し、12項目・年次完全2/5期を確認した。
+- 比較policyは元policy hashを参照することでQName・taxonomyを束縛し、定義の複製を避けた。証明の再計算は既存 `validate_acceptance` を通じて行う。
+- run version 2だけに期間別充足を追加し、version 1の保存済み成果物の再検証成功を確認した。
+- 詳細は[受入結果](../../decision-requests/2026-09-27-financial-comparative-period-outcome.md)を参照。

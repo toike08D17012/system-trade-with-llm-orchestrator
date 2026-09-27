@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "status": "approved",
+  "approval_reference": "docs/agent-reports/plans/2026-09-27-financial-comparative-period-implementation-plan.md",
+  "base_policy_sha256": "7874467ef5032e5dcfa58a7403259f08c93222b7fb91ac73d95856c944c4d46f",
+  "security_code": "7203",
+  "edinet_code": "E02144",
+  "document_id": "S100Y8NY",
+  "archive_sha256": "6b9e1d9cd955f630bc0cf62f68f4d790b09798568004151bbe988224ae450034",
+  "proposal_sha256": "8048c166f99ac98917a04b4820b7e38193229643fcf24f4a02141f8888101dd9",
+  "reporting_period": {
+    "start_date": "2025-04-01",
+    "end_date": "2026-03-31"
+  },
+  "periods": [
+    {
+      "start_date": "2024-04-01",
+      "end_date": "2025-03-31"
+    },
+    {
+      "start_date": "2025-04-01",
+      "end_date": "2026-03-31"
+    }
+  ],
+  "required_annual_periods": [
+    {
+      "start_date": "2021-04-01",
+      "end_date": "2022-03-31"
+    },
+    {
+      "start_date": "2022-04-01",
+      "end_date": "2023-03-31"
+    },
+    {
+      "start_date": "2023-04-01",
+      "end_date": "2024-03-31"
+    },
+    {
+      "start_date": "2024-04-01",
+      "end_date": "2025-03-31"
+    },
+    {
+      "start_date": "2025-04-01",
+      "end_date": "2026-03-31"
+    }
+  ]
+}

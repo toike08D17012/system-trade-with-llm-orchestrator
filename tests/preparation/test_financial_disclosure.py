@@ -500,6 +500,18 @@ def test_financial_adoption_roundtrip_all_six_metrics(
         name = rule["concepts"][0]["local_name"]
         context = "instant" if rule["metric"] in ("assets", "equity") else "annual"
         facts += f'<s:{name} contextRef="{context}" unitRef="JPY" decimals="-6">123000000</s:{name}>'
+    prior_instant = instant.replace('id="instant"', 'id="prior-instant"').replace("2026-03-31", "2025-03-31")
+    prior_duration = prior_instant.replace('id="prior-instant"', 'id="prior-annual"').replace(
+        "<xbrli:instant>2025-03-31</xbrli:instant>",
+        "<xbrli:startDate>2024-04-01</xbrli:startDate><xbrli:endDate>2025-03-31</xbrli:endDate>",
+    )
+    prior_facts = (
+        facts[len(instant) :]
+        .replace('contextRef="instant"', 'contextRef="prior-instant"')
+        .replace('contextRef="annual"', 'contextRef="prior-annual"')
+        .replace("123000000", "98000000")
+    )
+    facts += prior_instant + prior_duration + prior_facts
     xml = xml.replace('<s:Revenue contextRef="annual" unitRef="JPY" decimals="-6">123000000</s:Revenue>', facts)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
@@ -580,8 +592,102 @@ def test_financial_adoption_roundtrip_all_six_metrics(
     arguments = ["--financial", str(source), "--mapping-review", str(review), "--adoption", str(output)]
     assert main(["prepare-run", *arguments, "--output", str(inputs.parent / "cli-run")]) == 0
     assert main(["validate-run", *arguments, "--input", str(run_output)]) == 0
+    from stock_research_llm_orchestrator.preparation import financial_comparative as comparative
+
+    comparative_policy = json.loads(Path("config/financial-mapping/7203-2026-comparative-approved.json").read_bytes())
+    for field in ("security_code", "edinet_code", "document_id", "archive_sha256", "proposal_sha256"):
+        comparative_policy[field] = policy[field]
+    comparative_policy["base_policy_sha256"] = hashlib.sha256(policy_path.read_bytes()).hexdigest()
+    comparative_policy_path = inputs.parent / "comparative-policy.json"
+    _save(comparative_policy_path, comparative_policy)
+    monkeypatch.setattr(
+        comparative,
+        "APPROVED_COMPARATIVE_POLICY_SHA256",
+        hashlib.sha256(comparative_policy_path.read_bytes()).hexdigest(),
+    )
+    comparative_output = inputs.parent / "comparative"
+    comparative_result = comparative.prepare_comparative(
+        source, review, output, comparative_policy_path, comparative_output
+    )
+    assert comparative_result.accepted_count == 12
+    assert comparative_result.complete_annual_count == 2
+    assert comparative_result.partial_annual_count == 0
+    comparative_files = read_bundle(comparative_output)
+    assert [row["values"][0]["value"] for row in json.loads(comparative_files["values.json"])] == [
+        "98000000",
+        "123000000",
+    ]
+    for name, body in comparative_files.items():
+        if name != "values.json":
+            assert b"98000000" not in body and b"123000000" not in body
+        with pytest.raises(ValueError):
+            comparative.validate_comparative(
+                {**comparative_files, name: body + b" "}, before, read_bundle(review), saved
+            )
+    mismatched_policy = {**comparative_policy, "edinet_code": "E99999"}
+    mismatched_bytes = json.dumps(mismatched_policy).encode()
+    with monkeypatch.context() as changed_policy:
+        changed_policy.setattr(
+            comparative, "APPROVED_COMPARATIVE_POLICY_SHA256", hashlib.sha256(mismatched_bytes).hexdigest()
+        )
+        with pytest.raises(ValueError, match="binding_mismatch"):
+            comparative.evaluate_comparative(before, read_bundle(review), saved, mismatched_bytes)
+    for bad_source, bad_review, bad_adoption in (
+        ({**before, "raw/document/body.bin": b"bad"}, read_bundle(review), saved),
+        (before, {**read_bundle(review), "review.json": b"{}"}, saved),
+        (before, read_bundle(review), {**saved, "values.json": b"[]"}),
+    ):
+        with pytest.raises(ValueError):
+            comparative.validate_comparative(comparative_files, bad_source, bad_review, bad_adoption)
+    with pytest.raises(FileExistsError):
+        comparative.prepare_comparative(source, review, output, comparative_policy_path, comparative_output)
+    with pytest.raises(ValueError):
+        comparative.prepare_comparative(source, review, output, comparative_policy_path, output / "nested")
+    with pytest.raises(ValueError):
+        comparative.prepare_comparative(linked, review, output, comparative_policy_path, inputs.parent / "bad-link")
+    comparative_args = ["--source", str(source), "--review", str(review), "--adoption", str(output)]
+    assert adoption_main(["validate-comparative", *comparative_args, "--input", str(comparative_output)]) == 0
+    assert (
+        adoption_main(
+            [
+                "prepare-comparative",
+                *comparative_args,
+                "--policy",
+                str(comparative_policy_path),
+                "--output",
+                str(inputs.parent / "cli-comparative"),
+            ]
+        )
+        == 0
+    )
+    combined = inputs.parent / "comparative-run"
+    combined_result = prepare_financial_run(source, review, output, combined, comparative=comparative_output)
+    assert combined_result.version == 2 and combined_result.accepted_count == 12
+    assert "annual_periods_insufficient" in combined_result.reasons
+    assert "interim_periods_insufficient" in combined_result.reasons
+    assert not combined_result.analysis_ready
+    combined_files = read_bundle(combined)
+    assert b"98000000" not in b"".join(combined_files.values())
+    validate_financial_run(combined_files, before, read_bundle(review), saved, comparative=comparative_files)
+    for name, body in combined_files.items():
+        with pytest.raises(ValueError):
+            validate_financial_run(
+                {**combined_files, name: body + b" "},
+                before,
+                read_bundle(review),
+                saved,
+                comparative=comparative_files,
+            )
+    for command, flag, destination in (
+        ("prepare-run", "--output", inputs.parent / "cli-comparative-run"),
+        ("validate-run", "--input", combined),
+    ):
+        assert main([command, *arguments, "--comparative", str(comparative_output), flag, str(destination)]) == 0
+    validate_financial_run(run_files, before, read_bundle(review), saved)
     assert read_bundle(output) == saved
     (output / "values.json").write_bytes(b"bad")
     assert adoption_main(["validate", "--source", str(source), "--review", str(review), "--input", str(output)]) == 1
-    assert "123000000" not in capsys.readouterr().out
+    assert adoption_main(["validate-comparative", *comparative_args, "--input", str(comparative_output)]) == 1
+    captured = capsys.readouterr().out
+    assert "123000000" not in captured and "98000000" not in captured
     assert read_bundle(source) == before

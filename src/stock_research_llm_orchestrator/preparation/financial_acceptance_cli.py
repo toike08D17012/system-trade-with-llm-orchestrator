@@ -8,6 +8,11 @@ from stock_research_llm_orchestrator.preparation.financial_acceptance import (
     prepare_acceptance,
     validate_acceptance,
 )
+from stock_research_llm_orchestrator.preparation.financial_comparative import (
+    ComparativeManifest,
+    prepare_comparative,
+    validate_comparative,
+)
 from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 
 
@@ -15,18 +20,27 @@ def main(argv: list[str] | None = None) -> int:
     """Never print normalized values, provider text or exception details."""
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for command in ("prepare", "validate"):
+    for command in ("prepare", "validate", "prepare-comparative", "validate-comparative"):
         sub = commands.add_parser(command)
         sub.add_argument("--source", type=Path, required=True)
         sub.add_argument("--review", type=Path, required=True)
-        if command == "prepare":
+        if command.endswith("comparative"):
+            sub.add_argument("--adoption", type=Path, required=True)
+        if command.startswith("prepare"):
             sub.add_argument("--policy", type=Path, required=True)
             sub.add_argument("--output", type=Path, required=True)
         else:
             sub.add_argument("--input", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
-        if args.command == "prepare":
+        result: FinancialAcceptanceManifest | ComparativeManifest
+        if args.command == "prepare-comparative":
+            result = prepare_comparative(args.source, args.review, args.adoption, args.policy, args.output)
+        elif args.command == "validate-comparative":
+            files = read_bundle(args.input)
+            validate_comparative(files, read_bundle(args.source), read_bundle(args.review), read_bundle(args.adoption))
+            result = ComparativeManifest.model_validate_json(files["manifest.json"])
+        elif args.command == "prepare":
             result = prepare_acceptance(args.source, args.review, args.policy, args.output)
         else:
             files = read_bundle(args.input)

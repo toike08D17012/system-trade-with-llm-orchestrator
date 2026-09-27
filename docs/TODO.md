@@ -471,4 +471,6 @@ P0承認の阻害課題へ混在させない。
 - [x] Implement and replay local-only adoption with a pinned policy, taxonomy proofs and six normalized metrics.
 - [x] Connect local financial adoption references to internal run preparation while preserving evidence gaps.
 - [x] Prepare and connect real price/FX evidence for the same financial task and check time.
-- [ ] Inventory retained prior-period financial candidates before planning additional acquisition.
+- [x] Inventory retained prior-period financial candidates before planning additional acquisition.
+- [x] Adopt pinned prior-year comparisons and report annual metric coverage independently of filing counts.
+- [ ] Plan bounded acquisition for missing 2022–2024 annual periods and identify the latest eight interim periods.
