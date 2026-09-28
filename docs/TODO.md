@@ -42,6 +42,10 @@ Python、設定、スクリプト、CI、依存関係、公開インターフェ
   原ZIP・HTML member・採用pair・時刻を再照合し、旧bundleを変更せず別保存した。
   年次5/5期・IR8/8期間を維持するが、最新開示受入・IR runtime接続・凍結は未完了。
   [補足レビュー接続結果](decision-requests/2026-09-28-financial-supplement-binding-outcome.md)を参照する。
+- 固定IR 8PDFを共有Coordinator経由で各1回取得し、既存原本と一致するtask-bound来歴を追加した。
+  DBの要求・attempt・raw公開・成功状態を照合する。operator由来の採用値と旧制約は保持する。
+  最新重要開示の受入・全体鮮度・証拠凍結は残る。
+  [IR runtime接続結果](decision-requests/2026-09-28-interim-ir-runtime-binding-outcome.md)を参照する。
 
 ## 3. 優先順位と依存関係
 

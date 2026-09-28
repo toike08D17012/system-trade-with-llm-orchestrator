@@ -192,7 +192,7 @@ stderrへ出力し、設定内容の不正は終了code 3、pathまたはfileの
 | `.agents/skills/` | 調査、計画、検証など、Codexが開発時に使用するリポジトリ固有スキル | 定義済み |
 | `.codex/agents/` | リポジトリ調査・設計・品質確認を担当するCodexサブエージェント定義 | 定義済み |
 | `agent-sources/` | 実行Agent向けの役割別指示と入出力契約の原本 | P1 v1の共通指示、5役割別指示、合成定義あり |
-| `config/` | 版付きPolicy・profile | 内部Policyと承認済み`yfinance` profileあり |
+| `config/` | 版付きPolicy・profile | 版付きPolicyとsource承認・profileあり |
 | `docs/design/` | システム全体像、構想、アーキテクチャ、一次スクリーニング設計、判定ルール要求 | 5文書あり |
 | `docs/system-requirements/` | 詳細解析MVPの承認済みシステム要件 | P0要件6文書とP1契約基盤文書を承認済み |
 | `docs/agent-reports/` | Coding Agentが生成する開発用の調査、計画、構成確認レポート | 追跡対象外のローカル生成物 |
@@ -794,3 +794,41 @@ IRは`interim_accepted_count`・`complete_interim_count`・`interim_coverage`と
 旧制約は履歴として保持し、`correction_review` に補足結果と確認範囲を追加します。
 これは確認済みの定性判断の参照検証であり、意味の再判定や訂正網羅性の確認ではありません。
 最新開示・IR runtime接続・証拠凍結は引き続き未完了で、`analysis_ready=false`を維持します。
+
+### 固定IR資料の共有runtime取得・接続
+
+既存のoperator取得記録とは別に、固定済み7203の8PDFを共有Coordinator経由で
+各1回取得し、採用済み原本のhashとの一致を確認できます。
+`toyota-ir` v1はこれら8URLのみを対象とし、同時1、開始間隔60秒以上、retry・redirectなしです。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.interim_ir_runtime_cli acquire \
+  --allow-network --config config --runtime runs/dukascopy-shared-runtime \
+  --raw-root runs/toyota-ir-runtime-evidence \
+  --task runs/edinet-evidence/edinet-prepared-a27686c68a9f4a0c883105592f15eabc/task.json \
+  --policy config/financial-mapping/7203-interim-ir-approved.json \
+  --output runs/toyota-ir-runtime-evidence/toyota-ir-runtime-20260928
+python -m stock_research_llm_orchestrator.preparation.interim_ir_runtime_cli validate \
+  --runtime runs/dukascopy-shared-runtime --raw-root runs/toyota-ir-runtime-evidence \
+  --task runs/edinet-evidence/edinet-prepared-a27686c68a9f4a0c883105592f15eabc/task.json \
+  --input runs/toyota-ir-runtime-evidence/toyota-ir-runtime-20260928
+```
+
+取得campaignは共有runtime配下に一度だけ作成します。上記acquireは初回実行専用です。
+完了・失敗・中断後の再実行は拒否し、別task・別出力先でも同じcampaignを使います。
+markerの削除や別runtimeへの切替で再送しないでください。再検証にはvalidateを使います。
+保存済みPDFとDBのlogical request・physical attempt・raw publication・成功結果を照合します。
+保存されたreceiptだけでruntime取得済みと判定しません。
+
+年次統合CLIのprepare/validateへ、従来の入力に加えて次の3引数を渡すと
+8資料のruntime取得参照を別bundleに追加できます。
+
+```bash
+--interim-runtime runs/toyota-ir-runtime-evidence/toyota-ir-runtime-20260928 \
+--runtime runs/dukascopy-shared-runtime --ir-raw-root runs/toyota-ir-runtime-evidence
+```
+
+`--interim` と `--interim-source` も必要です。主taskの一致を必須とし、DBと原証拠は呼出元が明示指定します。
+新参照は同じbytesのruntime取得を証明しますが、採用済み数値のoperator由来を変更しません。
+旧制約を履歴として保持し、`interim_runtime` に別の来歴を保存します。
+最新重要開示・全体鮮度・証拠集合凍結は別の残件であり、`analysis_ready=false`を維持します。

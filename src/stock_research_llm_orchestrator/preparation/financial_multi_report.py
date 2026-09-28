@@ -29,8 +29,10 @@ from stock_research_llm_orchestrator.preparation.financial_run import (
 )
 from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.interim_ir import InterimPolicy, validate_interim
+from stock_research_llm_orchestrator.preparation.interim_ir_runtime import verify_runtime
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path, _timestamp
 from stock_research_llm_orchestrator.preparation.price_fx_run import publish_run_preparation
+from stock_research_llm_orchestrator.requests.storage import DATABASE_FILENAME, ProductionRequestRepository
 
 
 DEPENDENCIES = (
@@ -84,18 +86,28 @@ def merge_coverage(
     return tuple(result)
 
 
-def evaluate_multi_report(dependencies: Mapping[str, Mapping[str, bytes]]) -> dict[str, bytes]:
+def evaluate_multi_report(
+    dependencies: Mapping[str, Mapping[str, bytes]],
+    *,
+    runtime: Path | None = None,
+    ir_raw_root: Path | None = None,
+) -> dict[str, bytes]:
     """Revalidate every source and retain per-source task, time and limitations."""
     pair_keys = {"pair", "pair_adoption"}
     has_pair = pair_keys <= dependencies.keys()
     interim_keys = {"interim", "interim_source"}
     has_interim = interim_keys <= dependencies.keys()
     has_correction_review = "correction_review" in dependencies
+    has_ir_runtime = "interim_runtime" in dependencies
+    if has_ir_runtime and (not has_interim or runtime is None or ir_raw_root is None):
+        raise ValueError("multi_report_ir_runtime_inputs_required")
     if has_correction_review and not has_pair:
         raise ValueError("multi_report_correction_pair_required")
     if set(dependencies) != set(DEPENDENCIES) | (pair_keys if has_pair else set()) | (
         interim_keys if has_interim else set()
-    ) | ({"correction_review"} if has_correction_review else set()):
+    ) | ({"correction_review"} if has_correction_review else set()) | (
+        {"interim_runtime"} if has_ir_runtime else set()
+    ):
         raise ValueError("multi_report_dependency_set_invalid")
     d = dependencies
     primary = evaluate_financial_run(d["financial"], d["review"], d["adoption"], d["price_fx"], d["comparative"])
@@ -235,17 +247,38 @@ def evaluate_multi_report(dependencies: Mapping[str, Mapping[str, bytes]]) -> di
         supplement = bind_correction_review(d["correction_review"], d["pair"], d["pair_adoption"], tasks[0].task_id)
         result["correction_review"] = supplement
         combined_limitations.add("supplementary_narrative_review_not_completeness_check")
+    if has_ir_runtime:
+        assert runtime is not None and ir_raw_root is not None
+        database = _safe_path(runtime / DATABASE_FILENAME)
+        if not database.is_file():
+            raise ValueError("multi_report_ir_runtime_database_required")
+        acquisition = verify_runtime(
+            d["interim_runtime"], ProductionRequestRepository(database), ir_raw_root, tasks[0], runtime
+        )
+        result["interim_runtime"] = acquisition.model_dump(mode="json")
     result["limitations"] = sorted(combined_limitations)
     return {"inputs.json": inputs, "manifest.json": json.dumps(result, sort_keys=True, indent=2).encode()}
 
 
-def validate_multi_report(files: Mapping[str, bytes], dependencies: Mapping[str, Mapping[str, bytes]]) -> None:
+def validate_multi_report(
+    files: Mapping[str, bytes],
+    dependencies: Mapping[str, Mapping[str, bytes]],
+    *,
+    runtime: Path | None = None,
+    ir_raw_root: Path | None = None,
+) -> None:
     """Replay only explicitly supplied dependencies."""
-    if dict(files) != evaluate_multi_report(dependencies):
+    if dict(files) != evaluate_multi_report(dependencies, runtime=runtime, ir_raw_root=ir_raw_root):
         raise ValueError("multi_report_replay_mismatch")
 
 
-def prepare_multi_report(paths: Mapping[str, Path], output: Path) -> None:
+def prepare_multi_report(
+    paths: Mapping[str, Path],
+    output: Path,
+    *,
+    runtime: Path | None = None,
+    ir_raw_root: Path | None = None,
+) -> None:
     """Publish a separate immutable metadata-only bundle."""
     output = _safe_path(output)
     paths = {key: _safe_path(path) for key, path in paths.items()}
@@ -254,7 +287,10 @@ def prepare_multi_report(paths: Mapping[str, Path], output: Path) -> None:
     if output.exists():
         raise FileExistsError("multi_report_output_exists")
     dependencies = {key: read_bundle(path) for key, path in paths.items()}
-    files = evaluate_multi_report(dependencies)
+    files = evaluate_multi_report(dependencies, runtime=runtime, ir_raw_root=ir_raw_root)
     publish_run_preparation(
-        output.parent, output.name, files, validator=lambda saved: validate_multi_report(saved, dependencies)
+        output.parent,
+        output.name,
+        files,
+        validator=lambda saved: validate_multi_report(saved, dependencies, runtime=runtime, ir_raw_root=ir_raw_root),
     )

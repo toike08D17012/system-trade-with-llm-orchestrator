@@ -1261,6 +1261,48 @@ class ProductionRequestRepository:
             raise RuntimeStorageError("logical_request_read_failed") from error
         return None if row is None else str(row[0])
 
+    def logical_request(self, logical_request_id: str) -> ProductionLogicalRequest | None:
+        """Read persisted secret-free request identity for provenance verification."""
+        columns = (
+            "logical_request_id",
+            "task_id",
+            "source_id",
+            "operation",
+            "request_fingerprint",
+            "source_approval_version",
+            "source_profile_version",
+            "credential_scope_alias",
+            "egress_scope",
+            "created_at",
+            "state",
+        )
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                row = connection.execute(
+                    "SELECT " + ", ".join(columns) + " FROM logical_requests WHERE logical_request_id = ?",
+                    (logical_request_id,),
+                ).fetchone()
+            return (
+                None if row is None else ProductionLogicalRequest.model_validate(dict(zip(columns, row, strict=True)))
+            )
+        except (sqlite3.Error, OSError, ValueError) as error:
+            raise RuntimeStorageError("logical_request_read_failed") from error
+
+    def physical_attempt_identity(self, physical_attempt_id: str) -> tuple[str, int, int] | None:
+        """Read a physical attempt's parent request, sequence and fencing generation."""
+        try:
+            with _connect(self._database_path) as connection:
+                _verify_schema(connection)
+                row = connection.execute(
+                    "SELECT logical_request_id, sequence_number, lease_generation FROM physical_attempts "
+                    "WHERE physical_attempt_id = ?",
+                    (physical_attempt_id,),
+                ).fetchone()
+            return None if row is None else (str(row[0]), int(row[1]), int(row[2]))
+        except (sqlite3.Error, OSError, ValueError, TypeError) as error:
+            raise RuntimeStorageError("physical_attempt_read_failed") from error
+
     def physical_attempt_state(self, physical_attempt_id: str) -> tuple[str, int] | None:
         """Return a physical attempt state and fencing generation."""
         try:

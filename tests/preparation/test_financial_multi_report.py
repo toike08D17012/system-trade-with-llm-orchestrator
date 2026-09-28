@@ -66,6 +66,8 @@ def test_period_and_dependency_boundaries(tmp_path: Path) -> None:
         evaluate_multi_report({})
     with pytest.raises(ValueError, match="correction_pair_required"):
         evaluate_multi_report({"correction_review": {}})
+    with pytest.raises(ValueError, match="ir_runtime_inputs_required"):
+        evaluate_multi_report({"interim_runtime": {}})
     with pytest.raises(ValueError, match="output_overlap"):
         prepare_multi_report({"financial": tmp_path}, tmp_path / "child")
     with pytest.raises(FileExistsError):

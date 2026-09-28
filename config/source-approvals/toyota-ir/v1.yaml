@@ -1,0 +1,104 @@
+schema_id: detailed-analysis.source-approval
+schema_version: 1
+artifact_id: toyota-ir-source-approval-v1
+approval_id: toyota-ir-source-approval
+approval_version: 1
+source_id: toyota-ir
+status: approved
+provider: Toyota Motor Corporation
+service: Official IR PDF downloads
+dataset: Eight pinned 7203 interim financial summaries
+reviewer: repository-owner
+reviewed_on: '2026-09-28'
+approved_by: repository-owner
+effective_on: '2026-09-28'
+recheck_due_on: '2026-12-28'
+status_reason: Owner authorized necessary acquisition and private use of public documents;
+  fixed eight-document runtime binding only, not provider-specific written consent.
+usage_entity: private_individual_internal_analysis
+usage_purposes:
+- Private deterministic verification of eight already accepted IR PDFs
+contract_plan: Recheck on material website or terms changes; no external publication
+  or raw transfer.
+credential_scope_alias: null
+secret_value_storage_allowed: false
+online_use_allowed: true
+external_agent_transfer_allowed: false
+official_references:
+- reference_id: toyota-terms
+  document_type: terms
+  url: https://global.toyota/en/terms-of-use/
+  document_version_or_sha256: reviewed-2026-09-28
+  reviewed_on: '2026-09-28'
+- reference_id: toyota-financial-results
+  document_type: dataset_documentation
+  url: https://global.toyota/en/ir/financial-results/
+  document_version_or_sha256: reviewed-2026-09-28
+  reviewed_on: '2026-09-28'
+conditions:
+- category: terms
+  knowledge_status: known
+  summary: Website content remains protected; owner authorizes private internal processing
+    only. No provider-specific consent is asserted.
+  official_reference_ids:
+  - toyota-terms
+- category: pricing
+  knowledge_status: unsupported
+  summary: The chosen public PDF endpoint exposes no pricing or paid-entitlement mechanism;
+    no paid service is represented.
+  official_reference_ids:
+  - toyota-terms
+- category: authentication
+  knowledge_status: unsupported
+  summary: These fixed public PDF URLs use no credential or account.
+  official_reference_ids:
+  - toyota-financial-results
+- category: redistribution
+  knowledge_status: known
+  summary: No redistribution or external publication is authorized.
+  official_reference_ids:
+  - toyota-terms
+- category: derived_output
+  knowledge_status: known
+  summary: Accepted values and derived summaries remain private internal artifacts.
+  official_reference_ids:
+  - toyota-terms
+- category: external_processing
+  knowledge_status: known
+  summary: No automated raw transfer to external analysis agents is authorized.
+  official_reference_ids:
+  - toyota-terms
+- category: provider_retention
+  knowledge_status: unsupported
+  summary: No retention control is exposed by this public download.
+  official_reference_ids:
+  - toyota-terms
+- category: provider_training
+  knowledge_status: unsupported
+  summary: No training control is exposed; no private payload is submitted.
+  official_reference_ids:
+  - toyota-terms
+- category: freshness
+  knowledge_status: known
+  summary: The website gives no completeness warranty and can change; hash equality
+    does not establish latest disclosure coverage.
+  official_reference_ids:
+  - toyota-terms
+- category: available_period
+  knowledge_status: known
+  summary: Only the eight URLs and exact content hashes in the approved interim mapping
+    are in scope.
+  official_reference_ids:
+  - toyota-financial-results
+- category: rate_limit
+  knowledge_status: unsupported
+  summary: 'No provider numeric limit confirmed. Conservative internal policy: one
+    concurrent send, sixty-second start interval, eight campaign slots.'
+  official_reference_ids:
+  - toyota-terms
+- category: failure_behavior
+  knowledge_status: known
+  summary: HTTP, redirect, transport, gate or content mismatches stop; no retry or
+    direct fallback.
+  official_reference_ids:
+  - toyota-terms
