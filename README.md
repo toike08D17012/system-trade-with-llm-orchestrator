@@ -779,3 +779,18 @@ IRは`interim_accepted_count`・`complete_interim_count`・`interim_coverage`と
 省略時の既存成果物は不変です。確認日より後に公表された資料は拒否し、取得日を一括鮮度確認日へ置き換えません。
 原文・数値を統合出力へ転記せず、残る開示・訂正・鮮度・runtime接続の制約と`analysis_ready=false`を維持します。
 [受入・接続結果](docs/decision-requests/2026-09-27-interim-ir-acceptance-outcome.md)を参照してください。
+
+### 訂正本文の補足レビュー接続
+
+`financial_multi_report_cli prepare` / `validate` の同じ入力に
+`--correction-review runs/edinet-correction-inventory-20260928` を追加すると、
+確認済みS100RAR0の本文レビューを主taskへ参照付けします。
+`--pair` と `--pair-adoption` の両方が必須です。
+固定レビューのhash、採用文書、原ZIP、指定HTML member、取得・レビュー時刻を照合します。
+別文書のレビューや改変を拒否し、確認時刻を統合鮮度確認時刻へ置き換えません。
+
+既存bundleは変更せず、prepareには新しい出力先を指定します。
+未指定時の従来成果物は同じbytesで再現できます。
+旧制約は履歴として保持し、`correction_review` に補足結果と確認範囲を追加します。
+これは確認済みの定性判断の参照検証であり、意味の再判定や訂正網羅性の確認ではありません。
+最新開示・IR runtime接続・証拠凍結は引き続き未完了で、`analysis_ready=false`を維持します。

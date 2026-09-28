@@ -23,11 +23,12 @@ def main(argv: list[str] | None = None) -> int:
         sub.add_argument("--pair-adoption", type=Path)
         sub.add_argument("--interim", type=Path)
         sub.add_argument("--interim-source", type=Path)
+        sub.add_argument("--correction-review", type=Path)
         sub.add_argument("--output" if command == "prepare" else "--input", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
         paths = {name: getattr(args, name) for name in DEPENDENCIES}
-        for name in ("pair", "pair_adoption", "interim", "interim_source"):
+        for name in ("pair", "pair_adoption", "interim", "interim_source", "correction_review"):
             if getattr(args, name) is not None:
                 paths[name] = getattr(args, name)
         if args.command == "prepare":

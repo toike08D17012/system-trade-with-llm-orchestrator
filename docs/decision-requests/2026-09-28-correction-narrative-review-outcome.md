@@ -47,3 +47,10 @@ Python・設定・既存bundleを変更していないため、成功済みのPy
 
 次は最新重要開示の対象確認、IRのtask-bound runtime接続、補足レビューのrun参照と証拠凍結が残る。
 年次5/5期・interim8/8期間の充足だけでは完了とせず、`analysis_ready=false`を維持する。
+
+## 実行準備への補足参照
+
+同日の[補足レビュー接続](2026-09-28-financial-supplement-binding-outcome.md)で、
+原ZIP・HTML member・採用済みpairとの照合を内部API・CLIへ追加した。
+新しい統合bundleから固定レビューを参照できる。既存bundleは不変で、
+最新開示・IR runtime接続・証拠凍結の完了とは扱わない。

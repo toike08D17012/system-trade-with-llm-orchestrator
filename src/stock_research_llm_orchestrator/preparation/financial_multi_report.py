@@ -7,6 +7,7 @@ from hashlib import sha256
 from pathlib import Path
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
+from stock_research_llm_orchestrator.preparation.correction_review import bind_correction_review
 from stock_research_llm_orchestrator.preparation.financial_acceptance import (
     FinancialAcceptanceManifest,
     FinancialAdoptionPolicy,
@@ -89,9 +90,12 @@ def evaluate_multi_report(dependencies: Mapping[str, Mapping[str, bytes]]) -> di
     has_pair = pair_keys <= dependencies.keys()
     interim_keys = {"interim", "interim_source"}
     has_interim = interim_keys <= dependencies.keys()
+    has_correction_review = "correction_review" in dependencies
+    if has_correction_review and not has_pair:
+        raise ValueError("multi_report_correction_pair_required")
     if set(dependencies) != set(DEPENDENCIES) | (pair_keys if has_pair else set()) | (
         interim_keys if has_interim else set()
-    ):
+    ) | ({"correction_review"} if has_correction_review else set()):
         raise ValueError("multi_report_dependency_set_invalid")
     d = dependencies
     primary = evaluate_financial_run(d["financial"], d["review"], d["adoption"], d["price_fx"], d["comparative"])
@@ -195,6 +199,7 @@ def evaluate_multi_report(dependencies: Mapping[str, Mapping[str, bytes]]) -> di
         indent=2,
     ).encode()
     limitations.update({"source_specific_check_times", "no_combined_freshness_check", "not_a_frozen_evidence_set"})
+    combined_limitations = set(limitations)
     result = {
         "version": 1,
         "kind": "internal-multi-report-financial-run-preparation",
@@ -224,9 +229,13 @@ def evaluate_multi_report(dependencies: Mapping[str, Mapping[str, bytes]]) -> di
         result["interim_accepted_count"] = interim_manifest["accepted_count"]
         result["complete_interim_count"] = interim_manifest["complete_interim_count"]
         sources.append({"dependency": "interim", "adoption": interim_manifest})
-        result["limitations"] = sorted(
-            limitations | set(interim_manifest["limitations"]) | {"interim_operator_evidence_not_task_bound"}
-        )
+        combined_limitations.update(interim_manifest["limitations"])
+        combined_limitations.add("interim_operator_evidence_not_task_bound")
+    if has_correction_review:
+        supplement = bind_correction_review(d["correction_review"], d["pair"], d["pair_adoption"], tasks[0].task_id)
+        result["correction_review"] = supplement
+        combined_limitations.add("supplementary_narrative_review_not_completeness_check")
+    result["limitations"] = sorted(combined_limitations)
     return {"inputs.json": inputs, "manifest.json": json.dumps(result, sort_keys=True, indent=2).encode()}
 
 

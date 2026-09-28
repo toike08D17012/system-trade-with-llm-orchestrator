@@ -64,6 +64,8 @@ def test_period_and_dependency_boundaries(tmp_path: Path) -> None:
         merge_coverage((PERIOD,), ((record(6), record(6)),))
     with pytest.raises(ValueError, match="dependency_set"):
         evaluate_multi_report({})
+    with pytest.raises(ValueError, match="correction_pair_required"):
+        evaluate_multi_report({"correction_review": {}})
     with pytest.raises(ValueError, match="output_overlap"):
         prepare_multi_report({"financial": tmp_path}, tmp_path / "child")
     with pytest.raises(FileExistsError):
@@ -203,6 +205,27 @@ def test_join_retains_source_limits_and_checks_compatibility(monkeypatch: pytest
     assert extended["accepted_count"] == 6 and len(extended["sources"]) == 3
     assert "pair_limit" in extended["limitations"]
     assert multi.evaluate_multi_report(d) == files
+    correction_calls = []
+
+    def bind_review(*args: object) -> dict[str, object]:
+        correction_calls.append(args)
+        return {"task_id": args[3], "analysis_ready": False}
+
+    monkeypatch.setattr(multi, "bind_correction_review", bind_review)
+    corrected_dependencies = {**pair_dependencies, "correction_review": {"narrative-review.json": b"review"}}
+    corrected = multi.evaluate_multi_report(corrected_dependencies)
+    corrected_manifest = json.loads(corrected["manifest.json"])
+    assert corrected_manifest["correction_review"]["task_id"] == "source-2026"
+    assert corrected_manifest["analysis_ready"] is False
+    assert "pair_limit" in corrected_manifest["limitations"]
+    assert len(correction_calls) == 1
+    multi.validate_multi_report(corrected, corrected_dependencies)
+    with pytest.raises(ValueError, match="replay_mismatch"):
+        multi.validate_multi_report(corrected, pair_dependencies)
+    assert (
+        multi.evaluate_multi_report(pair_dependencies)["manifest.json"]
+        == json.dumps(extended, sort_keys=True, indent=2).encode()
+    )
     with pytest.raises(ValueError, match="dependency_set"):
         multi.evaluate_multi_report({**d, "interim": {}})
     monkeypatch.setattr(multi, "validate_interim", lambda files, source: calls.append("interim"))
