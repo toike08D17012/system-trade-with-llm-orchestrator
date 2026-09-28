@@ -1,4 +1,4 @@
-"""Acquire eight pinned IR PDFs or verify existing runtime provenance offline."""
+"""Acquire fixed IR PDFs or verify existing runtime provenance offline."""
 
 import argparse
 from pathlib import Path
@@ -24,6 +24,7 @@ def main(argv: list[str] | None = None) -> int:
             sub.add_argument("--config", type=Path, default=Path("config"))
             sub.add_argument("--policy", type=Path, required=True)
             sub.add_argument("--allow-network", action="store_true")
+            sub.add_argument("--latest-disclosures", action="store_true")
     args = parser.parse_args(argv)
     if args.command == "acquire" and not args.allow_network:
         parser.error("acquire requires --allow-network")
@@ -37,6 +38,7 @@ def main(argv: list[str] | None = None) -> int:
                 output=args.output,
                 task_bytes=task_bytes,
                 policy_bytes=_safe_path(args.policy).read_bytes(),
+                latest_disclosures=args.latest_disclosures,
             )
         else:
             database = _safe_path(args.runtime / DATABASE_FILENAME)

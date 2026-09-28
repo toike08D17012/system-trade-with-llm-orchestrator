@@ -80,7 +80,7 @@ def test_cli_requires_explicit_dependencies() -> None:
         main(["validate", "--input", "unused"])
 
 
-def test_join_retains_source_limits_and_checks_compatibility(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_join_retains_source_limits_and_checks_compatibility(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Isolate join behavior; raw-source replay is covered by acceptance tests."""
     import json
 
@@ -255,6 +255,20 @@ def test_join_retains_source_limits_and_checks_compatibility(monkeypatch: pytest
     assert b'"value"' not in joined["manifest.json"]
     multi.validate_multi_report(joined, interim_dependencies)
     assert multi.evaluate_multi_report(d) == files
+    from stock_research_llm_orchestrator.preparation.interim_ir_runtime import IrRuntimeManifest
+    from stock_research_llm_orchestrator.requests.storage import initialize_runtime_storage
+
+    runtime = tmp_path / "runtime"
+    runtime.mkdir(mode=0o700)
+    initialize_runtime_storage(runtime)
+    runtime_manifest = IrRuntimeManifest(task_id="source-2026", receipts=(), hashes={})
+    monkeypatch.setattr(multi, "verify_runtime", lambda *args: runtime_manifest)
+    runtime_dependencies = {**interim_dependencies, "interim_runtime": {}}
+    runtime_join = multi.evaluate_multi_report(runtime_dependencies, runtime=runtime, ir_raw_root=tmp_path)
+    assert json.loads(runtime_join["manifest.json"])["interim_runtime"]["kind"] == "toyota-ir-runtime-acquisition"
+    runtime_manifest = runtime_manifest.model_copy(update={"kind": "toyota-disclosure-runtime-candidates"})
+    with pytest.raises(ValueError, match="runtime_kind_invalid"):
+        multi.evaluate_multi_report(runtime_dependencies, runtime=runtime, ir_raw_root=tmp_path)
     older_base = base.model_copy(update={"checked_at": "2026-01-01T00:00:00Z"})
     monkeypatch.setattr(
         multi, "evaluate_financial_run", lambda *args: {"manifest.json": older_base.model_dump_json().encode()}

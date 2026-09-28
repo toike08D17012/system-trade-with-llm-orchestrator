@@ -10,6 +10,7 @@ import httpx
 from stock_research_llm_orchestrator.requests.transport import PhysicalTransportRequest, UntrustedTransportResponse
 from stock_research_llm_orchestrator.sources.dukascopy.httpx_transport import _retry_after
 from stock_research_llm_orchestrator.sources.protocol import CredentialFreeSourceIntent
+from stock_research_llm_orchestrator.sources.toyota_ir import disclosure_policy
 from stock_research_llm_orchestrator.sources.toyota_ir.production_policy import intent_for, load_policy
 
 
@@ -23,10 +24,17 @@ class ToyotaIrTransport:
     on_received: Callable[[datetime], None] = field(repr=False)
     transport: httpx.BaseTransport | None = field(default=None, repr=False)
 
+    latest_disclosures: bool = False
+
     def __call__(self, request: PhysicalTransportRequest) -> UntrustedTransportResponse:
         """Return exact decoded response bytes through the controlled boundary."""
-        policy = load_policy(self.policy_bytes)
-        if self.intent != intent_for(policy, self.intent.resource_key):
+        if self.latest_disclosures:
+            candidate_policy = disclosure_policy.load_policy(self.policy_bytes)
+            expected = disclosure_policy.intent_for(candidate_policy, self.intent.resource_key)
+        else:
+            policy = load_policy(self.policy_bytes)
+            expected = intent_for(policy, self.intent.resource_key)
+        if self.intent != expected:
             raise ValueError("toyota_ir_intent_invalid")
         if request != self.intent.to_transport_request(request.logical_request_id, request.physical_attempt_id):
             raise ValueError("toyota_ir_request_mismatch")

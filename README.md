@@ -832,3 +832,32 @@ markerの削除や別runtimeへの切替で再送しないでください。再�
 新参照は同じbytesのruntime取得を証明しますが、採用済み数値のoperator由来を変更しません。
 旧制約を履歴として保持し、`interim_runtime` に別の来歴を保存します。
 最新重要開示・全体鮮度・証拠集合凍結は別の残件であり、`analysis_ready=false`を維持します。
+
+### 最新重要開示候補のruntime取得
+
+`toyota-ir` v2は、最新重要開示候補7件とFY2027 1Qの説明付き決算資料・Q&Aの計9PDFを対象にします。
+固定対象は`config/financial-mapping/7203-latest-disclosure-candidates.json`です。
+v1とは別campaignで、provider・origin・egressの共有gateと60秒間隔を維持します。
+初回取得のbody hashを正本DBへ記録し、PDF署名・サイズ・隔離parserによる可読性を検証します。
+過去の採用hashとの一致や本文の意味の採用は主張しません。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.interim_ir_runtime_cli acquire \
+  --allow-network --latest-disclosures --config config --runtime runs/dukascopy-shared-runtime \
+  --raw-root runs/toyota-disclosure-runtime-evidence \
+  --task runs/edinet-evidence/edinet-prepared-a27686c68a9f4a0c883105592f15eabc/task.json \
+  --policy config/financial-mapping/7203-latest-disclosure-candidates.json \
+  --output runs/toyota-disclosure-runtime-evidence/toyota-disclosure-candidates-20260928
+python -m stock_research_llm_orchestrator.preparation.interim_ir_runtime_cli validate \
+  --runtime runs/dukascopy-shared-runtime --raw-root runs/toyota-disclosure-runtime-evidence \
+  --task runs/edinet-evidence/edinet-prepared-a27686c68a9f4a0c883105592f15eabc/task.json \
+  --input runs/toyota-disclosure-runtime-evidence/toyota-disclosure-candidates-20260928
+```
+
+この例のcampaignは9件取得済みです。campaignは開始時に消費されます。中断・失敗でも再実行、marker削除、別runtimeによる回避はしません。
+再検証にはvalidateを使用します。候補kindは`toyota-disclosure-runtime-candidates`で、
+財務統合の`--interim-runtime`には使用できません。
+本文採用、訂正・更新関係、直近3年の開示網羅性、EDINET照合、全体鮮度と証拠凍結は別途確認し、
+`analysis_ready=false`を維持します。原本の外部公開・自動転送は行いません。
+
+[最新重要開示候補の取得結果](docs/decision-requests/2026-09-29-latest-disclosure-runtime-outcome.md)を参照してください。

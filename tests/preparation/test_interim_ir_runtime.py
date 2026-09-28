@@ -297,3 +297,38 @@ def test_cli_requires_network_opt_in(tmp_path: Path, capsys: pytest.CaptureFixtu
     assert stopped.value.code == 2
     assert "requires --allow-network" in capsys.readouterr().err
     assert not (tmp_path / "runtime").exists()
+
+
+def test_v1_send_blocks_v2_other_task_and_operation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Both source versions share provider/origin/egress gates across task IDs."""
+    s = Scenario(tmp_path, monkeypatch)
+    s.acquire()
+    calls: list[str] = []
+
+    def candidate_handler(request: httpx.Request) -> httpx.Response:
+        calls.append(str(request.url))
+        return httpx.Response(200, content=b"unexpected", headers={"Content-Type": "application/pdf"})
+
+    task = s.task.model_copy(update={"task_id": "other-disclosure-task"})
+    with pytest.raises((ValueError, RuntimeError)):
+        acquire_runtime(
+            config=ROOT / "config",
+            runtime=tmp_path / "runtime",
+            raw_root=tmp_path / "candidates",
+            output=tmp_path / "candidates/accepted",
+            task_bytes=task.model_dump_json().encode(),
+            policy_bytes=(ROOT / "config/financial-mapping/7203-latest-disclosure-candidates.json").read_bytes(),
+            latest_disclosures=True,
+            clock=s.clock,
+            sleep=s.sleep,
+            transport=httpx.MockTransport(candidate_handler),
+        )
+    assert calls == []
+    repository = ProductionRequestRepository(tmp_path / "runtime" / DATABASE_FILENAME)
+    with sqlite3.connect(tmp_path / "runtime" / DATABASE_FILENAME) as connection:
+        identity = connection.execute(
+            "SELECT logical_request_id FROM logical_requests WHERE operation = 'disclosure-pdf'"
+        ).fetchone()
+    assert identity is not None
+    assert ("blocked", "global", "minimum_interval") in repository.gate_events(identity[0])
+    assert repository.logical_result(identity[0]) is None

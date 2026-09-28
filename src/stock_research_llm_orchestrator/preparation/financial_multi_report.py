@@ -255,6 +255,8 @@ def evaluate_multi_report(
         acquisition = verify_runtime(
             d["interim_runtime"], ProductionRequestRepository(database), ir_raw_root, tasks[0], runtime
         )
+        if acquisition.kind != "toyota-ir-runtime-acquisition":
+            raise ValueError("multi_report_ir_runtime_kind_invalid")
         result["interim_runtime"] = acquisition.model_dump(mode="json")
     result["limitations"] = sorted(combined_limitations)
     return {"inputs.json": inputs, "manifest.json": json.dumps(result, sort_keys=True, indent=2).encode()}

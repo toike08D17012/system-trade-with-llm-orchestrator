@@ -47,6 +47,12 @@ Python、設定、スクリプト、CI、依存関係、公開インターフェ
   最新重要開示の受入・全体鮮度・証拠凍結は残る。
   [IR runtime接続結果](decision-requests/2026-09-28-interim-ir-runtime-binding-outcome.md)を参照する。
 
+- 最新重要開示候補9PDFの固定取得scopeとv2来歴検証を追加した。
+  既存8資料と共有gateを使い、候補kindを財務採用済みの取得証明として拒否する。
+  9件の実取得・正本DB照合・オフライン検証が成功し、原本hashに結び付いた本文参照ページをローカル保存した。
+  本文採用・更新関係・直近3年の網羅性・EDINET照合・全体鮮度・凍結は引き続き残る。
+  [最新重要開示候補の取得結果](decision-requests/2026-09-29-latest-disclosure-runtime-outcome.md)を参照する。
+
 ## 3. 優先順位と依存関係
 
 ```mermaid
