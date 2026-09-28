@@ -292,6 +292,17 @@ def test_join_retains_source_limits_and_checks_compatibility(monkeypatch: pytest
     assert "old_limit" in disclosed_manifest["limitations"] and len(seen) == 1
     multi.validate_multi_report(disclosed, disclosures, runtime=runtime, disclosure_raw_root=tmp_path)
     assert multi.evaluate_multi_report(interim_dependencies) == joined
+    calculated = multi.evaluate_multi_report(interim_dependencies, calculate_annual_subset=True)
+    calc_manifest = json.loads(calculated["manifest.json"])
+    assert "annual-calculations.json" in calculated
+    assert calc_manifest["annual_calculations"]["slot_count"] == 20
+    assert "value" not in calc_manifest["annual_calculations"]
+    assert calc_manifest["accepted_count"] == joined_manifest["accepted_count"]
+    assert calc_manifest["analysis_ready"] is False
+    multi.validate_multi_report(calculated, interim_dependencies, calculate_annual_subset=True)
+    with pytest.raises(ValueError, match="replay_mismatch"):
+        multi.validate_multi_report(calculated, interim_dependencies)
+    assert multi.evaluate_multi_report(interim_dependencies) == joined
     older_base = base.model_copy(update={"checked_at": "2026-01-01T00:00:00Z"})
     monkeypatch.setattr(
         multi, "evaluate_financial_run", lambda *args: {"manifest.json": older_base.model_dump_json().encode()}

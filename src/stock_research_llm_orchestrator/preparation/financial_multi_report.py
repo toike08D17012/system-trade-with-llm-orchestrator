@@ -7,6 +7,7 @@ from hashlib import sha256
 from pathlib import Path
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
+from stock_research_llm_orchestrator.preparation.annual_calculations import calculate_annual
 from stock_research_llm_orchestrator.preparation.correction_review import bind_correction_review
 from stock_research_llm_orchestrator.preparation.disclosure_review import bind_disclosure_review
 from stock_research_llm_orchestrator.preparation.financial_acceptance import (
@@ -93,6 +94,7 @@ def evaluate_multi_report(
     runtime: Path | None = None,
     ir_raw_root: Path | None = None,
     disclosure_raw_root: Path | None = None,
+    calculate_annual_subset: bool = False,
 ) -> dict[str, bytes]:
     """Revalidate every source and retain per-source task, time and limitations."""
     pair_keys = {"pair", "pair_adoption"}
@@ -138,6 +140,7 @@ def evaluate_multi_report(
         raise ValueError("multi_report_duplicate_archive")
     required = ComparativePolicy.model_validate_json(d["comparative"]["policy.json"]).required_annual_periods
     reports = []
+    calculation_reports = {}
     sources = []
     limitations = set(base_run.limitations)
     for prefix, task, policy in zip(("", "additional_"), tasks, policies, strict=True):
@@ -146,6 +149,7 @@ def evaluate_multi_report(
             for r in json.loads(d[prefix + "comparative"]["values.json"])
         )
         reports.append(records)
+        calculation_reports[prefix + "comparative"] = records
         manifest = FinancialManifest.model_validate_json(d[prefix + "financial"]["manifest.json"])
         comparison = ComparativeManifest.model_validate_json(d[prefix + "comparative"]["manifest.json"])
         adoption_manifest = FinancialAcceptanceManifest.model_validate_json(d[prefix + "adoption"]["manifest.json"])
@@ -194,6 +198,7 @@ def evaluate_multi_report(
             for r in json.loads(d["pair_adoption"]["values.json"])
         )
         reports.append(pair_records)
+        calculation_reports["pair_adoption"] = pair_records
         limitations.update(pair_manifest["limitations"])
         sources.append(
             {
@@ -283,8 +288,20 @@ def evaluate_multi_report(
         review = json.loads(d["disclosure_review"]["review.json"])
         combined_limitations.update(review["limitations"])
         combined_limitations.add("selected_disclosure_narrative_not_completeness_check")
+    extra = {}
+    if calculate_annual_subset:
+        body, metadata = calculate_annual(
+            required,
+            calculation_reports,
+            {key: sha256(d[key]["values.json"]).hexdigest() for key in calculation_reports},
+        )
+        extra["annual-calculations.json"] = body
+        result["annual_calculations"] = metadata
+        combined_limitations.update(
+            {"annual_subset_only", "not_p1_calculated_evidence", "no_valuation_or_one_time_adjustment"}
+        )
     result["limitations"] = sorted(combined_limitations)
-    return {"inputs.json": inputs, "manifest.json": json.dumps(result, sort_keys=True, indent=2).encode()}
+    return {"inputs.json": inputs, "manifest.json": json.dumps(result, sort_keys=True, indent=2).encode(), **extra}
 
 
 def validate_multi_report(
@@ -294,10 +311,15 @@ def validate_multi_report(
     runtime: Path | None = None,
     ir_raw_root: Path | None = None,
     disclosure_raw_root: Path | None = None,
+    calculate_annual_subset: bool = False,
 ) -> None:
     """Replay only explicitly supplied dependencies."""
     if dict(files) != evaluate_multi_report(
-        dependencies, runtime=runtime, ir_raw_root=ir_raw_root, disclosure_raw_root=disclosure_raw_root
+        dependencies,
+        runtime=runtime,
+        ir_raw_root=ir_raw_root,
+        disclosure_raw_root=disclosure_raw_root,
+        calculate_annual_subset=calculate_annual_subset,
     ):
         raise ValueError("multi_report_replay_mismatch")
 
@@ -309,8 +331,9 @@ def prepare_multi_report(
     runtime: Path | None = None,
     ir_raw_root: Path | None = None,
     disclosure_raw_root: Path | None = None,
+    calculate_annual_subset: bool = False,
 ) -> None:
-    """Publish a separate immutable metadata-only bundle."""
+    """Publish a separate immutable local bundle; calculated values remain private."""
     output = _safe_path(output)
     paths = {key: _safe_path(path) for key, path in paths.items()}
     if any(output == p or output in p.parents or p in output.parents for p in paths.values()):
@@ -319,13 +342,22 @@ def prepare_multi_report(
         raise FileExistsError("multi_report_output_exists")
     dependencies = {key: read_bundle(path) for key, path in paths.items()}
     files = evaluate_multi_report(
-        dependencies, runtime=runtime, ir_raw_root=ir_raw_root, disclosure_raw_root=disclosure_raw_root
+        dependencies,
+        runtime=runtime,
+        ir_raw_root=ir_raw_root,
+        disclosure_raw_root=disclosure_raw_root,
+        calculate_annual_subset=calculate_annual_subset,
     )
     publish_run_preparation(
         output.parent,
         output.name,
         files,
         validator=lambda saved: validate_multi_report(
-            saved, dependencies, runtime=runtime, ir_raw_root=ir_raw_root, disclosure_raw_root=disclosure_raw_root
+            saved,
+            dependencies,
+            runtime=runtime,
+            ir_raw_root=ir_raw_root,
+            disclosure_raw_root=disclosure_raw_root,
+            calculate_annual_subset=calculate_annual_subset,
         ),
     )

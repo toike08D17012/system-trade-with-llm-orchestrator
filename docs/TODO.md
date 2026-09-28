@@ -512,3 +512,9 @@ P0承認の阻害課題へ混在させない。
 - [x] Implement and replay cross-report financial integration with source-specific tasks, check times and limitations; aggregate coverage is 4/5 annual periods.
 - [x] Acquire and validate the pinned 2023 annual/correction pair under standing permission for necessary, spaced requests.
 - [x] Verify the 2022 taxonomy and adopt bounded 2022 comparisons; replay 30 metrics across five annual periods with unresolved limits retained.
+
+- [x] Bind the retained correction narrative and nine selected disclosure reviews to separate replayable financial runs.
+- [x] Connect pinned issuer IR acquisition to shared task-bound runtime metadata without rewriting operator provenance.
+- [x] Calculate four private annual metric slots per required period with explicit missing reasons, fixed rounding and replayed input references.
+- [ ] Map normalized financial facts and this internal calculation subset to the P1 evidence contracts before claiming evidence-set readiness.
+- [ ] Complete disclosure coverage and final freshness checks before freezing evidence or running the analysis agents.

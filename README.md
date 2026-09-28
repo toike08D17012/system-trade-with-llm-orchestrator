@@ -885,3 +885,20 @@ python -m stock_research_llm_orchestrator.preparation.interim_ir_runtime_cli val
 入力省略時の既存bytesは不変です。選択節の定性採用は、全本文・直近3年の開示網羅性・数値採用・最終鮮度・証拠凍結を意味せず、
 `analysis_ready=false`を維持します。
 [定性レビュー接続結果](docs/decision-requests/2026-09-29-disclosure-narrative-binding-outcome.md)を参照してください。
+
+### 年次指標の内部計算
+
+財務統合CLIのprepare / validateに`--calculate-annual`を追加すると、
+採用済み年次値の再検証後に、営業利益・親会社帰属利益・営業CFの売上比率と売上前年比を計算します。
+対象は既存の必須年次期間のみです。前年比は開始日・終了日の月日が同じで、1年差かつ期間が連続する場合に限ります。
+分母がゼロ・負値、必要値が未採用、前期が対象外の場合は欠損理由を記録します。
+負の利益・CFは負の比率、売上前年比の当期売上ゼロは-100%として計算します。
+
+Decimal精度28、ROUND_HALF_EVEN、小数6桁で固定し、外部のDecimal設定に依存しません。
+計算値はGit追跡対象外の`annual-calculations.json`に保存し、manifestにはhash・件数・計算規則のみを追加します。
+各入力のdependency・values.json hash・期間・指標・採用根拠参照を保持します。
+prepareには新しい出力先を指定し、validateにも同じフラグを渡してください。未指定時の従来bytesは不変です。
+
+これは内部計算の限定実装です。P1の`CalculatedEvidenceV1`、ROE、株数依存の評価指標、一時損益調整、四半期差分は対象外です。
+開示網羅性・最終鮮度・証拠凍結は残り、`analysis_ready=false`を維持します。
+[年次計算結果](docs/decision-requests/2026-09-29-annual-calculation-subset-outcome.md)を参照してください。
