@@ -8,6 +8,7 @@ from pathlib import Path
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
 from stock_research_llm_orchestrator.preparation.correction_review import bind_correction_review
+from stock_research_llm_orchestrator.preparation.disclosure_review import bind_disclosure_review
 from stock_research_llm_orchestrator.preparation.financial_acceptance import (
     FinancialAcceptanceManifest,
     FinancialAdoptionPolicy,
@@ -91,6 +92,7 @@ def evaluate_multi_report(
     *,
     runtime: Path | None = None,
     ir_raw_root: Path | None = None,
+    disclosure_raw_root: Path | None = None,
 ) -> dict[str, bytes]:
     """Revalidate every source and retain per-source task, time and limitations."""
     pair_keys = {"pair", "pair_adoption"}
@@ -99,6 +101,12 @@ def evaluate_multi_report(
     has_interim = interim_keys <= dependencies.keys()
     has_correction_review = "correction_review" in dependencies
     has_ir_runtime = "interim_runtime" in dependencies
+    disclosure_keys = {"disclosure_runtime", "disclosure_review"}
+    has_disclosures = bool(disclosure_keys & dependencies.keys())
+    if has_disclosures and (
+        not disclosure_keys <= dependencies.keys() or runtime is None or disclosure_raw_root is None
+    ):
+        raise ValueError("multi_report_disclosure_inputs_required")
     if has_ir_runtime and (not has_interim or runtime is None or ir_raw_root is None):
         raise ValueError("multi_report_ir_runtime_inputs_required")
     if has_correction_review and not has_pair:
@@ -107,7 +115,7 @@ def evaluate_multi_report(
         interim_keys if has_interim else set()
     ) | ({"correction_review"} if has_correction_review else set()) | (
         {"interim_runtime"} if has_ir_runtime else set()
-    ):
+    ) | (disclosure_keys if has_disclosures else set()):
         raise ValueError("multi_report_dependency_set_invalid")
     d = dependencies
     primary = evaluate_financial_run(d["financial"], d["review"], d["adoption"], d["price_fx"], d["comparative"])
@@ -258,6 +266,23 @@ def evaluate_multi_report(
         if acquisition.kind != "toyota-ir-runtime-acquisition":
             raise ValueError("multi_report_ir_runtime_kind_invalid")
         result["interim_runtime"] = acquisition.model_dump(mode="json")
+    if has_disclosures:
+        assert runtime is not None and disclosure_raw_root is not None
+        database = _safe_path(runtime / DATABASE_FILENAME)
+        if not database.is_file():
+            raise ValueError("multi_report_disclosure_database_required")
+        supplement = bind_disclosure_review(
+            d["disclosure_review"],
+            d["disclosure_runtime"],
+            ProductionRequestRepository(database),
+            disclosure_raw_root,
+            tasks[0],
+            runtime,
+        )
+        result["latest_disclosures"] = supplement
+        review = json.loads(d["disclosure_review"]["review.json"])
+        combined_limitations.update(review["limitations"])
+        combined_limitations.add("selected_disclosure_narrative_not_completeness_check")
     result["limitations"] = sorted(combined_limitations)
     return {"inputs.json": inputs, "manifest.json": json.dumps(result, sort_keys=True, indent=2).encode()}
 
@@ -268,9 +293,12 @@ def validate_multi_report(
     *,
     runtime: Path | None = None,
     ir_raw_root: Path | None = None,
+    disclosure_raw_root: Path | None = None,
 ) -> None:
     """Replay only explicitly supplied dependencies."""
-    if dict(files) != evaluate_multi_report(dependencies, runtime=runtime, ir_raw_root=ir_raw_root):
+    if dict(files) != evaluate_multi_report(
+        dependencies, runtime=runtime, ir_raw_root=ir_raw_root, disclosure_raw_root=disclosure_raw_root
+    ):
         raise ValueError("multi_report_replay_mismatch")
 
 
@@ -280,6 +308,7 @@ def prepare_multi_report(
     *,
     runtime: Path | None = None,
     ir_raw_root: Path | None = None,
+    disclosure_raw_root: Path | None = None,
 ) -> None:
     """Publish a separate immutable metadata-only bundle."""
     output = _safe_path(output)
@@ -289,10 +318,14 @@ def prepare_multi_report(
     if output.exists():
         raise FileExistsError("multi_report_output_exists")
     dependencies = {key: read_bundle(path) for key, path in paths.items()}
-    files = evaluate_multi_report(dependencies, runtime=runtime, ir_raw_root=ir_raw_root)
+    files = evaluate_multi_report(
+        dependencies, runtime=runtime, ir_raw_root=ir_raw_root, disclosure_raw_root=disclosure_raw_root
+    )
     publish_run_preparation(
         output.parent,
         output.name,
         files,
-        validator=lambda saved: validate_multi_report(saved, dependencies, runtime=runtime, ir_raw_root=ir_raw_root),
+        validator=lambda saved: validate_multi_report(
+            saved, dependencies, runtime=runtime, ir_raw_root=ir_raw_root, disclosure_raw_root=disclosure_raw_root
+        ),
     )

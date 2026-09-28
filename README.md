@@ -861,3 +861,27 @@ python -m stock_research_llm_orchestrator.preparation.interim_ir_runtime_cli val
 `analysis_ready=false`を維持します。原本の外部公開・自動転送は行いません。
 
 [最新重要開示候補の取得結果](docs/decision-requests/2026-09-29-latest-disclosure-runtime-outcome.md)を参照してください。
+
+### 最新開示の選択節レビュー接続
+
+`financial_multi_report_cli prepare` / `validate` に次の3引数を追加すると、
+取得済み9PDFの選択節に限定した定性レビューを統合runへ参照付けします。
+共有runtimeも明示指定します。
+
+```bash
+--disclosure-runtime runs/toyota-disclosure-runtime-evidence/toyota-disclosure-candidates-20260928 \
+--disclosure-review runs/toyota-disclosure-runtime-evidence/narrative-adoption-20260929 \
+--disclosure-raw-root runs/toyota-disclosure-runtime-evidence \
+--runtime runs/dukascopy-shared-runtime
+```
+
+`--disclosure-runtime` と `--disclosure-review` は両方必要です。
+固定レビューhash、取得manifest、task、正本DB・raw、原本から再抽出した本文hash・選択ページ・時刻を照合します。
+レビュー時刻は既存財務の`checked_at`へ上書きしません。
+`latest_disclosures`に定性事実・更新関係・未受入参照先・制約を保存し、原文・財務値を転記しません。
+年次・IRの数値採用件数は増やさず、意味の再判定は行いません。
+
+旧runは変更せず、prepareには新しい出力先を指定してください。
+入力省略時の既存bytesは不変です。選択節の定性採用は、全本文・直近3年の開示網羅性・数値採用・最終鮮度・証拠凍結を意味せず、
+`analysis_ready=false`を維持します。
+[定性レビュー接続結果](docs/decision-requests/2026-09-29-disclosure-narrative-binding-outcome.md)を参照してください。

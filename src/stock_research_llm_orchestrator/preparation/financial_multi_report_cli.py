@@ -25,23 +25,42 @@ def main(argv: list[str] | None = None) -> int:
         sub.add_argument("--interim-source", type=Path)
         sub.add_argument("--correction-review", type=Path)
         sub.add_argument("--interim-runtime", type=Path)
+        sub.add_argument("--disclosure-runtime", type=Path)
+        sub.add_argument("--disclosure-review", type=Path)
+        sub.add_argument("--disclosure-raw-root", type=Path)
         sub.add_argument("--runtime", type=Path)
         sub.add_argument("--ir-raw-root", type=Path)
         sub.add_argument("--output" if command == "prepare" else "--input", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
         paths = {name: getattr(args, name) for name in DEPENDENCIES}
-        for name in ("pair", "pair_adoption", "interim", "interim_source", "correction_review", "interim_runtime"):
+        for name in (
+            "pair",
+            "pair_adoption",
+            "interim",
+            "interim_source",
+            "correction_review",
+            "interim_runtime",
+            "disclosure_runtime",
+            "disclosure_review",
+        ):
             if getattr(args, name) is not None:
                 paths[name] = getattr(args, name)
         if args.command == "prepare":
-            prepare_multi_report(paths, args.output, runtime=args.runtime, ir_raw_root=args.ir_raw_root)
+            prepare_multi_report(
+                paths,
+                args.output,
+                runtime=args.runtime,
+                ir_raw_root=args.ir_raw_root,
+                disclosure_raw_root=args.disclosure_raw_root,
+            )
         else:
             validate_multi_report(
                 read_bundle(args.input),
                 {k: read_bundle(p) for k, p in paths.items()},
                 runtime=args.runtime,
                 ir_raw_root=args.ir_raw_root,
+                disclosure_raw_root=args.disclosure_raw_root,
             )
         print("financial_multi_report: valid; offline_replay; analysis_ready=false")
     except (ValueError, OSError, RuntimeError, KeyError) as error:

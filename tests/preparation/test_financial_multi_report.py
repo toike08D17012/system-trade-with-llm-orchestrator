@@ -269,6 +269,29 @@ def test_join_retains_source_limits_and_checks_compatibility(monkeypatch: pytest
     runtime_manifest = runtime_manifest.model_copy(update={"kind": "toyota-disclosure-runtime-candidates"})
     with pytest.raises(ValueError, match="runtime_kind_invalid"):
         multi.evaluate_multi_report(runtime_dependencies, runtime=runtime, ir_raw_root=tmp_path)
+    for key in ("disclosure_runtime", "disclosure_review"):
+        with pytest.raises(ValueError, match="disclosure_inputs_required"):
+            multi.evaluate_multi_report({**interim_dependencies, key: {}})
+    disclosure_review = {"review.json": b'{"limitations":["selected_sections_only"]}'}
+    disclosures = {**interim_dependencies, "disclosure_runtime": {}, "disclosure_review": disclosure_review}
+    with pytest.raises(ValueError, match="disclosure_inputs_required"):
+        multi.evaluate_multi_report(disclosures, runtime=runtime)
+    seen = []
+
+    def bind_disclosures(*args: object) -> dict[str, object]:
+        seen.append(args)
+        return {"analysis_ready": False, "selected_document_count": 9}
+
+    monkeypatch.setattr(multi, "bind_disclosure_review", bind_disclosures)
+    disclosed = multi.evaluate_multi_report(disclosures, runtime=runtime, disclosure_raw_root=tmp_path)
+    disclosed_manifest = json.loads(disclosed["manifest.json"])
+    assert disclosed_manifest["latest_disclosures"]["selected_document_count"] == 9
+    assert disclosed_manifest["accepted_count"] == joined_manifest["accepted_count"]
+    assert disclosed_manifest["interim_accepted_count"] == 48 and disclosed_manifest["analysis_ready"] is False
+    assert "selected_sections_only" in disclosed_manifest["limitations"]
+    assert "old_limit" in disclosed_manifest["limitations"] and len(seen) == 1
+    multi.validate_multi_report(disclosed, disclosures, runtime=runtime, disclosure_raw_root=tmp_path)
+    assert multi.evaluate_multi_report(interim_dependencies) == joined
     older_base = base.model_copy(update={"checked_at": "2026-01-01T00:00:00Z"})
     monkeypatch.setattr(
         multi, "evaluate_financial_run", lambda *args: {"manifest.json": older_base.model_dump_json().encode()}
