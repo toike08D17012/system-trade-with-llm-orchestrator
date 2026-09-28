@@ -50,3 +50,5 @@ PDF制限、改ざん、部分coverage、CLI出力、保存先重複、旧出力
 `analysis_ready=false`を維持する。IRはoperator取得証拠であり、task-bound runtime source bindingが完成したとは扱わない。
 最新の重要開示、訂正本文の定性的内容、訂正網羅性、統合鮮度、証拠凍結は未完了。
 原文・`values.json`をGitへ保存せず、統合manifestにも財務値を転記していない。
+
+2026-09-28に[S100RAR0の訂正本文](2026-09-28-correction-narrative-review-outcome.md)を補足確認した。旧manifestの制約は保持し、最新開示・網羅性・runtime接続・凍結は引き続き未完了。

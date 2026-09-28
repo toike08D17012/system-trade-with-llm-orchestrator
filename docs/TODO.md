@@ -482,7 +482,9 @@ P0承認の阻害課題へ混在させない。
 - [ ] Implement task-bound issuer IR runtime source binding and shared acquisition metadata export.
 - [ ] Verify correction narratives and latest important disclosures before freezing financial evidence.
 - [x] Locate the retained amendment HTML without displaying narrative text; inventory exact TextBlock keys.
-- [ ] Resolve the owner decision on limited narrative review versus local human review; preserve the existing raw-transfer prohibition.
+- [x] Record owner permission for public-source internal review, editing, local storage and user explanation; distinguish external republication.
+- [x] Review the retained S100RAR0 correction explanation: omitted shareholder-meeting attachments, consistent with the 12 matching metric pairs.
+- [ ] Reference the supplemental narrative review in future run acceptance without rewriting historical artifacts.
 
 - [x] Implement the one-shot prior annual EDINET campaign and retain its failed list response.
 - [x] Revalidate the retained 2024-06-25 list offline after narrowing unused withdrawal-status validation.

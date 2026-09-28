@@ -1,6 +1,9 @@
-# 保存済み訂正本文の限定確認案
+# 保存済み訂正本文の限定確認案（判断済み）
 
-## 必要な判断
+2026-09-28に所有者が公開資料の内部確認・編集・保存・所有者への説明を承認した。
+以下は判断前の案であり、pendingと限定条件は[確認結果](2026-09-28-correction-narrative-review-outcome.md)により解消・更新された。
+
+## 当初求めた判断
 
 年次5期とinterim8期間の数値受入・接続は完了したが、訂正報告S100RAR0の定性的な訂正内容は未確認。
 [承認済みmapping計画](../agent-reports/plans/2026-09-27-xbrl-entity-financial-mapping-implementation-plan.md)は、

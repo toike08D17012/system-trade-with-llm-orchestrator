@@ -25,3 +25,7 @@
 受入manifest SHA-256: `59c7d0b0ba8a735a4ad314bb9673e90cce9a36ec369340e1e18e294e89863782`。統合manifest SHA-256: `a0f8a4010c59253417c80c34a893c80937f2923656846b8a5edef17625e55376`。コミット時の全体Pytest・Mypy・Ruffが成功した。
 
 次の[四半期・半期資料の候補調査](../agent-reports/research/2026-09-27-interim-source-inventory.md)も実施した。PDFの期間・比較欄・抽出方式は受入前に確認する。
+
+## 2026-09-28の補足確認
+
+[訂正本文の確認結果](2026-09-28-correction-narrative-review-outcome.md)により、S100RAR0の訂正理由は添付書類3件の添付漏れと確認した。受入6指標の数値訂正は該当節に記載されていない。上記の本文未確認は当時の状態であり、旧bundleは変更していない。
