@@ -4,8 +4,11 @@ import argparse
 from datetime import date
 from pathlib import Path
 
-from stock_research_llm_orchestrator.preparation.dukascopy_fx import acquire_dukascopy_fx
-from stock_research_llm_orchestrator.preparation.fx_evidence import revalidate_fx_diagnostic
+from stock_research_llm_orchestrator.preparation.dukascopy_fx import (
+    acquire_dukascopy_fx,
+    validate_dukascopy_year_receipt,
+)
+from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle, revalidate_fx_diagnostic
 from stock_research_llm_orchestrator.preparation.price_fx import join_price_fx
 
 
@@ -32,6 +35,10 @@ def main(argv: list[str] | None = None) -> int:
     revalidate.add_argument("--logical-request-id", required=True)
     revalidate.add_argument("--start", type=date.fromisoformat, required=True)
     revalidate.add_argument("--end", type=date.fromisoformat, required=True)
+    receipt = commands.add_parser("validate-year-receipt")
+    receipt.add_argument("--input", type=Path, required=True)
+    receipt.add_argument("--runtime", type=Path, required=True)
+    receipt.add_argument("--runs", type=Path, required=True)
     join = commands.add_parser("join")
     join.add_argument("--prices", type=Path, required=True)
     join.add_argument("--fx", type=Path, required=True)
@@ -62,6 +69,9 @@ def main(argv: list[str] | None = None) -> int:
                 end=args.end,
             )
             print(f"fx_evidence: {result.status}; offline_revalidation; original_logical_result=failed")
+        elif args.command == "validate-year-receipt":
+            validate_dukascopy_year_receipt(read_bundle(args.input), runtime=args.runtime, runs=args.runs)
+            print("fx_year_receipt: valid; offline_replay; analysis_ready=false")
         else:
             converted = join_price_fx(args.prices, args.fx, args.output)
             print(

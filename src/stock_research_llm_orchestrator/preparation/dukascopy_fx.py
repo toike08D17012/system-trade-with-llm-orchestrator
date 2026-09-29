@@ -15,7 +15,7 @@ from uuid import uuid4
 import httpx
 
 from stock_research_llm_orchestrator.contracts.base import StrictContractModel
-from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path
+from stock_research_llm_orchestrator.preparation.market_revalidation import _read_file, _safe_path, _timestamp
 from stock_research_llm_orchestrator.preparation.storage import publish_preparation
 from stock_research_llm_orchestrator.requests.production import (
     CommittedRawReference,
@@ -28,7 +28,11 @@ from stock_research_llm_orchestrator.requests.production import (
     RuntimeLeasePolicy,
 )
 from stock_research_llm_orchestrator.requests.raw_artifacts import RawArtifactPublisher
-from stock_research_llm_orchestrator.requests.storage import initialize_runtime_storage
+from stock_research_llm_orchestrator.requests.storage import (
+    DATABASE_FILENAME,
+    ProductionRequestRepository,
+    initialize_runtime_storage,
+)
 from stock_research_llm_orchestrator.requests.transport import (
     PhysicalTransportRequest,
     ProductionTransportCoordinator,
@@ -64,6 +68,109 @@ class YearReceipt(StrictContractModel):
     url: str
     received_at: str
     raw_reference: CommittedRawReference
+
+
+class YearReceiptArtifact(StrictContractModel):
+    """A durable response receipt, distinct from complete acquisition success."""
+
+    version: Literal[1] = 1
+    kind: Literal["internal-dukascopy-year-receipt"] = "internal-dukascopy-year-receipt"
+    requested_at: str
+    recorded_at: str
+    period_start: str
+    period_end: str
+    receipt: YearReceipt
+
+
+def validate_dukascopy_year_receipt(files: Mapping[str, bytes], *, runtime: Path, runs: Path) -> YearReceiptArtifact:
+    """Replay one saved receipt against its committed raw and original runtime."""
+    expected = {"year-receipt.json", "approval.yaml", "profile.yaml"}
+    if set(files) != expected | {"index.json"} or json.loads(files["index.json"]) != {
+        name: sha256(files[name]).hexdigest() for name in sorted(expected)
+    }:
+        raise ValueError("fx_year_receipt_inventory_or_hash_mismatch")
+    if (
+        sha256(files["approval.yaml"]).hexdigest() != APPROVAL_SHA256
+        or sha256(files["profile.yaml"]).hexdigest() != PROFILE_SHA256
+    ):
+        raise ValueError("fx_year_receipt_configuration_mismatch")
+    artifact = YearReceiptArtifact.model_validate_json(files["year-receipt.json"])
+    receipt = artifact.receipt
+    reference = receipt.raw_reference
+    requested = _timestamp(artifact.requested_at)
+    received = _timestamp(receipt.received_at)
+    recorded = _timestamp(artifact.recorded_at)
+    targets = urls(date.fromisoformat(artifact.period_start), date.fromisoformat(artifact.period_end), requested)
+    years = range(date.fromisoformat(artifact.period_start).year, date.fromisoformat(artifact.period_end).year + 1)
+    if dict(zip(years, targets, strict=True)).get(receipt.year) != receipt.url or not requested <= received <= recorded:
+        raise ValueError("fx_year_receipt_target_or_time_mismatch")
+    database = _safe_path(runtime / DATABASE_FILENAME)
+    if not database.is_file():
+        raise ValueError("fx_year_receipt_runtime_missing")
+    repo = ProductionRequestRepository(database)
+    logical = repo.logical_request(reference.logical_request_id)
+    fingerprint = sha256(
+        (str(targets) + artifact.period_start + artifact.period_end + APPROVAL_SHA256 + PROFILE_SHA256).encode()
+    ).hexdigest()
+    if logical is None or (
+        logical.task_id,
+        logical.source_id,
+        logical.operation,
+        logical.created_at,
+        logical.request_fingerprint,
+        logical.source_approval_version,
+        logical.source_profile_version,
+    ) != (reference.task_id, "dukascopy", "fx-daily-bid", artifact.requested_at, fingerprint, 1, 1):
+        raise ValueError("fx_year_receipt_logical_mismatch")
+    identity = repo.physical_attempt_identity(reference.physical_attempt_id)
+    publication = repo.raw_publication_record(reference.publication_id)
+    if (
+        identity is None
+        or identity[0] != reference.logical_request_id
+        or identity[2] != reference.publication_generation
+        or repo.physical_attempt_state(reference.physical_attempt_id) != ("succeeded", reference.publication_generation)
+        or publication is None
+        or publication.state != "committed"
+        or publication.intent.source_id != "dukascopy"
+        or publication.intent.operation != "fx-daily-bid"
+        or reference not in repo.committed_raw_references(reference.logical_request_id)
+        or reference.raw_schema_id != "dukascopy-fx-daily-raw"
+        or reference.raw_schema_version != 1
+    ):
+        raise ValueError("fx_year_receipt_committed_reference_mismatch")
+    raw = _safe_path(runs) / reference.task_id / reference.relative_path
+    body = _read_file(raw / "body.bin")
+    request = json.loads(_read_file(raw / "request.json"))
+    response = json.loads(_read_file(raw / "response.json"))
+    saved_receipt = json.loads(_read_file(raw / "receipt.json"))
+    if (
+        sha256(body).hexdigest() != reference.content_sha256
+        or len(body) != reference.byte_count
+        or request
+        != {
+            key: getattr(reference, key)
+            for key in (
+                "publication_id",
+                "task_id",
+                "logical_request_id",
+                "physical_attempt_id",
+                "publication_generation",
+            )
+        }
+        | {"source_id": "dukascopy", "operation": "fx-daily-bid"}
+        or response
+        != {
+            "byte_count": reference.byte_count,
+            "media_type": publication.intent.media_type,
+            "encoding": publication.intent.encoding,
+            "raw_schema_id": reference.raw_schema_id,
+            "raw_schema_version": reference.raw_schema_version,
+        }
+        or saved_receipt != {"body_sha256": reference.content_sha256, "byte_count": reference.byte_count}
+    ):
+        raise ValueError("fx_year_receipt_saved_raw_mismatch")
+    parse_daily(body, receipt.url, receipt.year, received)
+    return artifact
 
 
 class FxMetadataV2(StrictContractModel):
@@ -210,7 +317,9 @@ def acquire_dukascopy_fx(
     )
     release_allowed = True
     receipts = []
+    receipt_root = runs / f"year-receipts-{uid}"
     try:
+        receipt_root.mkdir(mode=0o700)
         repo.admit_logical_request(
             logical, binding.profile.rate_domain, ProductionCachePolicy(applicable=False), lease, clock(), QueuePolicy()
         )
@@ -351,10 +460,36 @@ def acquire_dukascopy_fx(
                 validate,
             )
             files[f"raw/{year}.bin"] = candidate.body
-            receipts.append(
-                YearReceipt(year=year, url=url, received_at=received_at.isoformat(), raw_reference=reference)
-            )
+            year_receipt = YearReceipt(year=year, url=url, received_at=received_at.isoformat(), raw_reference=reference)
+            receipts.append(year_receipt)
             release_allowed = True
+            artifact = YearReceiptArtifact(
+                requested_at=now.isoformat(),
+                recorded_at=clock().isoformat(),
+                period_start=start.isoformat(),
+                period_end=end.isoformat(),
+                receipt=year_receipt,
+            )
+            receipt_files = {name: files[name] for name in ("approval.yaml", "profile.yaml")}
+            receipt_files["year-receipt.json"] = artifact.model_dump_json(indent=2).encode()
+            receipt_files["index.json"] = json.dumps(
+                {name: sha256(content).hexdigest() for name, content in sorted(receipt_files.items())}, indent=2
+            ).encode()
+
+            def validate_year(saved: Mapping[str, bytes]) -> None:
+                validate_dukascopy_year_receipt(saved, runtime=runtime, runs=runs)
+
+            try:
+                publish_preparation(receipt_root, str(year), receipt_files, validator=validate_year)
+            except OSError, ValueError, RuntimeError:
+                coordinator.finalize_logical_request(
+                    logical.logical_request_id,
+                    LogicalResultOutcome.FAILED,
+                    lease,
+                    clock(),
+                    "dukascopy_year_receipt_publication_failed",
+                )
+                raise
         metadata = FxMetadataV2(
             period_start=start.isoformat(),
             period_end=end.isoformat(),

@@ -2,7 +2,7 @@
 
 import json
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
@@ -268,3 +268,138 @@ def test_later_year_failure_keeps_partial_raw(tmp_path: Path) -> None:
     assert len(seen) == 2
     assert not (tmp_path / "runs/accepted").exists()
     assert len(list((tmp_path / "runs/test-fx").rglob("body.bin"))) == 1
+
+
+def test_failed_logical_keeps_replayable_successful_year_receipt(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Keep actual receipt time after the next year's HTTP failure without relabeling success."""
+    from stock_research_llm_orchestrator.preparation.dukascopy_fx import validate_dukascopy_year_receipt
+    from stock_research_llm_orchestrator.preparation.fx_evidence_cli import main
+    from stock_research_llm_orchestrator.requests.storage import DATABASE_FILENAME, ProductionRequestRepository
+
+    seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(
+            200 if len(seen) == 1 else 500, content=body(2026), headers={"Content-Type": "application/json"}
+        )
+
+    with pytest.raises(ValueError):
+        acquire(tmp_path, handler)
+    saved_path = next((tmp_path / "runs").glob("year-receipts-*/2026"))
+    artifact = validate_dukascopy_year_receipt(
+        read_bundle(saved_path), runtime=tmp_path / "runtime", runs=tmp_path / "runs"
+    )
+    assert artifact.receipt.received_at == NOW.isoformat()
+    assert artifact.requested_at == NOW.isoformat()
+    assert len(seen) == 2 and not (tmp_path / "runs/accepted").exists()
+    repo = ProductionRequestRepository(tmp_path / "runtime" / DATABASE_FILENAME)
+    result = repo.logical_result(artifact.receipt.raw_reference.logical_request_id)
+    assert result is not None and result.outcome == "failed" and result.error_code == "provider_error"
+    assert (
+        main(
+            [
+                "validate-year-receipt",
+                "--input",
+                str(saved_path),
+                "--runtime",
+                str(tmp_path / "runtime"),
+                "--runs",
+                str(tmp_path / "runs"),
+            ]
+        )
+        == 0
+    )
+    output = capsys.readouterr().out
+    assert "offline_replay" in output and "150.001" not in output
+    assert repo.logical_result(artifact.receipt.raw_reference.logical_request_id) == result
+
+
+@pytest.mark.parametrize(
+    "change", ["index", "body", "time", "task", "physical", "publication", "request", "response", "receipt", "runtime"]
+)
+def test_year_receipt_rejects_changed_provenance(tmp_path: Path, change: str) -> None:
+    """Require original runtime identities and exact saved acquisition artifacts."""
+    import sqlite3
+    from hashlib import sha256
+
+    from stock_research_llm_orchestrator.preparation.dukascopy_fx import validate_dukascopy_year_receipt
+    from stock_research_llm_orchestrator.requests.storage import DATABASE_FILENAME
+
+    acquire(
+        tmp_path,
+        lambda request: httpx.Response(
+            200, content=body(2026 if request.url.query else 2025), headers={"Content-Type": "application/json"}
+        ),
+    )
+    saved_path = next((tmp_path / "runs").glob("year-receipts-*/2026"))
+    files = read_bundle(saved_path)
+    artifact = json.loads(files["year-receipt.json"])
+    reference = artifact["receipt"]["raw_reference"]
+    raw = tmp_path / "runs" / reference["task_id"] / reference["relative_path"]
+    runtime = tmp_path / "runtime"
+    if change == "runtime":
+        runtime = tmp_path / "other-runtime"
+        runtime.mkdir(mode=0o700)
+    elif change == "index":
+        files["index.json"] = b"{}"
+    elif change == "body":
+        (raw / "body.bin").write_bytes(body(2026) + b" ")
+    elif change == "time":
+        artifact["receipt"]["received_at"] = (NOW + timedelta(seconds=1)).isoformat()
+    elif change == "task":
+        artifact["receipt"]["raw_reference"]["task_id"] = "other-task"
+    elif change in {"physical", "publication"}:
+        table, field, identifier = (
+            ("physical_attempts", "physical_attempt_id", reference["physical_attempt_id"])
+            if change == "physical"
+            else ("raw_publications", "publication_id", reference["publication_id"])
+        )
+        with sqlite3.connect(tmp_path / "runtime" / DATABASE_FILENAME) as connection:
+            connection.execute(f"UPDATE {table} SET state='failed' WHERE {field}=?", (identifier,))
+    else:
+        target = raw / (change + ".json")
+        target.write_text("{}")
+    if change in {"time", "task"}:
+        files["year-receipt.json"] = json.dumps(artifact).encode()
+        files["index.json"] = json.dumps(
+            {name: sha256(content).hexdigest() for name, content in files.items() if name != "index.json"}
+        ).encode()
+    with pytest.raises(ValueError, match="fx_year_receipt"):
+        validate_dukascopy_year_receipt(files, runtime=runtime, runs=tmp_path / "runs")
+    if change == "runtime":
+        assert not (runtime / DATABASE_FILENAME).exists()
+
+
+def test_year_receipt_publication_failure_stops_next_send(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A committed raw without a durable year receipt cannot trigger later acquisition."""
+    from stock_research_llm_orchestrator.preparation import dukascopy_fx as fx
+    from stock_research_llm_orchestrator.preparation.storage import PreparationReceipt, PreparationValidator
+    from stock_research_llm_orchestrator.requests.storage import DATABASE_FILENAME, ProductionRequestRepository
+
+    original = fx.publish_preparation
+    seen = []
+
+    def publish(
+        root: Path, destination_name: str, files: Mapping[str, bytes], *, validator: PreparationValidator
+    ) -> PreparationReceipt:
+        if root.name.startswith("year-receipts-"):
+            raise OSError("simulated receipt publication failure")
+        return original(root, destination_name, files, validator=validator)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, content=body(2026), headers={"Content-Type": "application/json"})
+
+    monkeypatch.setattr(fx, "publish_preparation", publish)
+    with pytest.raises(OSError):
+        acquire(tmp_path, handler)
+    assert len(seen) == 1 and not (tmp_path / "runs/accepted").exists()
+    repo = ProductionRequestRepository(tmp_path / "runtime" / DATABASE_FILENAME)
+    records = repo.committed_raw_records()
+    assert len(records) == 1
+    result = repo.logical_result(records[0].intent.logical_request_id)
+    assert result is not None and result.outcome == "failed"
+    assert result.error_code == "dukascopy_year_receipt_publication_failed"

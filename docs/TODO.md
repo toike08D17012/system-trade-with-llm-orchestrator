@@ -541,4 +541,4 @@ P0承認の阻害課題へ混在させない。
 - [ ] Resolve the current-year Dukascopy provider failure through an explicitly initiated later run; preserve its failed logical/physical record and avoid automatic retries.
 
 - [x] Publish and replay a separate current-price/retained-FX pending run with an explicit September 28 FX gap and unchanged historical artifacts.
-- [ ] Persist each successful Dukascopy year receipt before continuing to later years, so a later failure does not discard its HTTP receipt timestamp.
+- [x] Persist each successful Dukascopy year receipt before continuing to later years, so a later failure does not discard its HTTP receipt timestamp. Validate it offline against the original runtime identity and committed raw response; stop subsequent sends if receipt publication fails.

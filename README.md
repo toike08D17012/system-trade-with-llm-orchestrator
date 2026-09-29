@@ -367,6 +367,20 @@ Node bridgeは通信を禁止し、送信・permit・原応答公開・論理結
   --start 2023-09-26 --end 2026-09-25
 ```
 
+各年の原応答commit後、後続年への送信前に、実際のHTTP受信時刻を含むreceiptを
+`<runs>/year-receipts-<uid>/<year>`へ保存します。後続年が失敗しても保存済みreceiptは残り、
+元の論理取得の失敗状態を保持したまま共有runtime DBと原応答に照合できます。
+
+```bash
+./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.fx_evidence_cli validate-year-receipt \
+  --input runs/dukascopy-evidence/year-receipts-ACQUISITION_ID/2026 \
+  --runtime runs/dukascopy-shared-runtime --runs runs/dukascopy-evidence
+```
+
+上記の`ACQUISITION_ID`は実際の取得IDに置き換えてください。検証は通信せず、receipt保存の失敗時は
+後続年の送信を停止します。年別receiptだけでは全期間のFX受入や分析準備完了になりません。
+[年別receiptの実装結果](docs/decision-requests/2026-09-30-dukascopy-year-receipt-outcome.md)を参照してください。
+
 保存済み価格とFXの結合には通信しません。
 
 ```bash
