@@ -527,3 +527,6 @@ P0承認の阻害課題へ混在させない。
 
 - [x] Export selected latest-disclosure and correction review assertions as private P1 records with closed references and preserved acquisition provenance.
 - [ ] Assemble all four private P1 drafts with consistent duplicate identities, then resolve disclosure coverage and final freshness before freeze.
+
+- [x] Assemble all four replayed private P1 drafts, collapse identical correction source/raw records, and retain category provenance without freezing evidence.
+- [ ] Resolve remaining disclosure coverage and task-bound final freshness assessments before enabling EvidenceSet freeze and analysis.

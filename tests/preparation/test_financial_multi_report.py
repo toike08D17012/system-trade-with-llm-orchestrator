@@ -414,6 +414,72 @@ def test_join_retains_source_limits_and_checks_compatibility(monkeypatch: pytest
             narrative_evidence_draft=True,
         )
     assert multi.evaluate_multi_report(d) == files
+    with pytest.raises(ValueError, match="assembly_drafts_required"):
+        multi.evaluate_multi_report(d, assembled_evidence_draft=True)
+    assembly_calls = []
+
+    def assembly_builder(drafts: object) -> tuple[bytes, dict[str, object]]:
+        assembly_calls.append(drafts)
+        return b"private-assembly", {"sha256": "4" * 64, "record_counts": {"normalized": 10}}
+
+    monkeypatch.setattr(multi, "build_evidence_assembly", assembly_builder)
+    assembly_dependencies = {**narrative_dependencies, "interim_runtime": {}}
+    unassembled = multi.evaluate_multi_report(
+        assembly_dependencies,
+        runtime=runtime,
+        ir_raw_root=tmp_path,
+        disclosure_raw_root=tmp_path,
+        calculate_annual_subset=True,
+        annual_evidence_draft=True,
+        interim_evidence_draft=True,
+        price_fx_evidence_draft=True,
+        narrative_evidence_draft=True,
+    )
+    assembled = multi.evaluate_multi_report(
+        assembly_dependencies,
+        runtime=runtime,
+        ir_raw_root=tmp_path,
+        disclosure_raw_root=tmp_path,
+        calculate_annual_subset=True,
+        annual_evidence_draft=True,
+        interim_evidence_draft=True,
+        price_fx_evidence_draft=True,
+        narrative_evidence_draft=True,
+        assembled_evidence_draft=True,
+    )
+    assert assembled["assembled-evidence-draft.json"] == b"private-assembly"
+    assert assembly_calls[0] == {
+        category: unassembled[f"{category}-evidence-draft.json"] for category in multi.DRAFT_CATEGORIES
+    }
+    assert all(assembled[name] == body for name, body in unassembled.items() if name != "manifest.json")
+    assert b'"value"' not in assembled["manifest.json"]
+    multi.validate_multi_report(
+        assembled,
+        assembly_dependencies,
+        runtime=runtime,
+        ir_raw_root=tmp_path,
+        disclosure_raw_root=tmp_path,
+        calculate_annual_subset=True,
+        annual_evidence_draft=True,
+        interim_evidence_draft=True,
+        price_fx_evidence_draft=True,
+        narrative_evidence_draft=True,
+        assembled_evidence_draft=True,
+    )
+    with pytest.raises(ValueError, match="replay_mismatch"):
+        multi.validate_multi_report(
+            {**assembled, "assembled-evidence-draft.json": b"changed"},
+            assembly_dependencies,
+            runtime=runtime,
+            ir_raw_root=tmp_path,
+            disclosure_raw_root=tmp_path,
+            calculate_annual_subset=True,
+            annual_evidence_draft=True,
+            interim_evidence_draft=True,
+            price_fx_evidence_draft=True,
+            narrative_evidence_draft=True,
+            assembled_evidence_draft=True,
+        )
     older_base = base.model_copy(update={"checked_at": "2026-01-01T00:00:00Z"})
     monkeypatch.setattr(
         multi, "evaluate_financial_run", lambda *args: {"manifest.json": older_base.model_dump_json().encode()}

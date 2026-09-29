@@ -11,6 +11,7 @@ from stock_research_llm_orchestrator.preparation.annual_calculations import calc
 from stock_research_llm_orchestrator.preparation.annual_evidence import build_annual_evidence
 from stock_research_llm_orchestrator.preparation.correction_review import bind_correction_review
 from stock_research_llm_orchestrator.preparation.disclosure_review import bind_disclosure_review
+from stock_research_llm_orchestrator.preparation.evidence_assembly import DRAFT_CATEGORIES, build_evidence_assembly
 from stock_research_llm_orchestrator.preparation.financial_acceptance import (
     FinancialAcceptanceManifest,
     FinancialAdoptionPolicy,
@@ -103,8 +104,13 @@ def evaluate_multi_report(
     interim_evidence_draft: bool = False,
     price_fx_evidence_draft: bool = False,
     narrative_evidence_draft: bool = False,
+    assembled_evidence_draft: bool = False,
 ) -> dict[str, bytes]:
     """Revalidate every source and retain per-source task, time and limitations."""
+    if assembled_evidence_draft and not all(
+        (annual_evidence_draft, interim_evidence_draft, price_fx_evidence_draft, narrative_evidence_draft)
+    ):
+        raise ValueError("multi_report_assembly_drafts_required")
     if annual_evidence_draft and not calculate_annual_subset:
         raise ValueError("multi_report_annual_calculation_required")
     pair_keys = {"pair", "pair_adoption"}
@@ -357,6 +363,12 @@ def evaluate_multi_report(
         )
         extra["narrative-evidence-draft.json"] = body
         result["narrative_evidence_draft"] = metadata
+    if assembled_evidence_draft:
+        body, metadata = build_evidence_assembly(
+            {category: extra[f"{category}-evidence-draft.json"] for category in DRAFT_CATEGORIES}
+        )
+        extra["assembled-evidence-draft.json"] = body
+        result["assembled_evidence_draft"] = metadata
     result["limitations"] = sorted(combined_limitations)
     return {"inputs.json": inputs, "manifest.json": json.dumps(result, sort_keys=True, indent=2).encode(), **extra}
 
@@ -373,6 +385,7 @@ def validate_multi_report(
     interim_evidence_draft: bool = False,
     price_fx_evidence_draft: bool = False,
     narrative_evidence_draft: bool = False,
+    assembled_evidence_draft: bool = False,
 ) -> None:
     """Replay only explicitly supplied dependencies."""
     if dict(files) != evaluate_multi_report(
@@ -385,6 +398,7 @@ def validate_multi_report(
         interim_evidence_draft=interim_evidence_draft,
         price_fx_evidence_draft=price_fx_evidence_draft,
         narrative_evidence_draft=narrative_evidence_draft,
+        assembled_evidence_draft=assembled_evidence_draft,
     ):
         raise ValueError("multi_report_replay_mismatch")
 
@@ -401,6 +415,7 @@ def prepare_multi_report(
     interim_evidence_draft: bool = False,
     price_fx_evidence_draft: bool = False,
     narrative_evidence_draft: bool = False,
+    assembled_evidence_draft: bool = False,
 ) -> None:
     """Publish a separate immutable local bundle; calculated values remain private."""
     output = _safe_path(output)
@@ -420,6 +435,7 @@ def prepare_multi_report(
         interim_evidence_draft=interim_evidence_draft,
         price_fx_evidence_draft=price_fx_evidence_draft,
         narrative_evidence_draft=narrative_evidence_draft,
+        assembled_evidence_draft=assembled_evidence_draft,
     )
     publish_run_preparation(
         output.parent,
@@ -436,5 +452,6 @@ def prepare_multi_report(
             interim_evidence_draft=interim_evidence_draft,
             price_fx_evidence_draft=price_fx_evidence_draft,
             narrative_evidence_draft=narrative_evidence_draft,
+            assembled_evidence_draft=assembled_evidence_draft,
         ),
     )

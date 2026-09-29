@@ -970,3 +970,16 @@ FXは元の観測日・UTC区間を保持し、株価終値との同時性を主
 原文・定性値はGit対象外の私的ドラフトにのみ保存し、manifestにはhashと層別件数のみを追加します。
 意味の再判定、開示網羅性・全体鮮度・凍結を示すものではなく、`analysis_ready=false`を維持します。
 [接続結果](docs/decision-requests/2026-09-29-narrative-p1-evidence-draft-outcome.md)を参照してください。
+
+### P1証拠ドラフトの私的組立
+
+財務統合CLIのprepare / validateへ`--assembled-evidence-draft`を追加すると、
+再生成・再検証した年次・IR・価格/FX・定性の4ドラフトを`assembled-evidence-draft.json`へまとめます。
+`--calculate-annual`と4種類の`--*-evidence-draft`フラグ、および各入力が必要です。
+同一ID・同一record・同一payloadの重複だけを整理し、内容衝突・参照欠落・層違いは拒否します。
+元のpayload・ID、カテゴリ別locator・確認context・制約と元ドラフトhashを保持します。
+
+新しい出力先を使用し、validateにも同じフラグを指定してください。
+元の4ドラフトは変更せず、manifestには組立hashと層別件数のみを追加します。
+私的組立は未凍結で`analysis_ready=false`です。開示網羅性・最終鮮度の確認は別途必要です。
+[組立結果](docs/decision-requests/2026-09-29-p1-evidence-assembly-outcome.md)を参照してください。
