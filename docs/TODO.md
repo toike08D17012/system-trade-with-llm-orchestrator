@@ -524,3 +524,6 @@ P0承認の阻害課題へ混在させない。
 - [ ] Map accepted price/FX and selected narrative evidence to P1 records before completing evidence-set assembly and final freshness review.
 - [x] Export replayed price/FX conversion inputs and outputs as private P1 records without changing decimals, missingness, quality states or acquisition/reuse provenance.
 - [ ] Map selected narrative review assertions to P1 records, keeping semantic adoption separate from completeness and final freshness.
+
+- [x] Export selected latest-disclosure and correction review assertions as private P1 records with closed references and preserved acquisition provenance.
+- [ ] Assemble all four private P1 drafts with consistent duplicate identities, then resolve disclosure coverage and final freshness before freeze.

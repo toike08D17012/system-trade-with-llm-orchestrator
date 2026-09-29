@@ -956,3 +956,17 @@ FXは元の観測日・UTC区間を保持し、株価終値との同時性を主
 年次・IR・元conversionのbytesを変えず、validateにも同じフラグを指定してください。
 ドラフトは未凍結で、`analysis_ready=false`を維持します。
 [接続結果](docs/decision-requests/2026-09-29-price-fx-p1-evidence-draft-outcome.md)を参照してください。
+
+### 定性レビューのP1証拠ドラフト
+
+財務統合CLIのprepare / validateへ`--narrative-evidence-draft`を追加すると、
+固定済みの最新開示レビューと訂正補足レビューから`narrative-evidence-draft.json`を生成します。
+`--calculate-annual --annual-evidence-draft`、訂正pair・補足レビュー、
+最新開示runtime・固定レビュー・raw rootの入力が必要です。validateにも同じフラグを指定してください。
+
+資料ごとのsource_metadata・raw・normalizedを保存し、選択ページ・抽出hash・レビュー時点を保持します。
+訂正文書の原本は年次ドラフトのdocument IDとarchive hashで特定し、既存来歴を再利用します。
+原本取得時刻とレビュー時刻を区別し、公表時刻が未知ならnullを維持します。
+原文・定性値はGit対象外の私的ドラフトにのみ保存し、manifestにはhashと層別件数のみを追加します。
+意味の再判定、開示網羅性・全体鮮度・凍結を示すものではなく、`analysis_ready=false`を維持します。
+[接続結果](docs/decision-requests/2026-09-29-narrative-p1-evidence-draft-outcome.md)を参照してください。

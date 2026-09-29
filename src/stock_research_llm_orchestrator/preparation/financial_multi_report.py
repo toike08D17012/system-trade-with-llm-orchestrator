@@ -35,6 +35,7 @@ from stock_research_llm_orchestrator.preparation.interim_evidence import build_i
 from stock_research_llm_orchestrator.preparation.interim_ir import InterimPolicy, validate_interim
 from stock_research_llm_orchestrator.preparation.interim_ir_runtime import verify_runtime
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path, _timestamp
+from stock_research_llm_orchestrator.preparation.narrative_evidence import build_narrative_evidence
 from stock_research_llm_orchestrator.preparation.price_fx_evidence import build_price_fx_evidence
 from stock_research_llm_orchestrator.preparation.price_fx_run import publish_run_preparation
 from stock_research_llm_orchestrator.requests.storage import DATABASE_FILENAME, ProductionRequestRepository
@@ -101,6 +102,7 @@ def evaluate_multi_report(
     annual_evidence_draft: bool = False,
     interim_evidence_draft: bool = False,
     price_fx_evidence_draft: bool = False,
+    narrative_evidence_draft: bool = False,
 ) -> dict[str, bytes]:
     """Revalidate every source and retain per-source task, time and limitations."""
     if annual_evidence_draft and not calculate_annual_subset:
@@ -115,6 +117,8 @@ def evaluate_multi_report(
         raise ValueError("multi_report_interim_runtime_required")
     disclosure_keys = {"disclosure_runtime", "disclosure_review"}
     has_disclosures = bool(disclosure_keys & dependencies.keys())
+    if narrative_evidence_draft and (not annual_evidence_draft or not has_correction_review or not has_disclosures):
+        raise ValueError("multi_report_narrative_inputs_required")
     if has_disclosures and (
         not disclosure_keys <= dependencies.keys() or runtime is None or disclosure_raw_root is None
     ):
@@ -267,8 +271,10 @@ def evaluate_multi_report(
         combined_limitations.update(interim_manifest["limitations"])
         combined_limitations.add("interim_operator_evidence_not_task_bound")
     if has_correction_review:
-        supplement = bind_correction_review(d["correction_review"], d["pair"], d["pair_adoption"], tasks[0].task_id)
-        result["correction_review"] = supplement
+        correction_binding = bind_correction_review(
+            d["correction_review"], d["pair"], d["pair_adoption"], tasks[0].task_id
+        )
+        result["correction_review"] = correction_binding
         combined_limitations.add("supplementary_narrative_review_not_completeness_check")
     if has_ir_runtime:
         assert runtime is not None and ir_raw_root is not None
@@ -286,7 +292,7 @@ def evaluate_multi_report(
         database = _safe_path(runtime / DATABASE_FILENAME)
         if not database.is_file():
             raise ValueError("multi_report_disclosure_database_required")
-        supplement = bind_disclosure_review(
+        disclosure_binding = bind_disclosure_review(
             d["disclosure_review"],
             d["disclosure_runtime"],
             ProductionRequestRepository(database),
@@ -294,7 +300,7 @@ def evaluate_multi_report(
             tasks[0],
             runtime,
         )
-        result["latest_disclosures"] = supplement
+        result["latest_disclosures"] = disclosure_binding
         review = json.loads(d["disclosure_review"]["review.json"])
         combined_limitations.update(review["limitations"])
         combined_limitations.add("selected_disclosure_narrative_not_completeness_check")
@@ -338,6 +344,19 @@ def evaluate_multi_report(
         body, metadata = build_price_fx_evidence(d["price_fx"], tuple(sorted(combined_limitations)))
         extra["price-fx-evidence-draft.json"] = body
         result["price_fx_evidence_draft"] = metadata
+    if narrative_evidence_draft:
+        assert disclosure_raw_root is not None
+        body, metadata = build_narrative_evidence(
+            disclosure_binding,
+            correction_binding,
+            extra["annual-evidence-draft.json"],
+            d["disclosure_runtime"],
+            d["correction_review"],
+            disclosure_raw_root,
+            tuple(sorted(combined_limitations)),
+        )
+        extra["narrative-evidence-draft.json"] = body
+        result["narrative_evidence_draft"] = metadata
     result["limitations"] = sorted(combined_limitations)
     return {"inputs.json": inputs, "manifest.json": json.dumps(result, sort_keys=True, indent=2).encode(), **extra}
 
@@ -353,6 +372,7 @@ def validate_multi_report(
     annual_evidence_draft: bool = False,
     interim_evidence_draft: bool = False,
     price_fx_evidence_draft: bool = False,
+    narrative_evidence_draft: bool = False,
 ) -> None:
     """Replay only explicitly supplied dependencies."""
     if dict(files) != evaluate_multi_report(
@@ -364,6 +384,7 @@ def validate_multi_report(
         annual_evidence_draft=annual_evidence_draft,
         interim_evidence_draft=interim_evidence_draft,
         price_fx_evidence_draft=price_fx_evidence_draft,
+        narrative_evidence_draft=narrative_evidence_draft,
     ):
         raise ValueError("multi_report_replay_mismatch")
 
@@ -379,6 +400,7 @@ def prepare_multi_report(
     annual_evidence_draft: bool = False,
     interim_evidence_draft: bool = False,
     price_fx_evidence_draft: bool = False,
+    narrative_evidence_draft: bool = False,
 ) -> None:
     """Publish a separate immutable local bundle; calculated values remain private."""
     output = _safe_path(output)
@@ -397,6 +419,7 @@ def prepare_multi_report(
         annual_evidence_draft=annual_evidence_draft,
         interim_evidence_draft=interim_evidence_draft,
         price_fx_evidence_draft=price_fx_evidence_draft,
+        narrative_evidence_draft=narrative_evidence_draft,
     )
     publish_run_preparation(
         output.parent,
@@ -412,5 +435,6 @@ def prepare_multi_report(
             annual_evidence_draft=annual_evidence_draft,
             interim_evidence_draft=interim_evidence_draft,
             price_fx_evidence_draft=price_fx_evidence_draft,
+            narrative_evidence_draft=narrative_evidence_draft,
         ),
     )
