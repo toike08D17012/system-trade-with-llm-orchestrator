@@ -490,3 +490,108 @@ def test_financial_run_preserves_price_layer_state(
     assert "issuer_ir_unchecked" in summary.reasons and not summary.analysis_ready
     with pytest.raises(ValueError):
         financial_run.validate_financial_run(result, source, {}, {"values.json": b"[]"})
+
+
+def test_p1_draft_preserves_native_export_conversion_and_source_identity(case: Path) -> None:
+    """P1 projections keep acquired approval and exact conversion decimals distinct from reuse."""
+    from pydantic import TypeAdapter
+
+    from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence import EvidenceRecordV1
+    from stock_research_llm_orchestrator.preparation.price_fx_evidence import build_price_fx_evidence
+
+    result = run(case)
+    files = read_bundle(case / "result")
+    before = dict(files)
+    body, metadata = build_price_fx_evidence(files, ("retained_limit",))
+    draft = json.loads(body)
+    assert metadata["sha256"] == sha256(body).hexdigest()
+    counts = metadata["record_counts"]
+    assert isinstance(counts, dict)
+    assert counts["normalized"] == 2 * len(result.requirements.price_dates)
+    assert counts["calculated"] == len(result.requirements.price_dates)
+    adapter: TypeAdapter[EvidenceRecordV1] = TypeAdapter(EvidenceRecordV1)
+    records = {r["evidence_id"]: r for r in draft["records"]}
+    conversion = {r["on"]: r for r in json.loads(files["conversion.json"])}
+    for record in records.values():
+        adapter.validate_json(json.dumps(record))
+        if record["layer"] in {"normalized", "calculated"}:
+            payload = draft["payloads"][record["evidence_id"]]
+            assert (
+                record["content_sha256"] == sha256(json.dumps(payload, sort_keys=True, indent=2).encode()).hexdigest()
+            )
+            assert payload["context_sha256"] == draft["context_sha256"]
+            original = conversion[payload["period"]["start_date"]]
+            assert record["value"] == original[payload["metric"]]
+            assert (
+                record["unit"]
+                == {"close_jpy": "JPY_per_share", "usd_jpy": "JPY_per_USD", "close_usd": "USD_per_share"}[
+                    payload["metric"]
+                ]
+            )
+            expected = "raw" if record["layer"] == "normalized" else "normalized"
+            assert all(records[i]["layer"] == expected for i in record["input_evidence_ids"])
+            if payload["metric"] == "usd_jpy":
+                assert payload["fx_observation"]["on"] == payload["period"]["start_date"]
+                assert payload["fx_observation"]["interval_end"]
+        elif record["layer"] == "source_metadata":
+            assert record["published_at"] is None and record["first_available_at"] is None
+            payload = draft["payloads"][record["evidence_id"]]
+            if record["source_id"] == "yfinance":
+                assert payload["acquisition"]["http_body_retained"] is False
+                assert payload["acquisition"]["payload_kind"] == "library_dataframe_csv_export"
+            else:
+                assert payload["acquisition"]["runtime_database_rechecked"] is False
+        else:
+            locator = draft["artifact_locators"][record["payload_reference"]["artifact_id"]][0]
+            assert locator["dependency"] == "price_fx"
+            assert sha256(files[locator["path"]]).hexdigest() == record["content_sha256"]
+    assert draft["analysis_ready"] is False and "evidence_frozen_at" not in draft
+    assert "retained_limit" in draft["limitations"]
+    assert build_price_fx_evidence(files, ("retained_limit",))[0] == body
+    assert files == before
+
+
+def test_p1_draft_keeps_missing_conversion_and_layer_reasons(case: Path) -> None:
+    """Pending requirements cannot become available calculated values in a projection."""
+    from stock_research_llm_orchestrator.preparation.price_fx_evidence import build_price_fx_evidence
+
+    result = run(case, checked=datetime.fromisoformat("2026-09-29T10:00:00+09:00"))
+    assert result.status == "pending"
+    files = read_bundle(case / "result")
+    body, _ = build_price_fx_evidence(files, ())
+    draft = json.loads(body)
+    missing = [r for r in draft["records"] if r["layer"] == "calculated" and r["value"] is None]
+    assert missing
+    for record in missing:
+        payload = draft["payloads"][record["evidence_id"]]
+        assert record["missing_reason"] == ";".join(payload["row"]["reasons"])
+        assert payload["row"]["close_usd"] is None
+    assert any(p["run_layer"]["status"] == "pending" for p in draft["payloads"].values() if "run_layer" in p)
+
+
+@pytest.mark.parametrize("change", ["native_kind", "approval_version", "raw_fx", "dates", "no_missing_reason"])
+def test_p1_draft_rejects_unbound_inputs(case: Path, change: str) -> None:
+    """Reject unsupported acquisition, altered FX and unbound conversion shape."""
+    from stock_research_llm_orchestrator.preparation.price_fx_evidence import build_price_fx_evidence
+
+    run(case)
+    files = read_bundle(case / "result")
+    if change in {"native_kind", "approval_version"}:
+        path = "price-input/preparation/history-metadata.json"
+        history = json.loads(files[path])
+        history["artifact_kind" if change == "native_kind" else "source_approval_version"] = (
+            "http" if change == "native_kind" else 999
+        )
+        files[path] = json.dumps(history).encode()
+    elif change == "raw_fx":
+        path = next(n for n in files if n.startswith("fx-input/raw/") and n.endswith(".bin"))
+        files[path] += b"changed"
+    else:
+        rows = json.loads(files["conversion.json"])
+        if change == "dates":
+            rows.pop()
+        else:
+            rows[0].update(close_usd=None, reasons=[])
+        files["conversion.json"] = json.dumps(rows).encode()
+    with pytest.raises(ValueError, match="price_fx_evidence_"):
+        build_price_fx_evidence(files, ())

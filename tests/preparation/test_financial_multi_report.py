@@ -357,6 +357,23 @@ def test_join_retains_source_limits_and_checks_compatibility(monkeypatch: pytest
             annual_evidence_draft=True,
         )
     assert multi.evaluate_multi_report(interim_dependencies, calculate_annual_subset=True) == calculated
+    market_draft_calls = []
+
+    def market_draft(*args: object) -> tuple[bytes, dict[str, object]]:
+        market_draft_calls.append(args)
+        return b"private-market-draft", {"sha256": "2" * 64, "record_counts": {"calculated": 1}}
+
+    monkeypatch.setattr(multi, "build_price_fx_evidence", market_draft)
+    market_drafted = multi.evaluate_multi_report(d, price_fx_evidence_draft=True)
+    assert market_drafted["price-fx-evidence-draft.json"] == b"private-market-draft"
+    assert market_draft_calls[0][0] is d["price_fx"]
+    assert b'"value"' not in market_drafted["manifest.json"]
+    multi.validate_multi_report(market_drafted, d, price_fx_evidence_draft=True)
+    with pytest.raises(ValueError, match="replay_mismatch"):
+        multi.validate_multi_report(
+            {**market_drafted, "price-fx-evidence-draft.json": b"changed"}, d, price_fx_evidence_draft=True
+        )
+    assert multi.evaluate_multi_report(d) == files
     older_base = base.model_copy(update={"checked_at": "2026-01-01T00:00:00Z"})
     monkeypatch.setattr(
         multi, "evaluate_financial_run", lambda *args: {"manifest.json": older_base.model_dump_json().encode()}

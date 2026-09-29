@@ -522,3 +522,5 @@ P0承認の阻害課題へ混在させない。
 - [ ] Extend evidence-contract mapping to accepted interim, price/FX and selected narrative inputs before completing a full evidence set.
 - [x] Export 48 accepted interim IR metric slots as private P1 source/raw/normalized records while preserving operator adoption and runtime acquisition histories separately.
 - [ ] Map accepted price/FX and selected narrative evidence to P1 records before completing evidence-set assembly and final freshness review.
+- [x] Export replayed price/FX conversion inputs and outputs as private P1 records without changing decimals, missingness, quality states or acquisition/reuse provenance.
+- [ ] Map selected narrative review assertions to P1 records, keeping semantic adoption separate from completeness and final freshness.

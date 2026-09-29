@@ -35,6 +35,7 @@ from stock_research_llm_orchestrator.preparation.interim_evidence import build_i
 from stock_research_llm_orchestrator.preparation.interim_ir import InterimPolicy, validate_interim
 from stock_research_llm_orchestrator.preparation.interim_ir_runtime import verify_runtime
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path, _timestamp
+from stock_research_llm_orchestrator.preparation.price_fx_evidence import build_price_fx_evidence
 from stock_research_llm_orchestrator.preparation.price_fx_run import publish_run_preparation
 from stock_research_llm_orchestrator.requests.storage import DATABASE_FILENAME, ProductionRequestRepository
 
@@ -99,6 +100,7 @@ def evaluate_multi_report(
     calculate_annual_subset: bool = False,
     annual_evidence_draft: bool = False,
     interim_evidence_draft: bool = False,
+    price_fx_evidence_draft: bool = False,
 ) -> dict[str, bytes]:
     """Revalidate every source and retain per-source task, time and limitations."""
     if annual_evidence_draft and not calculate_annual_subset:
@@ -332,6 +334,10 @@ def evaluate_multi_report(
         )
         extra["interim-evidence-draft.json"] = body
         result["interim_evidence_draft"] = metadata
+    if price_fx_evidence_draft:
+        body, metadata = build_price_fx_evidence(d["price_fx"], tuple(sorted(combined_limitations)))
+        extra["price-fx-evidence-draft.json"] = body
+        result["price_fx_evidence_draft"] = metadata
     result["limitations"] = sorted(combined_limitations)
     return {"inputs.json": inputs, "manifest.json": json.dumps(result, sort_keys=True, indent=2).encode(), **extra}
 
@@ -346,6 +352,7 @@ def validate_multi_report(
     calculate_annual_subset: bool = False,
     annual_evidence_draft: bool = False,
     interim_evidence_draft: bool = False,
+    price_fx_evidence_draft: bool = False,
 ) -> None:
     """Replay only explicitly supplied dependencies."""
     if dict(files) != evaluate_multi_report(
@@ -356,6 +363,7 @@ def validate_multi_report(
         calculate_annual_subset=calculate_annual_subset,
         annual_evidence_draft=annual_evidence_draft,
         interim_evidence_draft=interim_evidence_draft,
+        price_fx_evidence_draft=price_fx_evidence_draft,
     ):
         raise ValueError("multi_report_replay_mismatch")
 
@@ -370,6 +378,7 @@ def prepare_multi_report(
     calculate_annual_subset: bool = False,
     annual_evidence_draft: bool = False,
     interim_evidence_draft: bool = False,
+    price_fx_evidence_draft: bool = False,
 ) -> None:
     """Publish a separate immutable local bundle; calculated values remain private."""
     output = _safe_path(output)
@@ -387,6 +396,7 @@ def prepare_multi_report(
         calculate_annual_subset=calculate_annual_subset,
         annual_evidence_draft=annual_evidence_draft,
         interim_evidence_draft=interim_evidence_draft,
+        price_fx_evidence_draft=price_fx_evidence_draft,
     )
     publish_run_preparation(
         output.parent,
@@ -401,5 +411,6 @@ def prepare_multi_report(
             calculate_annual_subset=calculate_annual_subset,
             annual_evidence_draft=annual_evidence_draft,
             interim_evidence_draft=interim_evidence_draft,
+            price_fx_evidence_draft=price_fx_evidence_draft,
         ),
     )

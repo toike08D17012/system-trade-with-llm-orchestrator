@@ -937,3 +937,22 @@ operator採用の元receipt・原本locator・values/policy hashは別途保持�
 manifestにはhashと層別件数のみを追加し、prepareには新しい出力先、validateには同じフラグを指定してください。
 ドラフトは凍結済みEvidenceSetではなく、既存source制約と`analysis_ready=false`を維持します。
 [接続結果](docs/decision-requests/2026-09-29-interim-p1-evidence-draft-outcome.md)を参照してください。
+
+### 価格・FXのP1証拠ドラフト
+
+財務統合CLIのprepare / validateへ`--price-fx-evidence-draft`を追加すると、
+price_fx入力の再検証後に別の`price-fx-evidence-draft.json`を生成します。
+取得時承認・元の取得時刻・原本locatorを、現在の使用／再利用承認と区別して保持します。
+yfinanceのraw payloadは保存DataFrameのCSV出力で、HTTP本文ではありません。
+FXは保存年bucketのbody hashと元receiptを保持し、今回新たにruntime DBを照合したとは扱いません。
+
+既存conversion.jsonの日付ごとに、価格JPY_per_share・FXのJPY_per_USDのnormalized枠と、
+換算USD_per_shareのcalculated枠を保存します。値・欠損・元reasons・品質status・対象期間を転記し、
+換算式・Decimal精度28・ROUND_HALF_EVENを保持して再計算や追加quantizeをしません。
+数値があるnormalized枠も品質・使用条件の解除を意味せず、元のrun layer制約を参照できます。
+FXは元の観測日・UTC区間を保持し、株価終値との同時性を主張しません。
+
+値は私的ドラフトのみ、manifestはhash・層別件数のみです。
+年次・IR・元conversionのbytesを変えず、validateにも同じフラグを指定してください。
+ドラフトは未凍結で、`analysis_ready=false`を維持します。
+[接続結果](docs/decision-requests/2026-09-29-price-fx-p1-evidence-draft-outcome.md)を参照してください。
