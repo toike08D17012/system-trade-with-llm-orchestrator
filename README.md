@@ -902,3 +902,20 @@ prepareには新しい出力先を指定し、validateにも同じフラグを�
 これは内部計算の限定実装です。P1の`CalculatedEvidenceV1`、ROE、株数依存の評価指標、一時損益調整、四半期差分は対象外です。
 開示網羅性・最終鮮度・証拠凍結は残り、`analysis_ready=false`を維持します。
 [年次計算結果](docs/decision-requests/2026-09-29-annual-calculation-subset-outcome.md)を参照してください。
+
+### 年次P1証拠ドラフト
+
+財務統合CLIのprepare / validateへ`--calculate-annual --annual-evidence-draft`を追加すると、
+再検証済み年次値と計算結果をP1のsource_metadata・raw・normalized・calculatedモデルへ変換します。
+正規化は年度×6指標、計算は年度×4指標の枠を持ち、欠損理由と入力参照を保持します。
+採用値は桁を丸めず、計算値には既存の固定丸めを適用します。
+
+私的な`annual-evidence-draft.json`へレコード、hash対象payload、原ZIP・取得時承認のdependency/path/hash locatorを保存します。
+原本を複製せず、採用値のmember・context・unit・ordinalと等値の重複観測を保持します。
+source IDには取得identityを束縛し、同じ日時・bytesでも異なるattemptを区別します。
+manifestにはドラフトhashと層別件数のみを追加し、CLIから原文・値を表示しません。
+
+新しい出力先を使用し、validateにも両フラグを渡してください。未指定時の既存出力は不変です。
+ドラフトはEvidenceSetV1ではなく、網羅性・全体鮮度・凍結を示しません。
+元のoperator取得metadataがruntime DB未照合である制約も保持し、`analysis_ready=false`を維持します。
+[接続結果](docs/decision-requests/2026-09-29-annual-p1-evidence-draft-outcome.md)を参照してください。

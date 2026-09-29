@@ -8,6 +8,7 @@ from pathlib import Path
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
 from stock_research_llm_orchestrator.preparation.annual_calculations import calculate_annual
+from stock_research_llm_orchestrator.preparation.annual_evidence import build_annual_evidence
 from stock_research_llm_orchestrator.preparation.correction_review import bind_correction_review
 from stock_research_llm_orchestrator.preparation.disclosure_review import bind_disclosure_review
 from stock_research_llm_orchestrator.preparation.financial_acceptance import (
@@ -95,8 +96,11 @@ def evaluate_multi_report(
     ir_raw_root: Path | None = None,
     disclosure_raw_root: Path | None = None,
     calculate_annual_subset: bool = False,
+    annual_evidence_draft: bool = False,
 ) -> dict[str, bytes]:
     """Revalidate every source and retain per-source task, time and limitations."""
+    if annual_evidence_draft and not calculate_annual_subset:
+        raise ValueError("multi_report_annual_calculation_required")
     pair_keys = {"pair", "pair_adoption"}
     has_pair = pair_keys <= dependencies.keys()
     interim_keys = {"interim", "interim_source"}
@@ -300,6 +304,17 @@ def evaluate_multi_report(
         combined_limitations.update(
             {"annual_subset_only", "not_p1_calculated_evidence", "no_valuation_or_one_time_adjustment"}
         )
+    if annual_evidence_draft:
+        body, metadata = build_annual_evidence(
+            tasks[0].task_id,
+            required,
+            calculation_reports,
+            d,
+            extra["annual-calculations.json"],
+            tuple(sorted(combined_limitations)),
+        )
+        extra["annual-evidence-draft.json"] = body
+        result["annual_evidence_draft"] = metadata
     result["limitations"] = sorted(combined_limitations)
     return {"inputs.json": inputs, "manifest.json": json.dumps(result, sort_keys=True, indent=2).encode(), **extra}
 
@@ -312,6 +327,7 @@ def validate_multi_report(
     ir_raw_root: Path | None = None,
     disclosure_raw_root: Path | None = None,
     calculate_annual_subset: bool = False,
+    annual_evidence_draft: bool = False,
 ) -> None:
     """Replay only explicitly supplied dependencies."""
     if dict(files) != evaluate_multi_report(
@@ -320,6 +336,7 @@ def validate_multi_report(
         ir_raw_root=ir_raw_root,
         disclosure_raw_root=disclosure_raw_root,
         calculate_annual_subset=calculate_annual_subset,
+        annual_evidence_draft=annual_evidence_draft,
     ):
         raise ValueError("multi_report_replay_mismatch")
 
@@ -332,6 +349,7 @@ def prepare_multi_report(
     ir_raw_root: Path | None = None,
     disclosure_raw_root: Path | None = None,
     calculate_annual_subset: bool = False,
+    annual_evidence_draft: bool = False,
 ) -> None:
     """Publish a separate immutable local bundle; calculated values remain private."""
     output = _safe_path(output)
@@ -347,6 +365,7 @@ def prepare_multi_report(
         ir_raw_root=ir_raw_root,
         disclosure_raw_root=disclosure_raw_root,
         calculate_annual_subset=calculate_annual_subset,
+        annual_evidence_draft=annual_evidence_draft,
     )
     publish_run_preparation(
         output.parent,
@@ -359,5 +378,6 @@ def prepare_multi_report(
             ir_raw_root=ir_raw_root,
             disclosure_raw_root=disclosure_raw_root,
             calculate_annual_subset=calculate_annual_subset,
+            annual_evidence_draft=annual_evidence_draft,
         ),
     )

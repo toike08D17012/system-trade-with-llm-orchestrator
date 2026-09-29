@@ -303,6 +303,31 @@ def test_join_retains_source_limits_and_checks_compatibility(monkeypatch: pytest
     with pytest.raises(ValueError, match="replay_mismatch"):
         multi.validate_multi_report(calculated, interim_dependencies)
     assert multi.evaluate_multi_report(interim_dependencies) == joined
+    with pytest.raises(ValueError, match="annual_calculation_required"):
+        multi.evaluate_multi_report(interim_dependencies, annual_evidence_draft=True)
+    draft_calls = []
+
+    def draft_builder(*args: object) -> tuple[bytes, dict[str, object]]:
+        draft_calls.append(args)
+        return b"private-draft", {"sha256": "1" * 64, "record_counts": {"normalized": 30}}
+
+    monkeypatch.setattr(multi, "build_annual_evidence", draft_builder)
+    drafted = multi.evaluate_multi_report(
+        interim_dependencies, calculate_annual_subset=True, annual_evidence_draft=True
+    )
+    assert drafted["annual-evidence-draft.json"] == b"private-draft"
+    assert drafted["annual-calculations.json"] == calculated["annual-calculations.json"]
+    assert draft_calls[0][0] == "source-2026" and draft_calls[0][3] is interim_dependencies
+    assert b'"value"' not in drafted["manifest.json"]
+    multi.validate_multi_report(drafted, interim_dependencies, calculate_annual_subset=True, annual_evidence_draft=True)
+    with pytest.raises(ValueError, match="replay_mismatch"):
+        multi.validate_multi_report(
+            {**drafted, "annual-evidence-draft.json": b"changed"},
+            interim_dependencies,
+            calculate_annual_subset=True,
+            annual_evidence_draft=True,
+        )
+    assert multi.evaluate_multi_report(interim_dependencies, calculate_annual_subset=True) == calculated
     older_base = base.model_copy(update={"checked_at": "2026-01-01T00:00:00Z"})
     monkeypatch.setattr(
         multi, "evaluate_financial_run", lambda *args: {"manifest.json": older_base.model_dump_json().encode()}

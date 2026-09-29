@@ -518,3 +518,5 @@ P0承認の阻害課題へ混在させない。
 - [x] Calculate four private annual metric slots per required period with explicit missing reasons, fixed rounding and replayed input references.
 - [ ] Map normalized financial facts and this internal calculation subset to the P1 evidence contracts before claiming evidence-set readiness.
 - [ ] Complete disclosure coverage and final freshness checks before freezing evidence or running the analysis agents.
+- [x] Export replayed annual source/raw/normalized/calculated P1 records as a private unfrozen draft with hash-bound acquisition and artifact locators.
+- [ ] Extend evidence-contract mapping to accepted interim, price/FX and selected narrative inputs before completing a full evidence set.
