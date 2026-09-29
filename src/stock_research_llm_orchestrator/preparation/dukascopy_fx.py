@@ -183,6 +183,7 @@ class FxMetadataV2(StrictContractModel):
     period_end: str
     requested_at: str
     receipts: tuple[YearReceipt, ...]
+    year_requested_at: dict[str, str] | None = None
     package_version: Literal["1.50.0"] = "1.50.0"
     bridge_version: Literal[1] = 1
     node_version: str
@@ -202,7 +203,19 @@ def normalized(files: Mapping[str, bytes], metadata: FxMetadataV2) -> DailySerie
     """Reparse every source year and verify raw receipts without any HTTP."""
     now = datetime.fromisoformat(metadata.requested_at)
     start, end = date.fromisoformat(metadata.period_start), date.fromisoformat(metadata.period_end)
-    expected = dict(zip(range(start.year, end.year + 1), urls(start, end, now), strict=True))
+    years = range(start.year, end.year + 1)
+    if metadata.year_requested_at is None:
+        requested = dict.fromkeys(years, now)
+        expected = dict(zip(years, urls(start, end, now), strict=True))
+    else:
+        if start > end or set(metadata.year_requested_at) != {str(year) for year in years}:
+            raise ValueError("fx_component_request_inventory_mismatch")
+        requested = {year: _timestamp(metadata.year_requested_at[str(year)]) for year in years}
+        if min(requested.values()) != _timestamp(metadata.requested_at):
+            raise ValueError("fx_component_request_start_mismatch")
+        expected = {
+            year: urls(max(start, date(year, 1, 1)), min(end, date(year, 12, 31)), requested[year])[0] for year in years
+        }
     if len(metadata.receipts) != len(expected) or {r.year for r in metadata.receipts} != set(expected):
         raise ValueError("fx_year_inventory_mismatch")
     rows: list[DailyRow] = []
@@ -210,7 +223,7 @@ def normalized(files: Mapping[str, bytes], metadata: FxMetadataV2) -> DailySerie
         received = datetime.fromisoformat(receipt.received_at)
         if (
             received.tzinfo is None
-            or received < now
+            or received < requested[receipt.year]
             or receipt.url != expected[receipt.year]
             or not date(2026, 9, 26) <= received.date() < date(2026, 12, 26)
         ):
@@ -504,7 +517,7 @@ def acquire_dukascopy_fx(
                 }
             )["node_version"],
         )
-        files["metadata.json"] = metadata.model_dump_json(indent=2).encode()
+        files["metadata.json"] = metadata.model_dump_json(indent=2, exclude_none=True).encode()
         files["normalized.json"] = normalized(files, metadata).model_dump_json(indent=2).encode()
         index = _index(files)
         files["index.json"] = index.model_dump_json(indent=2).encode()

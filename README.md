@@ -396,6 +396,12 @@ Node bridgeは通信を禁止し、送信・permit・原応答公開・論理結
 欠損を別日やBOJで補完せず、原応答にない補完足と未確定足を採用しません。
 v2証拠にはraw・設定bytes・正規化結果とhashを保持し、保存後に再検証します。
 
+異なる取得の年別receiptを構成するv2証拠では、任意の`year_requested_at`に各年の元要求時刻を記録します。
+全体の`requested_at`は構成元の最も早い要求時刻であり、拡張期間を単一要求で取得した時刻ではありません。
+年inventory・最小時刻・要求と受信の順序を照合し、各年の元要求時点で確定済みのUTC日だけを許可します。
+通常の単一取得と旧v2証拠の検証方法は維持します。
+[市場不足の解消結果](docs/decision-requests/2026-09-30-current-fx-recovery-outcome.md)を参照してください。
+
 旧BOJ v1証拠と価格FX索引の再検証・結合互換は維持します。
 `revalidate`は旧BOJ未受入診断の互換コマンドであり、Dukascopy取得には使用しません。
 [Dukascopy初回確認](docs/decision-requests/2026-09-26-dukascopy-fx-evidence-acceptance-outcome.md)では

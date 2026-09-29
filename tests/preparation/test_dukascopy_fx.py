@@ -3,13 +3,19 @@
 import json
 import subprocess
 from collections.abc import Callable, Mapping
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
 import pytest
 
-from stock_research_llm_orchestrator.preparation.dukascopy_fx import acquire_dukascopy_fx, validate_dukascopy_fx
+from stock_research_llm_orchestrator.preparation.dukascopy_fx import (
+    FxMetadataV2,
+    _index,
+    acquire_dukascopy_fx,
+    normalized,
+    validate_dukascopy_fx,
+)
 from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle, validate_fx_evidence
 from stock_research_llm_orchestrator.sources.dukascopy.daily import parse_daily, urls, year_url
 
@@ -100,9 +106,98 @@ def test_acquire_annual_and_replay(tmp_path: Path) -> None:
     assert seen == [2026, 2025]
     validate_fx_evidence(saved)
     validate_dukascopy_fx(saved)
+    assert "year_requested_at" not in json.loads(saved["metadata.json"])
+    assert (
+        FxMetadataV2.model_validate_json(saved["metadata.json"]).model_dump_json(indent=2, exclude_none=True).encode()
+        == saved["metadata.json"]
+    )
     saved["raw/2025.bin"] += b" "
     with pytest.raises(ValueError, match="raw_reference"):
         validate_dukascopy_fx(saved)
+
+
+@pytest.fixture(scope="module")
+def composite_fx_files(tmp_path_factory: pytest.TempPathFactory) -> dict[str, bytes]:
+    """Combine original receipts from two real offline-coordinated acquisitions."""
+    root = tmp_path_factory.mktemp("composite-fx")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        year = 2026 if request.url.query else int(request.url.path.rsplit("/", 1)[1])
+        return httpx.Response(200, content=body(year), headers={"Content-Type": "application/json"})
+
+    old = read_bundle(acquire(root / "old", handler))
+    later = NOW + timedelta(days=3)
+    acquire_dukascopy_fx(
+        config=ROOT / "config",
+        runtime=root / "later-runtime",
+        runs=root / "later-runs",
+        destination="accepted",
+        task_id="composite-fx",
+        start=date(2026, 1, 1),
+        end=date(2026, 9, 28),
+        clock=lambda: later,
+        transport=httpx.MockTransport(handler),
+    )
+    new = read_bundle(root / "later-runs/accepted")
+    old_meta = json.loads(old["metadata.json"])
+    new_meta = json.loads(new["metadata.json"])
+    receipts = [r for r in old_meta["receipts"] if r["year"] == 2025] + new_meta["receipts"]
+    metadata = {
+        **old_meta,
+        "period_end": "2026-09-28",
+        "receipts": receipts,
+        "year_requested_at": {"2025": old_meta["requested_at"], "2026": new_meta["requested_at"]},
+    }
+    files = {**old, "raw/2026.bin": new["raw/2026.bin"], "metadata.json": json.dumps(metadata).encode()}
+    files["normalized.json"] = (
+        normalized(files, FxMetadataV2.model_validate_json(files["metadata.json"])).model_dump_json(indent=2).encode()
+    )
+    files["index.json"] = _index(files).model_dump_json(indent=2).encode()
+    assert read_bundle(root / "old/runs/accepted") == old
+    assert read_bundle(root / "later-runs/accepted") == new
+    return files
+
+
+def test_composite_replays_original_receipts(composite_fx_files: dict[str, bytes]) -> None:
+    """An expanded endpoint uses its own request time without changing old receipts."""
+    validate_fx_evidence(composite_fx_files)
+    validate_dukascopy_fx(composite_fx_files)
+    metadata = FxMetadataV2.model_validate_json(composite_fx_files["metadata.json"])
+    assert metadata.period_end == "2026-09-28"
+    assert metadata.receipts[0].received_at < metadata.receipts[1].received_at
+    assert [r.confirmed for r in normalized(composite_fx_files, metadata).rows if r.on == "2026-09-26"] == [True]
+    equivalent = metadata.model_copy(update={"requested_at": NOW.astimezone(timezone(timedelta(hours=3))).isoformat()})
+    assert normalized(composite_fx_files, equivalent) == normalized(composite_fx_files, metadata)
+
+
+@pytest.mark.parametrize(
+    "change",
+    ["absent", "missing", "extra", "noncanonical", "earliest", "naive", "after_receipt", "unfinished", "reversed"],
+)
+def test_composite_rejects_invalid_request_times(composite_fx_files: dict[str, bytes], change: str) -> None:
+    """Explicit components preserve inventory, offset, receipt and completed-day boundaries."""
+    metadata = json.loads(composite_fx_files["metadata.json"])
+    times = metadata["year_requested_at"]
+    if change == "absent":
+        del metadata["year_requested_at"]
+    elif change == "missing":
+        del times["2025"]
+    elif change == "extra":
+        times["2024"] = NOW.isoformat()
+    elif change == "noncanonical":
+        times["02025"] = times.pop("2025")
+    elif change == "earliest":
+        metadata["requested_at"] = (NOW + timedelta(seconds=1)).isoformat()
+    elif change == "naive":
+        times["2026"] = "2026-09-29T12:00:00"
+    elif change == "after_receipt":
+        times["2026"] = (NOW + timedelta(days=3, seconds=1)).isoformat()
+    elif change == "unfinished":
+        times["2026"] = NOW.isoformat()
+    elif change == "reversed":
+        metadata["period_start"] = "2026-09-29"
+    with pytest.raises(ValueError):
+        normalized(composite_fx_files, FxMetadataV2.model_validate_json(json.dumps(metadata)))
 
 
 @pytest.mark.parametrize("status", [429, 500, 302])
