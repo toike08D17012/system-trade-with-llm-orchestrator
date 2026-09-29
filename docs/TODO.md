@@ -520,3 +520,5 @@ P0承認の阻害課題へ混在させない。
 - [ ] Complete disclosure coverage and final freshness checks before freezing evidence or running the analysis agents.
 - [x] Export replayed annual source/raw/normalized/calculated P1 records as a private unfrozen draft with hash-bound acquisition and artifact locators.
 - [ ] Extend evidence-contract mapping to accepted interim, price/FX and selected narrative inputs before completing a full evidence set.
+- [x] Export 48 accepted interim IR metric slots as private P1 source/raw/normalized records while preserving operator adoption and runtime acquisition histories separately.
+- [ ] Map accepted price/FX and selected narrative evidence to P1 records before completing evidence-set assembly and final freshness review.

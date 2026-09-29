@@ -21,6 +21,7 @@ def main(argv: list[str] | None = None) -> int:
             sub.add_argument("--" + name.replace("_", "-"), type=Path, required=True)
         sub.add_argument("--calculate-annual", action="store_true")
         sub.add_argument("--annual-evidence-draft", action="store_true")
+        sub.add_argument("--interim-evidence-draft", action="store_true")
         sub.add_argument("--pair", type=Path)
         sub.add_argument("--pair-adoption", type=Path)
         sub.add_argument("--interim", type=Path)
@@ -57,6 +58,7 @@ def main(argv: list[str] | None = None) -> int:
                 disclosure_raw_root=args.disclosure_raw_root,
                 calculate_annual_subset=args.calculate_annual,
                 annual_evidence_draft=args.annual_evidence_draft,
+                interim_evidence_draft=args.interim_evidence_draft,
             )
         else:
             validate_multi_report(
@@ -67,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
                 disclosure_raw_root=args.disclosure_raw_root,
                 calculate_annual_subset=args.calculate_annual,
                 annual_evidence_draft=args.annual_evidence_draft,
+                interim_evidence_draft=args.interim_evidence_draft,
             )
         print("financial_multi_report: valid; offline_replay; analysis_ready=false")
     except (ValueError, OSError, RuntimeError, KeyError) as error:

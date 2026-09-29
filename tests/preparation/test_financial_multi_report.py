@@ -273,6 +273,35 @@ def test_join_retains_source_limits_and_checks_compatibility(monkeypatch: pytest
         with pytest.raises(ValueError, match="disclosure_inputs_required"):
             multi.evaluate_multi_report({**interim_dependencies, key: {}})
     disclosure_review = {"review.json": b'{"limitations":["selected_sections_only"]}'}
+    with pytest.raises(ValueError, match="interim_runtime_required"):
+        multi.evaluate_multi_report(interim_dependencies, interim_evidence_draft=True)
+    runtime_manifest = runtime_manifest.model_copy(update={"kind": "toyota-ir-runtime-acquisition"})
+    monkeypatch.setattr(multi, "verify_runtime", lambda *args: runtime_manifest)
+    ir_draft_calls = []
+
+    def ir_draft(*args: object) -> tuple[bytes, dict[str, object]]:
+        ir_draft_calls.append(args)
+        return b"private-ir-draft", {"sha256": "1" * 64, "record_counts": {"normalized": 48}}
+
+    monkeypatch.setattr(multi, "build_interim_evidence", ir_draft)
+    drafted_ir = multi.evaluate_multi_report(
+        runtime_dependencies, runtime=runtime, ir_raw_root=tmp_path, interim_evidence_draft=True
+    )
+    assert drafted_ir["interim-evidence-draft.json"] == b"private-ir-draft"
+    assert ir_draft_calls[0][3] == runtime_manifest and ir_draft_calls[0][5] == tmp_path
+    assert b'"value"' not in drafted_ir["manifest.json"]
+    multi.validate_multi_report(
+        drafted_ir, runtime_dependencies, runtime=runtime, ir_raw_root=tmp_path, interim_evidence_draft=True
+    )
+    with pytest.raises(ValueError, match="replay_mismatch"):
+        multi.validate_multi_report(
+            {**drafted_ir, "interim-evidence-draft.json": b"changed"},
+            runtime_dependencies,
+            runtime=runtime,
+            ir_raw_root=tmp_path,
+            interim_evidence_draft=True,
+        )
+    assert multi.evaluate_multi_report(runtime_dependencies, runtime=runtime, ir_raw_root=tmp_path) == runtime_join
     disclosures = {**interim_dependencies, "disclosure_runtime": {}, "disclosure_review": disclosure_review}
     with pytest.raises(ValueError, match="disclosure_inputs_required"):
         multi.evaluate_multi_report(disclosures, runtime=runtime)

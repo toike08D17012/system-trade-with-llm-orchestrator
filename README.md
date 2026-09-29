@@ -919,3 +919,21 @@ manifestにはドラフトhashと層別件数のみを追加し、CLIから原�
 ドラフトはEvidenceSetV1ではなく、網羅性・全体鮮度・凍結を示しません。
 元のoperator取得metadataがruntime DB未照合である制約も保持し、`analysis_ready=false`を維持します。
 [接続結果](docs/decision-requests/2026-09-29-annual-p1-evidence-draft-outcome.md)を参照してください。
+
+### IRのP1証拠ドラフト
+
+財務統合CLIのprepare / validateへ`--interim-evidence-draft`を追加すると、
+IR採用値の再検証と共有runtimeのDB・raw照合後に、別の`interim-evidence-draft.json`を生成します。
+`--interim`、`--interim-source`、`--interim-runtime`、`--runtime`、`--ir-raw-root`が必要です。
+年次計算・年次ドラフトのフラグとは独立し、既存の年次ドラフトbytesは変えません。
+
+8資料のsource_metadata・rawと、48のnormalized枠を保存します。
+元のJPY値を追加換算せず、JPY_millionsと倍率1000000、instant/YTD期間、page/table/column根拠を保持します。
+日単位の公表日はpayloadへ記録し、正確な時刻が不明な`published_at`はnullにします。
+
+runtimeの取得時承認・receiptはruntime取得の来歴に使用します。
+operator採用の元receipt・原本locator・values/policy hashは別途保持し、同じbytesという確認で来歴を置き換えません。
+保存原本は明示した`ir_raw_root`の相対pathとhashで参照し、複製・外部転送は行いません。
+manifestにはhashと層別件数のみを追加し、prepareには新しい出力先、validateには同じフラグを指定してください。
+ドラフトは凍結済みEvidenceSetではなく、既存source制約と`analysis_ready=false`を維持します。
+[接続結果](docs/decision-requests/2026-09-29-interim-p1-evidence-draft-outcome.md)を参照してください。
