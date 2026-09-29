@@ -535,3 +535,10 @@ P0承認の阻害課題へ混在させない。
 - [x] Extend the retained local schedule through September 29 without new source observation and resolve the explicit price/FX endpoint gaps.
 - [ ] Prepare a separate current market run for newly required price/FX dates, resolving requirements again at execution time.
 - [ ] Inventory three-year disclosures and twelve-month news coverage before claiming initial evidence completeness.
+
+- [x] Allow explicit same-day price acquisition only after the approved Tokyo session close and reject future/unsupported dates before native calls.
+- [x] Acquire current price evidence once, retaining source metadata and offline quality validation.
+- [ ] Resolve the current-year Dukascopy provider failure through an explicitly initiated later run; preserve its failed logical/physical record and avoid automatic retries.
+
+- [x] Publish and replay a separate current-price/retained-FX pending run with an explicit September 28 FX gap and unchanged historical artifacts.
+- [ ] Persist each successful Dukascopy year receipt before continuing to later years, so a later failure does not discard its HTTP receipt timestamp.

@@ -983,3 +983,10 @@ FXは元の観測日・UTC区間を保持し、株価終値との同時性を主
 元の4ドラフトは変更せず、manifestには組立hashと層別件数のみを追加します。
 私的組立は未凍結で`analysis_ready=false`です。開示網羅性・最終鮮度の確認は別途必要です。
 [組立結果](docs/decision-requests/2026-09-29-p1-evidence-assembly-outcome.md)を参照してください。
+
+### 立会終了後の当日価格準備
+
+内部APIの`prepare_market_evidence`は、承認済み市場profile期間内の15:30 JST以降、
+当日の翌日を排他的終了日として指定できます。終了前・先の日付・期間外は取得前に拒否します。
+データ到着と品質は取得後に別途検証します。市場run APIは保存原本から当日終端を受け入れられます。
+[修正と実取得結果](docs/decision-requests/2026-09-29-current-market-run-outcome.md)を参照してください。

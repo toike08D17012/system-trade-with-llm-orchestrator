@@ -4,7 +4,7 @@ import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
 from typing import Final, Literal
@@ -252,8 +252,13 @@ def prepare_market_evidence(
     retrieved = datetime.fromisoformat(jpx_provenance.retrieved_at)
     if retrieved > prepared_at:
         raise ValueError("jpx_retrieval_in_future")
-    if end > prepared_at.astimezone(ZoneInfo("Asia/Tokyo")).date():
-        raise ValueError("price_request_includes_unfinished_day")
+    today = prepared_at.astimezone(ZoneInfo("Asia/Tokyo")).date()
+    if end > today:
+        # Import only for same-day acquisition; requirements imports preparation models.
+        from stock_research_llm_orchestrator.preparation.run_requirements import session_end
+
+        if end != today + timedelta(days=1) or prepared_at < session_end(today.isoformat()):
+            raise ValueError("price_request_includes_unfinished_day")
     response = BoundedSourceResponse(
         physical_attempt_id=jpx_provenance.physical_attempt_id,
         body=jpx_body,

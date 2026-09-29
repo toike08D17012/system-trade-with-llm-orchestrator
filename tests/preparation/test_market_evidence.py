@@ -327,3 +327,56 @@ def test_corrupt_calendar_prevents_provider_call(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="calendar_hash_mismatch"):
         scenario.prepare(calendar=bad)
     assert scenario.calls == 0
+
+
+@pytest.mark.parametrize(
+    ("now", "end", "allowed"),
+    [
+        (datetime(2026, 9, 29, 6, 29, 59, tzinfo=UTC), date(2026, 9, 30), False),
+        (datetime(2026, 9, 29, 6, 30, tzinfo=UTC), date(2026, 9, 30), True),
+        (datetime(2026, 9, 29, 14, tzinfo=UTC), date(2026, 9, 30), True),
+        (datetime(2026, 9, 29, 14, tzinfo=UTC), date(2026, 10, 1), False),
+        (datetime(2026, 9, 26, 9, tzinfo=UTC), date(2026, 9, 27), False),
+        (datetime(2026, 12, 27, 9, tzinfo=UTC), date(2026, 12, 28), False),
+    ],
+)
+def test_same_day_acquisition_requires_approved_session_completion(
+    tmp_path: Path, now: datetime, end: date, allowed: bool
+) -> None:
+    """Allow exclusive tomorrow only after the approved current session closes."""
+    scenario = Scenario(tmp_path)
+    scenario.client = NativeHistoryClient(
+        tmp_path / ".rate-current", ticker_factory=lambda _: scenario, clock=lambda: now.timestamp()
+    )
+    scenario.adapter = YfinanceDailyAdapter(history_client=scenario.client)
+    for day in ("2026-09-28", "2026-09-29"):
+        scenario.frame.loc[pd.Timestamp(day, tz="Asia/Tokyo")] = scenario.frame.iloc[-1]
+    body = _workbook()
+    task = create_human_selected_task(
+        "7203", 1, mic="XTKS", task_id_factory=lambda: "task-current", accepted_at_factory=lambda: NOW
+    )
+
+    def prepare() -> MarketPreparationResult:
+        return prepare_market_evidence(
+            task=task,
+            jpx_body=body,
+            jpx_provenance=_provenance(body),
+            start=START,
+            end=end,
+            adapter=scenario.adapter,
+            root=tmp_path,
+            destination_name="current",
+            prepared_at=now,
+        )
+
+    if allowed:
+        prepare()
+        files = {path.name: path.read_bytes() for path in (tmp_path / "current").iterdir()}
+        validate_market_preparation(files)
+        assert json.loads(files["history-metadata.json"])["arguments"]["end"] == end.isoformat()
+        assert json.loads(files["normalized.json"])["requested_period"]["end_date"] == "2026-09-29"
+        assert scenario.calls == 1
+    else:
+        with pytest.raises(ValueError, match="unfinished_day|outside_profile_period"):
+            prepare()
+        assert scenario.calls == 0
