@@ -530,3 +530,8 @@ P0承認の阻害課題へ混在させない。
 
 - [x] Assemble all four replayed private P1 drafts, collapse identical correction source/raw records, and retain category provenance without freezing evidence.
 - [ ] Resolve remaining disclosure coverage and task-bound final freshness assessments before enabling EvidenceSet freeze and analysis.
+
+- [x] Reconcile initial evidence requirements with retained P1 coverage; distinguish pre-freeze checks from completion-time freshness checks.
+- [x] Extend the retained local schedule through September 29 without new source observation and resolve the explicit price/FX endpoint gaps.
+- [ ] Prepare a separate current market run for newly required price/FX dates, resolving requirements again at execution time.
+- [ ] Inventory three-year disclosures and twelve-month news coverage before claiming initial evidence completeness.
