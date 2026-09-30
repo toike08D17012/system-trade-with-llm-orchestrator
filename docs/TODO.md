@@ -545,6 +545,6 @@ P0承認の阻害課題へ混在させない。
 
 - [x] Export and offline-replay a separate price/FX P1 draft from the September 30 market run; retain original component acquisition times and leave evidence unfrozen.
 - [x] Research the official public EDINET code list: the September 29 snapshot uniquely maps E02144 and 72030 to Toyota; keep the result private and separate from accepted evidence.
-- [ ] Obtain owner approval for a separate, one-GET EDINET code-list source binding before production acquisition or financial adoption.
-- [ ] Rebind the expired issuer evidence for September 30 with an approved current basis, then confirm all six adopted values remain accepted.
+- [x] Obtain owner approval for a separate, one-GET EDINET code-list source binding before production acquisition or financial adoption.
+- [x] Rebind the expired issuer evidence for September 30 with an approved current basis, then confirm all six adopted values remain accepted.
 - [ ] Regenerate comparative evidence, the financial integration and full P1 assembly from the rebound financial source and September 30 market run after the issuer binding is valid.

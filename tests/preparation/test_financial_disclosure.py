@@ -5,15 +5,19 @@ import io
 import json
 import socket
 import zipfile
+from datetime import date
 from pathlib import Path
 
 import pytest
 
+from stock_research_llm_orchestrator.preparation.edinet_code_list import CodeListReceipt
 from stock_research_llm_orchestrator.preparation.financial_disclosure import prepare_financial, validate_financial
 from stock_research_llm_orchestrator.preparation.financial_disclosure_cli import main
 from stock_research_llm_orchestrator.preparation.financial_mapping import METRICS, prepare_mapping, validate_mapping
 from stock_research_llm_orchestrator.preparation.financial_mapping_cli import main as mapping_main
 from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
+from stock_research_llm_orchestrator.requests.production import CommittedRawReference
+from stock_research_llm_orchestrator.sources.edinet.code_list import CODE_LIST_URL, parse_code_list
 from stock_research_llm_orchestrator.sources.edinet.document_list import EdinetDocumentListAdapter
 from stock_research_llm_orchestrator.sources.edinet.xbrl_document import EdinetXbrlDocumentAdapter
 from stock_research_llm_orchestrator.sources.protocol import SourceParameter
@@ -174,6 +178,97 @@ def test_prepare_replay_preserves_candidates_and_missing_periods(inputs: Path) -
     assert read_bundle(inputs) == before
     with pytest.raises(FileExistsError):
         prepare_financial(inputs, output)
+
+
+def test_dated_code_list_restores_issuer_binding_only_with_exact_embedded_raw(inputs: Path) -> None:
+    """A current approved code list extends an old issuer binding only through its exact raw receipt."""
+    listing = json.loads((inputs / "raw/list/body.bin").read_bytes())
+    listing["results"][0]["edinetCode"] = "E02144"
+    _replace_list(inputs, listing)
+    text = (
+        "ダウンロード実行日,2026年09月30日現在,件数,1件\n"
+        "ＥＤＩＮＥＴコード,提出者種別,上場区分,連結の有無,資本金,決算日,提出者名,提出者名（英字）,提出者名（ヨミ）,所在地,提出者業種,証券コード,提出者法人番号\n"
+        "E02144,,,,,,トヨタ自動車株式会社,,,,,72030,\n"
+    ).encode("cp932")
+    stream = io.BytesIO()
+    with zipfile.ZipFile(stream, "w") as archive:
+        archive.writestr("EdinetcodeDlInfo.csv", text)
+    body = stream.getvalue()
+    observed = parse_code_list(body, date(2026, 9, 30))
+    reference = dict(
+        publication_id="code-list-publication",
+        task_id="original-task",
+        logical_request_id="edinet-code-list-20260930",
+        physical_attempt_id="code-list-attempt",
+        relative_path="acquisitions/edinet-code-list-20260930/code-list-attempt",
+        content_sha256=hashlib.sha256(body).hexdigest(),
+        byte_count=len(body),
+        raw_schema_id="edinet-code-list-zip-raw",
+        raw_schema_version=1,
+        publication_generation=1,
+    )
+    receipt = CodeListReceipt(
+        requested_at="2026-09-30T00:00:00+00:00",
+        received_at="2026-09-30T00:00:01+00:00",
+        recorded_at="2026-09-30T00:00:02+00:00",
+        url=CODE_LIST_URL,
+        observation=observed,
+        raw_reference=CommittedRawReference.model_validate(reference),
+    )
+    embedded = inputs / "issuer-code-list"
+    raw = embedded / "raw"
+    raw.mkdir(parents=True)
+    for name in ("approval.yaml", "profile.yaml"):
+        source_type = "source-approvals" if name == "approval.yaml" else "source-profiles"
+        (embedded / name).write_bytes((ROOT / "config" / source_type / "edinet-code-list/v1.yaml").read_bytes())
+    receipt_bytes = receipt.model_dump_json(indent=2).encode()
+    (embedded / "receipt.json").write_bytes(receipt_bytes)
+    _save(
+        embedded / "index.json",
+        {
+            name: hashlib.sha256((embedded / name).read_bytes()).hexdigest()
+            for name in ("approval.yaml", "profile.yaml", "receipt.json")
+        },
+    )
+    (raw / "body.bin").write_bytes(body)
+    _save(
+        raw / "request.json",
+        {
+            key: reference[key]
+            for key in (
+                "publication_id",
+                "task_id",
+                "logical_request_id",
+                "physical_attempt_id",
+                "publication_generation",
+            )
+        }
+        | {"source_id": "edinet-code-list", "operation": "code-list-zip"},
+    )
+    _save(
+        raw / "response.json",
+        {
+            "byte_count": len(body),
+            "media_type": "application/octet-stream",
+            "encoding": "binary",
+            "raw_schema_id": "edinet-code-list-zip-raw",
+            "raw_schema_version": 1,
+        },
+    )
+    _save(raw / "receipt.json", {"body_sha256": reference["content_sha256"], "byte_count": len(body)})
+    data = json.loads((inputs / "inputs.json").read_bytes())
+    data["checked_at"] = "2026-09-30T00:01:00+00:00"
+    data["issuer"].update(
+        edinet_code="E02144",
+        applicable_period=dict(start_date="2026-09-22", end_date="2026-09-30"),
+        code_list_receipt_sha256=hashlib.sha256(receipt_bytes).hexdigest(),
+    )
+    _save(inputs / "inputs.json", data)
+    result = prepare_financial(inputs, inputs.parent / "with-code-list")
+    assert "issuer_binding_unresolved" not in result.reasons
+    (raw / "body.bin").write_bytes(body + b"changed")
+    with pytest.raises(ValueError, match="embedded_raw_mismatch"):
+        prepare_financial(inputs, inputs.parent / "tampered")
 
 
 @pytest.mark.parametrize("change", ["body", "receipt", "future", "issuer", "missing_archive"])

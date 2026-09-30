@@ -17,6 +17,7 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.policies imp
     SourceApprovalV1,
 )
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
+from stock_research_llm_orchestrator.preparation.edinet_code_list import validate_embedded_code_list
 from stock_research_llm_orchestrator.preparation.edinet_revalidation import revalidate_list
 from stock_research_llm_orchestrator.preparation.financial_candidates import correction_reasons
 from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
@@ -52,6 +53,7 @@ class IssuerBinding(StrictContractModel):
     applicable_period: ApplicablePeriodV1
     list_key: Identifier
     list_sha256: Sha256Hex
+    code_list_receipt_sha256: Sha256Hex | None = None
 
 
 class FinancialInput(StrictContractModel):
@@ -263,6 +265,21 @@ def evaluate_financial(files: Mapping[str, bytes]) -> tuple[FinancialManifest, b
                 for i in inputs.acquisitions
             )
         )
+        if binding.code_list_receipt_sha256 is not None:
+            embedded = _subset(files, "issuer-code-list/")
+            receipt = validate_embedded_code_list(embedded)
+            if sha256(embedded["receipt.json"]).hexdigest() != binding.code_list_receipt_sha256:
+                raise ValueError("financial_code_list_receipt_hash_mismatch")
+            if _timestamp(receipt.received_at) > checked:
+                raise ValueError("financial_code_list_from_future")
+            if not (
+                receipt.observation.as_of <= today <= "2026-09-30"
+                and binding.applicable_period.end_date <= "2026-09-30"
+                and binding.edinet_code == receipt.observation.edinet_code
+                and binding.provider_security_code == receipt.observation.security_code
+            ):
+                raise ValueError("financial_code_list_binding_invalid")
+            expected.update(f"issuer-code-list/{name}" for name in embedded)
     if (
         binding is not None
         and len({d.edinet_code for _, d in observations if d.security_code == binding.provider_security_code}) > 1

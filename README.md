@@ -565,6 +565,24 @@ Pytestの終了コード5は、テストの未収集を検出する失敗とし�
 
 ## EDINET限定取得受入
 
+### 公開コードリストによる9月30日の発行体照合
+
+[金融庁EDINETの公開コードリスト](https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelist/Edinetcode.zip)を、
+[独立した承認設定](config/source-approvals/edinet-code-list/v1.yaml)に従って1回取得した。
+原ZIPと受信記録は私的な`runs/edinet-code-list-20260930`へ保存し、共有runtimeの
+コミット済みrawとオフライン照合できる。固定URLだけを認証なしで使用し、自動再試行・cache・
+fallback・外部Agent転送はしない。今回の1回の取得枠は使用済みで、再取得は行わない。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.edinet_code_list_cli validate \
+  --runtime runs/dukascopy-shared-runtime --runs runs/edinet-code-list-20260930 \
+  --receipt runs/edinet-code-list-20260930/formal-receipt
+```
+
+9月30日現在の一覧ではE02144と72030がトヨタ自動車株式会社に一意に対応した。
+この対応は金融庁公開データを内部検証用に加工した結果であり、9月30日以降の開示網羅性を示さない。
+[実取得と財務再生の結果](docs/decision-requests/2026-09-30-edinet-code-list-issuer-binding-outcome.md)を参照。
+
 内部CLI `preparation.edinet_evidence_cli` は承認済みv2設定で、2026-06-10の一覧1回と、
 7203の2026年3月期年次報告が一意に確認できた場合のXBRL1回だけを取得します。
 既存の共有runtimeを指定し、並列1・60秒間隔、retryなしを維持します。
