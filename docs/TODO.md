@@ -535,6 +535,7 @@ P0承認の阻害課題へ混在させない。
 - [x] Extend the retained local schedule through September 30 without new source observation and resolve the explicit price/FX endpoint gaps.
 - [x] Prepare a separate current market run for newly required price/FX dates, resolving requirements again at execution time. On September 30 before the Tokyo open, replay 729 required price days and 728 required confirmed FX days with no gaps.
 - [ ] Inventory three-year disclosures and twelve-month news coverage before claiming initial evidence completeness.
+- [x] Inventory the retained disclosure and news evidence in the September 30 integrated draft; record the unsearched periods and missing source approval separately.
 
 - [x] Allow explicit same-day price acquisition only after the approved Tokyo session close and reject future/unsupported dates before native calls.
 - [x] Acquire current price evidence once, retaining source metadata and offline quality validation.
