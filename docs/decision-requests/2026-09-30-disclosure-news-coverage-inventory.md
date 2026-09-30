@@ -22,6 +22,17 @@
 `disclosure_coverage_and_final_freshness_unresolved`は解消していない。
 元の[要件と不足表](2026-09-29-p1-readiness-gap-and-market-requirements-outcome.md)とも一致する。
 
+## 公開ページの調査境界
+
+Toyotaの[決算資料アーカイブ](https://global.toyota/en/ir/financial-results/archives/03.html)には、
+この3年に重なる2023年11月のFY2024 2Qから2026年5月のFY2026通期までの
+決算発表・補足資料が年度別に掲示されている。ただし、このページだけで
+適時開示、法定書類、訂正の全件を列挙したとはいえない。
+[Global Newsroomのトップページ](https://global.toyota/en/newsroom/)は最新・注目記事の表示で、
+12か月の全件一覧をここから確認できない。[Toyotaサイト利用規約](https://global.toyota/en/terms-of-use/)は
+内容の完全性を保証せず、コンテンツの複製・改変・再配布に制限を置く。
+これらは公開ページの調査結果で、承認済みの本番取得や受入証拠ではない。
+
 ## 次に必要な作業
 
 1. 対象期間のToyota IR/適時開示とEDINET提出日を月別に列挙し、識別子、公表日時、
