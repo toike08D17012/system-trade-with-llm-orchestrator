@@ -581,7 +581,7 @@ python -m stock_research_llm_orchestrator.preparation.edinet_code_list_cli valid
 
 9月30日現在の一覧ではE02144と72030がトヨタ自動車株式会社に一意に対応した。
 この対応は金融庁公開データを内部検証用に加工した結果であり、9月30日以降の開示網羅性を示さない。
-[実取得と財務再生の結果](docs/decision-requests/2026-09-30-edinet-code-list-issuer-binding-outcome.md)を参照。
+[実取得と同時刻の市場・財務統合結果](docs/decision-requests/2026-09-30-edinet-code-list-issuer-binding-outcome.md)を参照。
 
 内部CLI `preparation.edinet_evidence_cli` は承認済みv2設定で、2026-06-10の一覧1回と、
 7203の2026年3月期年次報告が一意に確認できた場合のXBRL1回だけを取得します。

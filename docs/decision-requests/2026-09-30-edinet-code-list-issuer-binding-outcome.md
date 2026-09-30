@@ -26,11 +26,34 @@ mappingと採用結果を再生成し、6指標すべてが受入となった。
 `runs/market-recovery-20260930/financial-code-list-prepared`、
 `financial-code-list-review`、`financial-code-list-adoption`。
 
-今回の財務別版は市場runをまだ接続していないため`price_fx_not_connected`が残る。
 9月30日22:10 JSTの要件再計算では価格終端が9月30日、確定FX終端が9月29日で、
-既存市場runの9月29日価格・9月28日FXでは足りない。コードリストは9月30日より後の
-発行体対応や全開示網羅性を証明しない。比較結果、財務統合、P1組立は新市場runに
-同じ確認時刻で財務を結び直した後に進める。現段階は`analysis_ready=false`。
+既存市場runの9月29日価格・9月28日FXでは足りなかった。
+
+## 同時刻の市場・財務統合
+
+承認済みyfinance v3の`Ticker.history`を1回呼び、9月30日までの価格730営業日を
+`prices-20260930`へ保存した。最初の試行はカレンダーmetadataの型検証で通信前に止まり、
+正しい保存済みカレンダー来歴を渡した後に取得した。価格品質は通過し、JPXスナップショットの
+鮮度未確認を残す。承認済みDukascopy経路で9月29日までの2026年bucketを取得し、
+年別receiptを共有runtime・rawと照合した。2023～2025年の保存済み証拠と組み合わせた
+`composite-fx-20260929`はオフライン再生で有効だった。
+
+同じ確認時刻の`run-20260930-evening`は価格・FXの必要日付欠損がともにゼロ、
+換算729行で`ready_with_limitations`となった。そこへ正式コードリストを含む財務入力を
+結び直し、`financial-code-list-market-prepared`、`financial-code-list-market-review`、
+`financial-code-list-market-adoption`、`financial-code-list-market-comparative`を再生成した。
+発行体bindingは有効で、採用6指標の値・出典参照は旧版と同じだった。
+比較結果では12件を受入とした。
+
+元の17依存を新しい市場・主財務5依存へ差し替えて
+`integrated-20260930-evening`を再生成した。年間5期、中間8期、受入指標30件、
+組立草稿2,348レコード。manifest SHA-256は
+`0807786e9bf8f7009e60ff604853ec4dcfdcafaacf93a4420826d9329f8494da`。
+元成果物の保存済みinventoryでは欠落・hash変更がともにゼロだった。
+
+コードリストは9月30日より後の発行体対応や全開示網羅性を証明しない。
+市場・統合は`ready_with_limitations` / `pending`を保持し、`analysis_ready=false`。
+開示・ニュースcoverage、最新性確認、EvidenceSet凍結は引き続き必要。
 
 ## 検証
 
@@ -38,3 +61,4 @@ mappingと採用結果を再生成し、6指標すべてが受入となった。
 旧財務入力の互換性と新bindingの原本改変拒否を対象テストで確認した。
 全体`./scripts/pre-commit/checks.sh`はRuff lint・format、pytest 1,344件、Mypy、
 shell検査を通過した。正式receiptは取得後にCLIでオフライン再検証した。
+市場run、FX合成、財務採用、比較結果、17依存統合は各prepare時のvalidatorで再生した。
