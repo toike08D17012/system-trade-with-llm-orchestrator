@@ -2,7 +2,7 @@
 
 import argparse
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 from zoneinfo import ZoneInfo
@@ -20,9 +20,10 @@ from stock_research_llm_orchestrator.sources.yfinance.normalization import three
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Prepare three years through yesterday; report incomplete acceptance distinctly."""
+    """Prepare three years through yesterday or the completed current session."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--allow-network", action="store_true", required=True)
+    parser.add_argument("--include-today", action="store_true", help="Include today's completed Tokyo session")
     parser.add_argument("--code", required=True)
     parser.add_argument("--evaluation-policy-version", type=int, required=True)
     parser.add_argument("--jpx-body", type=Path, required=True)
@@ -34,7 +35,7 @@ def main(argv: list[str] | None = None) -> int:
     if (args.calendar is None) != (args.calendar_metadata is None):
         parser.error("--calendar and --calendar-metadata must be supplied together")
     now = datetime.now(UTC)
-    end = now.astimezone(ZoneInfo("Asia/Tokyo")).date()
+    end = now.astimezone(ZoneInfo("Asia/Tokyo")).date() + timedelta(days=args.include_today)
     try:
         task = create_human_selected_task(
             args.code,

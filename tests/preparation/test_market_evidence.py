@@ -280,6 +280,51 @@ def test_cli_requires_explicit_network_opt_in() -> None:
     assert result.value.code == 2
 
 
+def test_cli_include_today_uses_exclusive_tomorrow_without_provider_call(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pass the completed current day as the exclusive next-day boundary."""
+    from stock_research_llm_orchestrator.preparation import market_evidence_cli
+
+    class FixedClock(datetime):
+        @classmethod
+        def now(cls, tz: object = None) -> FixedClock:
+            return cls(2026, 10, 1, 14, 0, tzinfo=UTC)
+
+    seen: list[date] = []
+
+    def reject_after_boundary(**kwargs: object) -> None:
+        end = kwargs["end"]
+        assert isinstance(end, date)
+        seen.append(end)
+        raise ValueError("test_boundary")
+
+    (tmp_path / "jpx.xlsx").write_bytes(_workbook())
+    (tmp_path / "jpx.json").write_text(_provenance(_workbook()).model_dump_json())
+    monkeypatch.setattr(market_evidence_cli, "datetime", FixedClock)
+    monkeypatch.setattr(market_evidence_cli, "prepare_market_evidence", reject_after_boundary)
+    assert (
+        main(
+            [
+                "--allow-network",
+                "--include-today",
+                "--code",
+                "7203",
+                "--evaluation-policy-version",
+                "1",
+                "--jpx-body",
+                str(tmp_path / "jpx.xlsx"),
+                "--jpx-metadata",
+                str(tmp_path / "jpx.json"),
+                "--output",
+                str(tmp_path / "prepared"),
+            ]
+        )
+        == 1
+    )
+    assert seen == [date(2026, 10, 2)]
+
+
 def test_cli_preserves_partial_acceptance_exit_status(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
