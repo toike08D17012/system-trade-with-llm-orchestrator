@@ -11,7 +11,7 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import 
 from stock_research_llm_orchestrator.preparation.edinet_campaign import CAMPAIGN_ID, TARGETS
 from stock_research_llm_orchestrator.preparation.edinet_evidence import acquire_prior_annual_campaign
 from stock_research_llm_orchestrator.preparation.financial_disclosure import validate_financial
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 
 from .test_financial_disclosure import inputs as financial_inputs  # noqa: F401
 

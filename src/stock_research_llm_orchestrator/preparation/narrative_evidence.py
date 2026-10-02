@@ -18,8 +18,8 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence imp
     SourceMetadataEvidenceV1,
 )
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.policies import SourceApprovalV1
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.interim_ir_runtime import IrRuntimeManifest
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 
 
 def _bytes(value: object) -> bytes:
@@ -254,7 +254,7 @@ def build_narrative_evidence(
                 | set(json.loads(_bytes(correction["limitations"])))
                 | {
                     "not_a_frozen_evidence_set",
-                    "no_external_agent_transfer",
+                    "not_transferred_during_preparation",
                     "selected_narrative_not_complete_disclosure_coverage",
                 }
             ),

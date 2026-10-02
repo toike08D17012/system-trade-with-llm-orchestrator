@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from stock_research_llm_orchestrator.preparation.storage import publish_preparation
+from stock_research_llm_orchestrator.preparation.storage import publish_preparation, read_bundle
 
 
 def test_publish_preparation_exposes_complete_validated_bytes(tmp_path: Path) -> None:
@@ -110,3 +110,15 @@ def test_publish_preparation_cleans_staging_when_rename_fails(tmp_path: Path, mo
         publish_preparation(tmp_path, "prep-001", {"task.json": b"{}"}, validator=lambda files: None)
 
     assert not list(tmp_path.iterdir())
+
+
+def test_read_bundle_rejects_symlinked_content(tmp_path: Path) -> None:
+    """The shared reader preserves the old bundle boundary after BOJ removal."""
+    root = tmp_path / "bundle"
+    root.mkdir()
+    (root / "nested").mkdir()
+    (root / "nested/data.json").write_bytes(b"{}")
+    assert read_bundle(root) == {"nested/data.json": b"{}"}
+    (root / "linked.json").symlink_to(root / "nested/data.json")
+    with pytest.raises(ValueError, match="symlink_input_or_output"):
+        read_bundle(root)

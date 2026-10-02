@@ -20,7 +20,6 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import 
 from stock_research_llm_orchestrator.preparation.edinet_code_list import validate_embedded_code_list
 from stock_research_llm_orchestrator.preparation.edinet_revalidation import revalidate_list
 from stock_research_llm_orchestrator.preparation.financial_candidates import correction_reasons
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path, _timestamp
 from stock_research_llm_orchestrator.preparation.price_fx_run import (
     PriceFxPreparationManifest,
@@ -28,6 +27,7 @@ from stock_research_llm_orchestrator.preparation.price_fx_run import (
     validate_price_fx_run,
 )
 from stock_research_llm_orchestrator.preparation.run_requirements import TOKYO
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.requests.production import RawPublicationIntent
 from stock_research_llm_orchestrator.sources.edinet.document_list import EdinetDocument, EdinetDocumentListAdapter
 from stock_research_llm_orchestrator.sources.edinet.xbrl_document import EdinetXbrlDocumentAdapter
@@ -99,7 +99,7 @@ class FinancialManifest(StrictContractModel):
     limitations: tuple[str, ...] = (
         "source_native_candidates_not_normalized_financials",
         "operator_exported_acquisition_metadata_not_verified_against_runtime_database",
-        "no_external_agent_transfer",
+        "not_transferred_during_preparation",
     )
 
 

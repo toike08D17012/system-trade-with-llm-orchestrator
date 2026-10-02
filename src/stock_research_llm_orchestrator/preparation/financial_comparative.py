@@ -17,9 +17,9 @@ from stock_research_llm_orchestrator.preparation.financial_acceptance import (
     validate_acceptance,
 )
 from stock_research_llm_orchestrator.preparation.financial_mapping import METRICS, MappingProposal, review_metric
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path
 from stock_research_llm_orchestrator.preparation.price_fx_run import publish_run_preparation
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.sources.edinet.xbrl_document import EdinetXbrlDocument
 from stock_research_llm_orchestrator.sources.edinet.xbrl_taxonomy import TaxonomyProof
 
@@ -142,7 +142,7 @@ class ComparativeManifest(StrictContractModel):
     limitations: tuple[str, ...] = (
         "single_archive_explicit_periods_only",
         "latest_published_period_unconfirmed",
-        "no_external_agent_transfer",
+        "not_transferred_during_preparation",
         "not_a_frozen_evidence_set",
     )
 

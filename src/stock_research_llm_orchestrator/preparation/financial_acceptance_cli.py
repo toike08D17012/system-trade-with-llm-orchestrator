@@ -13,7 +13,7 @@ from stock_research_llm_orchestrator.preparation.financial_comparative import (
     prepare_comparative,
     validate_comparative,
 )
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 
 
 def main(argv: list[str] | None = None) -> int:

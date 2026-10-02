@@ -5,7 +5,7 @@ from pathlib import Path
 
 from stock_research_llm_orchestrator.preparation.financial_disclosure import prepare_financial, validate_financial
 from stock_research_llm_orchestrator.preparation.financial_run import prepare_financial_run, validate_financial_run
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 
 
 def main(argv: list[str] | None = None) -> int:

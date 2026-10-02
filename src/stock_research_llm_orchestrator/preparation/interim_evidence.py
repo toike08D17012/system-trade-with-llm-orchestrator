@@ -18,9 +18,9 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence imp
 )
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.policies import SourceApprovalV1
 from stock_research_llm_orchestrator.preparation.financial_mapping import METRICS
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.interim_ir import InterimPolicy
 from stock_research_llm_orchestrator.preparation.interim_ir_runtime import IrRuntimeManifest
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.sources.toyota_ir_pdf import IrMetric
 
 
@@ -222,7 +222,7 @@ def build_interim_evidence(
                 set(limitations)
                 | {
                     "not_a_frozen_evidence_set",
-                    "no_external_agent_transfer",
+                    "not_transferred_during_preparation",
                     "interim_operator_evidence_not_task_bound",
                 }
             ),

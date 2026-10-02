@@ -17,9 +17,9 @@ import httpx
 from stock_research_llm_orchestrator.contracts.base import StrictContractModel, Timestamp
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
 from stock_research_llm_orchestrator.preparation.edinet_campaign import _durable_write
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path, _timestamp
 from stock_research_llm_orchestrator.preparation.price_fx_run import publish_run_preparation
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.requests.models import SourceBinding
 from stock_research_llm_orchestrator.requests.production import (
     CommittedRawReference,

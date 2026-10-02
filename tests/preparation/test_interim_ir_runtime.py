@@ -10,8 +10,8 @@ import httpx
 import pytest
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.interim_ir_runtime import CAMPAIGN, acquire_runtime, verify_runtime
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.requests.storage import DATABASE_FILENAME, ProductionRequestRepository
 from stock_research_llm_orchestrator.sources.toyota_ir import production_policy
 

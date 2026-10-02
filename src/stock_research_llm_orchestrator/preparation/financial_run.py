@@ -17,7 +17,6 @@ from stock_research_llm_orchestrator.preparation.financial_comparative import (
 )
 from stock_research_llm_orchestrator.preparation.financial_disclosure import FinancialManifest
 from stock_research_llm_orchestrator.preparation.financial_mapping import Metric
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path, _timestamp
 from stock_research_llm_orchestrator.preparation.price_fx_run import (
     PriceFxPreparationManifest,
@@ -25,6 +24,7 @@ from stock_research_llm_orchestrator.preparation.price_fx_run import (
     publish_run_preparation,
     validate_price_fx_run,
 )
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 
 
 class FinancialMetricSummary(StrictContractModel):

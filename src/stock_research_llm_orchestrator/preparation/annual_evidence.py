@@ -271,7 +271,8 @@ def build_annual_evidence(
             "payloads": payloads,
             "artifact_locators": locators,
             "limitations": sorted(
-                set(limitations) | {"annual_subset_only", "not_a_frozen_evidence_set", "no_external_agent_transfer"}
+                set(limitations)
+                | {"annual_subset_only", "not_a_frozen_evidence_set", "not_transferred_during_preparation"}
             ),
         }
     )

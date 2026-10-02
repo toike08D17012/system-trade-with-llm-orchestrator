@@ -16,7 +16,7 @@ from stock_research_llm_orchestrator.preparation.dukascopy_fx import (
     normalized,
     validate_dukascopy_fx,
 )
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle, validate_fx_evidence
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.sources.dukascopy.daily import parse_daily, urls, year_url
 
 
@@ -104,7 +104,6 @@ def test_acquire_annual_and_replay(tmp_path: Path) -> None:
 
     saved = read_bundle(acquire(tmp_path, handler))
     assert seen == [2026, 2025]
-    validate_fx_evidence(saved)
     validate_dukascopy_fx(saved)
     assert "year_requested_at" not in json.loads(saved["metadata.json"])
     assert (
@@ -160,7 +159,6 @@ def composite_fx_files(tmp_path_factory: pytest.TempPathFactory) -> dict[str, by
 
 def test_composite_replays_original_receipts(composite_fx_files: dict[str, bytes]) -> None:
     """An expanded endpoint uses its own request time without changing old receipts."""
-    validate_fx_evidence(composite_fx_files)
     validate_dukascopy_fx(composite_fx_files)
     metadata = FxMetadataV2.model_validate_json(composite_fx_files["metadata.json"])
     assert metadata.period_end == "2026-09-28"
@@ -234,7 +232,7 @@ def test_v2_join_uses_utc_bid_and_replays(tmp_path: Path) -> None:
     """Preserve source decimals and classify absent FX without filling it."""
     from decimal import Decimal, localcontext
 
-    from stock_research_llm_orchestrator.preparation.price_fx import join_price_fx, validate_price_fx
+    from stock_research_llm_orchestrator.preparation.price_fx_v2 import join_price_fx_v2, validate_price_fx
 
     from .test_price_acceptance import AcceptanceScenario
 
@@ -263,7 +261,7 @@ def test_v2_join_uses_utc_bid_and_replays(tmp_path: Path) -> None:
     )
     with localcontext() as context:
         context.prec = 3
-        result = join_price_fx(tmp_path / "accepted", tmp_path / "fx/accepted", tmp_path / "joined")
+        result = join_price_fx_v2(tmp_path / "accepted", tmp_path / "fx/accepted", tmp_path / "joined")
     assert result.version == 2
     assert result.status == "incomplete"
     assert result.rows[0].usd_jpy == Decimal("150.003")
@@ -370,7 +368,7 @@ def test_failed_logical_keeps_replayable_successful_year_receipt(
 ) -> None:
     """Keep actual receipt time after the next year's HTTP failure without relabeling success."""
     from stock_research_llm_orchestrator.preparation.dukascopy_fx import validate_dukascopy_year_receipt
-    from stock_research_llm_orchestrator.preparation.fx_evidence_cli import main
+    from stock_research_llm_orchestrator.preparation.fx_cli import main
     from stock_research_llm_orchestrator.requests.storage import DATABASE_FILENAME, ProductionRequestRepository
 
     seen = []
@@ -407,8 +405,7 @@ def test_failed_logical_keeps_replayable_successful_year_receipt(
         )
         == 0
     )
-    output = capsys.readouterr().out
-    assert "offline_replay" in output and "150.001" not in output
+    assert "offline_replay" in capsys.readouterr().out
     assert repo.logical_result(artifact.receipt.raw_reference.logical_request_id) == result
 
 

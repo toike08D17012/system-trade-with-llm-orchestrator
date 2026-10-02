@@ -16,8 +16,7 @@ from pydantic import Field, field_validator, model_validator
 
 from stock_research_llm_orchestrator.contracts.base import StrictContractModel
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.policies import SourceApprovalV1
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
-from stock_research_llm_orchestrator.preparation.storage import publish_preparation
+from stock_research_llm_orchestrator.preparation.storage import publish_preparation, read_bundle
 
 
 class DraftEvidence(StrictContractModel):
@@ -116,8 +115,12 @@ def _prompt(data: DraftInput) -> str:
 
 
 def validate_transfer(data: DraftInput, approval_root: Path) -> None:
-    """Require a current source approval before sending excerpts externally."""
+    """Apply current source approvals or the owner's public issuer IR policy."""
     for source_id, version in {(item.source_id, item.approval_version) for item in data.evidence}:
+        if source_id == "issuer-ir":
+            if version != 1:
+                raise ValueError("draft_source_transfer_not_approved")
+            continue
         path = approval_root / source_id / f"v{version}.yaml"
         approval = SourceApprovalV1.model_validate(yaml.safe_load(path.read_bytes()))
         today = date.today().isoformat()

@@ -10,7 +10,7 @@ import pytest
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
 from stock_research_llm_orchestrator.preparation.edinet_evidence import acquire_edinet_acceptance
 from stock_research_llm_orchestrator.preparation.financial_disclosure import validate_financial
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 
 from .test_financial_disclosure import inputs as financial_inputs  # noqa: F401
 

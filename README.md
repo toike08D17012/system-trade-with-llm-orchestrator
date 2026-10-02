@@ -231,9 +231,10 @@ manifest確定と完全な証拠一式を含む実行ディレクトリへの保
 `exchange`、`external_llm_transfer_allowed: true`、各資料の`evidence_id`、`source_id`、
 `approval_version`、`source_url`、`retrieved_at`、`text`が必要です。実行前に
 `config/source-approvals/<source_id>/v<approval_version>.yaml`を確認し、有効期間内の
-外部Agent移送承認がなければ停止します。Toyota IR v3とEDINET v6は、個人の
-非公開解析に使う関連抜粋・構造化データのLLM送信を認めています。取得した資料は
-出典を付けて解析に使い、全文・大量の原データや認証情報は送信しません。
+外部Agent移送承認がなければ停止します。公開企業IRは`source_id: issuer-ir`、
+`approval_version: 1`で入力でき、所有者が非公開LLM解析に使うことを申告します。
+Toyota IR v3、EDINET v6、JPX v2、Dukascopy v2も必要な抜粋・構造化データを
+私的解析へ渡せます。取得した資料には出典を付け、公開・再配布や認証情報の送信は行いません。
 
 ```bash
 python -m stock_research_llm_orchestrator.preparation.research_draft run \
@@ -370,7 +371,7 @@ PA-01〜PA-09を再評価します。価格を再取得せず、入力一式と�
 
 ## 為替日足証拠と価格の日付ラベル結合
 
-内部CLI `preparation.fx_evidence_cli acquire`は、共有Coordinator経由でDukascopyの
+内部CLI `preparation.fx_cli acquire`は、共有Coordinator経由でDukascopyの
 USDJPY Bid日足を年単位で取得し、`dukascopy-node 1.50.0`でオフライン解釈します。
 UTC日足終値を使い、東京市場の終了時刻への整合やtick取得は行いません。
 内部制限は同時数1・burst 1・最小間隔2秒・rolling 60秒に30送信です。
@@ -383,7 +384,7 @@ Node bridgeは通信を禁止し、送信・permit・原応答公開・論理結
 共有runtime directoryを継続使用してください。以下は明示的なオンライン取得の例です。
 
 ```bash
-./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.fx_evidence_cli acquire \
+./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.fx_cli acquire \
   --allow-network --config config --runtime runs/dukascopy-shared-runtime --runs runs/dukascopy-evidence \
   --destination dukascopy-fx-7203-20260926 --task-id dukascopy-acquisition-7203-20260926 \
   --start 2023-09-26 --end 2026-09-25
@@ -394,7 +395,7 @@ Node bridgeは通信を禁止し、送信・permit・原応答公開・論理結
 元の論理取得の失敗状態を保持したまま共有runtime DBと原応答に照合できます。
 
 ```bash
-./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.fx_evidence_cli validate-year-receipt \
+./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.fx_cli validate-year-receipt \
   --input runs/dukascopy-evidence/year-receipts-ACQUISITION_ID/2026 \
   --runtime runs/dukascopy-shared-runtime --runs runs/dukascopy-evidence
 ```
@@ -406,7 +407,7 @@ Node bridgeは通信を禁止し、送信・permit・原応答公開・論理結
 保存済み価格とFXの結合には通信しません。
 
 ```bash
-./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.fx_evidence_cli join \
+./docker/run-docker.sh python -m stock_research_llm_orchestrator.preparation.fx_cli join \
   --prices runs/price-acceptance-7203-20260926 \
   --fx runs/dukascopy-evidence/dukascopy-fx-7203-20260926 \
   --output runs/price-fx-dukascopy-7203-20260926
@@ -415,7 +416,7 @@ Node bridgeは通信を禁止し、送信・permit・原応答公開・論理結
 株価の日付ラベル`D`にUTC日付ラベル`D`の確定したBid終値を対応させ、
 調整前JPY終値を除算します。Decimal精度28・ROUND_HALF_EVENを固定した参考値です。
 最終quote・公表時刻は推測せず、足のtimestamp・対象区間・受信時刻を保存します。
-欠損を別日やBOJで補完せず、原応答にない補完足と未確定足を採用しません。
+欠損を別日で補完せず、原応答にない補完足と未確定足を採用しません。
 v2証拠にはraw・設定bytes・正規化結果とhashを保持し、保存後に再検証します。
 
 異なる取得の年別receiptを構成するv2証拠では、任意の`year_requested_at`に各年の元要求時刻を記録します。
@@ -424,8 +425,8 @@ v2証拠にはraw・設定bytes・正規化結果とhashを保持し、保存後
 通常の単一取得と旧v2証拠の検証方法は維持します。
 [市場不足の解消結果](docs/decision-requests/2026-09-30-current-fx-recovery-outcome.md)を参照してください。
 
-旧BOJ v1証拠と価格FX索引の再検証・結合互換は維持します。
-`revalidate`は旧BOJ未受入診断の互換コマンドであり、Dukascopy取得には使用しません。
+旧日銀FX経路とその再検証CLIは現行コードから削除しました。過去の成果物を再検証する場合は
+削除前のGitコミットを使用します。
 [Dukascopy初回確認](docs/decision-requests/2026-09-26-dukascopy-fx-evidence-acceptance-outcome.md)では
 4 GETで731/731日を換算した。旧BOJの[729/731日という結果](docs/decision-requests/2026-09-26-boj-fx-evidence-acceptance-outcome.md)は
 歴史的記録として保持します。

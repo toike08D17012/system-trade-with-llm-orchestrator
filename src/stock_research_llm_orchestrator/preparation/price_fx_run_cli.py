@@ -8,7 +8,6 @@ from hashlib import sha256
 from pathlib import Path
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.market_revalidation import _read_file, _safe_path, _timestamp
 from stock_research_llm_orchestrator.preparation.price_fx_run import (
     prepare_price_fx_run,
@@ -16,6 +15,7 @@ from stock_research_llm_orchestrator.preparation.price_fx_run import (
     validate_price_fx_run,
 )
 from stock_research_llm_orchestrator.preparation.run_requirements import calendar_inputs, resolve_requirements
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 
 
 def validate_run_plan(files: Mapping[str, bytes]) -> None:

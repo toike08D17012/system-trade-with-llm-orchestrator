@@ -30,10 +30,9 @@ from stock_research_llm_orchestrator.preparation.financial_disclosure import (
     IssuerBinding,
     prepare_financial,
 )
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path, _timestamp
 from stock_research_llm_orchestrator.preparation.run_requirements import TOKYO
-from stock_research_llm_orchestrator.preparation.storage import publish_preparation
+from stock_research_llm_orchestrator.preparation.storage import publish_preparation, read_bundle
 from stock_research_llm_orchestrator.requests.production import (
     LogicalResultOutcome,
     ProductionCachePolicy,

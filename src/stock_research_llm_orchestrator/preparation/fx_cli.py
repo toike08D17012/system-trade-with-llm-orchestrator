@@ -1,4 +1,4 @@
-"""Explicit annual Dukascopy acquisition and independently usable offline conversion."""
+"""Acquire Dukascopy FX evidence and join it with accepted prices."""
 
 import argparse
 from datetime import date
@@ -8,12 +8,12 @@ from stock_research_llm_orchestrator.preparation.dukascopy_fx import (
     acquire_dukascopy_fx,
     validate_dukascopy_year_receipt,
 )
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle, revalidate_fx_diagnostic
-from stock_research_llm_orchestrator.preparation.price_fx import join_price_fx
+from stock_research_llm_orchestrator.preparation.price_fx_v2 import join_price_fx_v2
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run only the selected acquisition or offline join mode."""
+    """Run the selected Dukascopy acquisition or offline validation mode."""
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     acquire = commands.add_parser("acquire")
@@ -25,16 +25,6 @@ def main(argv: list[str] | None = None) -> int:
     acquire.add_argument("--task-id", required=True)
     acquire.add_argument("--start", type=date.fromisoformat, required=True)
     acquire.add_argument("--end", type=date.fromisoformat, required=True)
-    revalidate = commands.add_parser("revalidate")
-    revalidate.add_argument("--config", type=Path, default=Path("config"))
-    revalidate.add_argument("--runtime", type=Path, required=True)
-    revalidate.add_argument("--runs", type=Path, required=True)
-    revalidate.add_argument("--diagnostic", type=Path, required=True)
-    revalidate.add_argument("--destination", required=True)
-    revalidate.add_argument("--task-id", required=True)
-    revalidate.add_argument("--logical-request-id", required=True)
-    revalidate.add_argument("--start", type=date.fromisoformat, required=True)
-    revalidate.add_argument("--end", type=date.fromisoformat, required=True)
     receipt = commands.add_parser("validate-year-receipt")
     receipt.add_argument("--input", type=Path, required=True)
     receipt.add_argument("--runtime", type=Path, required=True)
@@ -56,24 +46,11 @@ def main(argv: list[str] | None = None) -> int:
                 end=args.end,
             )
             print(f"fx_evidence: {acquired.status}; analysis_ready=false")
-        elif args.command == "revalidate":
-            result = revalidate_fx_diagnostic(
-                config=args.config,
-                runtime=args.runtime,
-                runs=args.runs,
-                diagnostic=args.diagnostic,
-                destination=args.destination,
-                task_id=args.task_id,
-                logical_request_id=args.logical_request_id,
-                start=args.start,
-                end=args.end,
-            )
-            print(f"fx_evidence: {result.status}; offline_revalidation; original_logical_result=failed")
         elif args.command == "validate-year-receipt":
             validate_dukascopy_year_receipt(read_bundle(args.input), runtime=args.runtime, runs=args.runs)
             print("fx_year_receipt: valid; offline_replay; analysis_ready=false")
         else:
-            converted = join_price_fx(args.prices, args.fx, args.output)
+            converted = join_price_fx_v2(args.prices, args.fx, args.output)
             print(
                 f"price_fx: {converted.status}; converted={converted.converted_count}/{len(converted.rows)}; "
                 "analysis_ready=false"

@@ -22,7 +22,6 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.policies imp
 )
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
 from stock_research_llm_orchestrator.preparation.dukascopy_fx import FxMetadataV2, validate_dukascopy_fx
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.market_evidence import validate_market_preparation
 from stock_research_llm_orchestrator.preparation.market_revalidation import _read_file, _safe_path, _timestamp
 from stock_research_llm_orchestrator.preparation.price_acceptance import (
@@ -40,7 +39,7 @@ from stock_research_llm_orchestrator.preparation.run_requirements import (
     resolve_requirements,
     session_end,
 )
-from stock_research_llm_orchestrator.preparation.storage import PreparationValidator, publish_preparation
+from stock_research_llm_orchestrator.preparation.storage import PreparationValidator, publish_preparation, read_bundle
 from stock_research_llm_orchestrator.sources.dukascopy.daily import DailySeries
 from stock_research_llm_orchestrator.sources.yfinance.normalization import NormalizedPrices
 

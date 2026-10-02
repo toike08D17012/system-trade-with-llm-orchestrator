@@ -31,7 +31,6 @@ from stock_research_llm_orchestrator.preparation.financial_run import (
     FinancialComparativeRunManifest,
     evaluate_financial_run,
 )
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.interim_evidence import build_interim_evidence
 from stock_research_llm_orchestrator.preparation.interim_ir import InterimPolicy, validate_interim
 from stock_research_llm_orchestrator.preparation.interim_ir_runtime import verify_runtime
@@ -39,6 +38,7 @@ from stock_research_llm_orchestrator.preparation.market_revalidation import _saf
 from stock_research_llm_orchestrator.preparation.narrative_evidence import build_narrative_evidence
 from stock_research_llm_orchestrator.preparation.price_fx_evidence import build_price_fx_evidence
 from stock_research_llm_orchestrator.preparation.price_fx_run import publish_run_preparation
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.requests.storage import DATABASE_FILENAME, ProductionRequestRepository
 
 

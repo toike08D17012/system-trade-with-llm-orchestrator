@@ -280,7 +280,7 @@ def build_price_fx_evidence(
                 | set(manifest.limitations)
                 | {
                     "not_a_frozen_evidence_set",
-                    "no_external_agent_transfer",
+                    "not_transferred_during_preparation",
                     "yfinance_dataframe_export_not_http_body",
                     "fx_runtime_database_not_rechecked",
                 }

@@ -8,7 +8,7 @@ from stock_research_llm_orchestrator.preparation.financial_multi_report import (
     prepare_multi_report,
     validate_multi_report,
 )
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 
 
 def main(argv: list[str] | None = None) -> int:

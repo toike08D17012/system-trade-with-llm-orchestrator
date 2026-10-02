@@ -20,9 +20,9 @@ from stock_research_llm_orchestrator.preparation.financial_mapping import (
     MetricReview,
     validate_mapping,
 )
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path
 from stock_research_llm_orchestrator.preparation.price_fx_run import publish_run_preparation
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.sources.edinet.xbrl_document import EdinetXbrlDocument
 from stock_research_llm_orchestrator.sources.edinet.xbrl_facts import EdinetXbrlFactSet, EdinetXbrlQName
 from stock_research_llm_orchestrator.sources.edinet.xbrl_taxonomy import (
@@ -115,7 +115,7 @@ class FinancialAcceptanceManifest(StrictContractModel):
     hashes: dict[str, Sha256Hex]
     limitations: tuple[str, ...] = (
         "single_filing_period_only",
-        "no_external_agent_transfer",
+        "not_transferred_during_preparation",
         "not_a_frozen_evidence_set",
     )
 

@@ -140,3 +140,15 @@ def test_private_analysis_approvals_allow_relevant_excerpts(source_id: str, vers
     payload["evidence"][0]["source_id"] = source_id
     payload["evidence"][0]["approval_version"] = version
     validate_transfer(DraftInput.model_validate(payload), Path("config/source-approvals"))
+
+
+@pytest.mark.parametrize(
+    "source_id,version",
+    [("jpx", 2), ("dukascopy", 2), ("toyota-ir-catalog", 2), ("edinet-code-list", 2), ("issuer-ir", 1)],
+)
+def test_owner_authorized_sources_allow_private_llm_analysis(source_id: str, version: int) -> None:
+    """Necessary facts from current sources and public issuer IR can reach the draft."""
+    payload = _input().model_dump()
+    payload["evidence"][0]["source_id"] = source_id
+    payload["evidence"][0]["approval_version"] = version
+    validate_transfer(DraftInput.model_validate(payload), Path("config/source-approvals"))

@@ -3,8 +3,8 @@
 import argparse
 from pathlib import Path
 
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.interim_ir import prepare_interim, validate_interim
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 
 
 def main(argv: list[str] | None = None) -> int:

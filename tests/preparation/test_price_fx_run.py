@@ -14,7 +14,6 @@ import httpx
 import pytest
 
 from stock_research_llm_orchestrator.preparation.dukascopy_fx import acquire_dukascopy_fx
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.price_fx_run import (
     PriceFxPreparationManifest,
     prepare_price_fx_run,
@@ -22,6 +21,7 @@ from stock_research_llm_orchestrator.preparation.price_fx_run import (
 )
 from stock_research_llm_orchestrator.preparation.price_fx_run_cli import main
 from stock_research_llm_orchestrator.preparation.run_requirements import calendar_inputs, resolve_requirements
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.preparation.task_input import create_human_selected_task
 
 from .test_price_acceptance import AcceptanceScenario, _rehash

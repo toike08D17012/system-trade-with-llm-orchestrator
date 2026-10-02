@@ -17,9 +17,9 @@ from stock_research_llm_orchestrator.preparation.financial_disclosure import (
     FinancialManifest,
     validate_financial,
 )
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path
 from stock_research_llm_orchestrator.preparation.price_fx_run import publish_run_preparation
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.sources.edinet.xbrl_document import EdinetXbrlDocument
 from stock_research_llm_orchestrator.sources.edinet.xbrl_facts import (
     EdinetXbrlContext,

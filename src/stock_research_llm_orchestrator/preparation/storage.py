@@ -106,6 +106,30 @@ def publish_task_preparation(root: Path, destination_name: str, task: DetailedAn
     return publish_preparation(root, destination_name, {"task.json": task_bytes}, validator=validate_task)
 
 
+def read_bundle(directory: Path) -> dict[str, bytes]:
+    """Read nested exact bytes without following symlinks."""
+    root = _safe_bundle_path(directory)
+    if not root.is_dir():
+        raise ValueError("bundle_directory_required")
+    result = {}
+    for path in sorted(root.rglob("*")):
+        safe = _safe_bundle_path(path)
+        if safe.is_file():
+            result[safe.relative_to(root).as_posix()] = safe.read_bytes()
+        elif not safe.is_dir():
+            raise ValueError("invalid_bundle_entry")
+    return result
+
+
+def _safe_bundle_path(path: Path) -> Path:
+    if ".." in path.parts:
+        raise ValueError("path_traversal")
+    absolute = path.absolute()
+    if any(part.is_symlink() for part in (absolute, *absolute.parents)):
+        raise ValueError("symlink_input_or_output")
+    return absolute
+
+
 def _validate_root(root: Path) -> None:
     if root.is_symlink() or not root.is_dir():
         raise ValueError("preparation root must be an existing non-symlink directory")

@@ -7,7 +7,7 @@ from stock_research_llm_orchestrator.preparation.edinet_code_list import (
     acquire_code_list,
     validate_code_list_receipt,
 )
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 
 
 def main(argv: list[str] | None = None) -> int:

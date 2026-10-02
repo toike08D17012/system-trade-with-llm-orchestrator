@@ -9,9 +9,9 @@ from typing import Literal
 from pydantic import model_validator
 
 from stock_research_llm_orchestrator.contracts.base import StrictContractModel
-from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.market_revalidation import _safe_path, _timestamp
 from stock_research_llm_orchestrator.preparation.price_fx_run import publish_run_preparation
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.sources.toyota_ir_pdf import InterimDocument, extract_pages, parse_pages
 
 
