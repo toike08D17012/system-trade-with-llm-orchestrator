@@ -261,7 +261,22 @@ python -m stock_research_llm_orchestrator.preparation.research_draft run \
   --input runs/my-follow-up/input.json --runs runs --destination my-reanalysis
 ```
 
-汎用のURL自動取得は未接続です。資料が1回のLLM入力容量を超える場合は黙って切り捨てず停止します。
+公開企業IRの匿名HTTPS資料なら、人が確認したURLと接続先ホストを指定して取得できます。
+前回の追加取得依頼番号に対応付け、原本と次回入力を`runs/`に保存します。
+同じ実行用データベースでは、公開IRの取得を全企業で1分に1件までに制限します。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.public_ir_follow_up \
+  --allow-network --prior runs/my-research-draft \
+  --url 'https://www.example.com/ir/report.pdf' --allow-host www.example.com \
+  --request-index 0 --runtime runs/request-runtime --runs runs \
+  --destination my-follow-up --task-id my-research
+python -m stock_research_llm_orchestrator.preparation.research_draft run \
+  --input runs/my-follow-up/input.json --runs runs --destination my-reanalysis
+```
+
+候補URLは自動採用しません。リダイレクト、認証が必要な資料、50 MB超の資料は
+この取得経路の対象外です。資料が1回のLLM入力容量を超える場合も黙って切り捨てず停止します。
 
 ## 価格証拠の準備
 
