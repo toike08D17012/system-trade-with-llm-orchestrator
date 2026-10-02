@@ -20,7 +20,8 @@
 | Camry約50.8万台 | [26V511000](https://api.nhtsa.gov/recalls/campaignNumber?campaignNumber=26V511000) | 508,354 | 2025～2026年式Camry Hybridの計器表示。ソフトウェア更新を予定。 |
 | Tacoma約4.8万台 | [26V514000](https://api.nhtsa.gov/recalls/campaignNumber?campaignNumber=26V514000) | 48,280 | 2024～2025年式Tacomaと2024年式Tacoma Hybridのショックアブソーバー。点検し、必要な場合に交換。 |
 | C-HR北米約1万台 | [26V570000](https://api.nhtsa.gov/recalls/campaignNumber?campaignNumber=26V570000) | 8,521 | 2026年式C-HRの米国内対象数。北米概数と米国内届出台数の地理的範囲が異なる。ソフトウェア更新を予定。 |
+| 補修用エアバッグ部品約4,100個 | [26E050000](https://api.nhtsa.gov/recalls/campaignNumber?campaignNumber=26E050000)、[26E051000](https://api.nhtsa.gov/recalls/campaignNumber?campaignNumber=26E051000) | 2,381個、1,737個 | Tacoma用とTundra用の装備品を別々に登録。合計4,118個は公表概数と整合する。車両台数ではない。 |
 
-APIの`ReportReceivedDate`は`06/08/2026`、`02/09/2026`のように表示され、トヨタの公表日と照らすと日/月/年の順である。月/日/年として引用しない。補修用エアバッグ部品については、該当するNHTSAキャンペーン番号をまだ独立に特定できていない。上表の届出も修理完了率や実費を示さないため、業績影響は未判定とする。
+APIの`ReportReceivedDate`は`06/08/2026`、`02/09/2026`のように表示され、トヨタの公表日と照らすと日/月/年の順である。月/日/年として引用しない。補修用エアバッグ部品の届出では、Tacoma向けは9月28日、Tundra向けは9月25日に安全上の危険を知らせる暫定通知を送付済みと記載されている。最終的な修理方法が利用可能になった後に追加通知を送る予定で、Tacoma向けは2026年第4四半期を見込む。したがって、暫定通知の送付を修理完了とみなさない。上表の届出は修理完了率や実費を示さず、業績影響は未判定である。
 
 本調査は個別事案の原本確認であり、世界各地の安全リコールを網羅する索引ではない。Toyota Global Newsroomの既存索引だけでは米国法人の安全リコールを捕捉できないため、反証材料の取得対象に地域別公式サイトと規制当局を加える。正式なCoordinator receiptには未登録で、`analysis_ready=false`を維持する。
