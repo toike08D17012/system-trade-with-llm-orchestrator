@@ -228,9 +228,10 @@ manifest確定と完全な証拠一式を含む実行ディレクトリへの保
 
 内部CLI `preparation.research_draft`は、銘柄と最大20件の出典付き本文抜粋をCodex CLIへ渡し、
 主張、根拠ID、未確認情報、追加取得依頼を`runs/`へ保存します。入力JSONには`security_code`、
-`exchange`、`external_llm_transfer_allowed: true`、各資料の`evidence_id`、`source_url`、
-`retrieved_at`、`text`が必要です。外部LLMへ送れることを確認した資料だけを入力してください。
-このフラグは操作者の申告であり、ソース承認を自動確認する機能ではありません。
+`exchange`、`external_llm_transfer_allowed: true`、各資料の`evidence_id`、`source_id`、
+`approval_version`、`source_url`、`retrieved_at`、`text`が必要です。実行前に
+`config/source-approvals/<source_id>/v<approval_version>.yaml`を確認し、有効期間内の
+外部Agent移送承認がなければ停止します。承認されたソースでも、許可された最小限の情報だけを入力してください。
 
 ```bash
 python -m stock_research_llm_orchestrator.preparation.research_draft run \

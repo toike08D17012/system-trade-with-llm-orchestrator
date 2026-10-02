@@ -5,15 +5,17 @@ import json
 import subprocess
 import tempfile
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import date, datetime
 from hashlib import sha256
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
+import yaml
 from pydantic import Field, field_validator, model_validator
 
 from stock_research_llm_orchestrator.contracts.base import StrictContractModel
+from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.policies import SourceApprovalV1
 from stock_research_llm_orchestrator.preparation.fx_evidence import read_bundle
 from stock_research_llm_orchestrator.preparation.storage import publish_preparation
 
@@ -22,6 +24,8 @@ class DraftEvidence(StrictContractModel):
     """One bounded excerpt supplied by the caller, with its source identity."""
 
     evidence_id: str = Field(min_length=1, max_length=100)
+    source_id: str = Field(pattern=r"^[a-z0-9-]+$")
+    approval_version: int = Field(ge=1)
     source_url: str = Field(min_length=1, max_length=2048)
     retrieved_at: str
     text: str = Field(min_length=1, max_length=20_000)
@@ -111,8 +115,28 @@ def _prompt(data: DraftInput) -> str:
     )
 
 
-def run_codex(data: DraftInput) -> DraftOutput:
+def validate_transfer(data: DraftInput, approval_root: Path) -> None:
+    """Require a current source approval before sending excerpts externally."""
+    for source_id, version in {(item.source_id, item.approval_version) for item in data.evidence}:
+        path = approval_root / source_id / f"v{version}.yaml"
+        approval = SourceApprovalV1.model_validate(yaml.safe_load(path.read_bytes()))
+        today = date.today().isoformat()
+        if (
+            approval.source_id != source_id
+            or approval.approval_version != version
+            or approval.status != "approved"
+            or not approval.external_agent_transfer_allowed
+            or approval.effective_on is None
+            or approval.effective_on > today
+            or approval.recheck_due_on is None
+            or approval.recheck_due_on < today
+        ):
+            raise ValueError("draft_source_transfer_not_approved")
+
+
+def run_codex(data: DraftInput, approval_root: Path = Path("config/source-approvals")) -> DraftOutput:
     """Invoke Codex in a temporary read-only workspace and parse its final JSON."""
+    validate_transfer(data, approval_root)
     with tempfile.TemporaryDirectory(prefix="research-draft-") as temporary:
         root = Path(temporary)
         schema = root / "output-schema.json"
@@ -198,13 +222,14 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--input", type=Path, required=True)
     run.add_argument("--runs", type=Path, required=True)
     run.add_argument("--destination", required=True)
+    run.add_argument("--approval-root", type=Path, default=Path("config/source-approvals"))
     validate = commands.add_parser("validate")
     validate.add_argument("--bundle", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
         if args.command == "run":
             data = DraftInput.model_validate_json(args.input.read_bytes())
-            output = run_codex(data)
+            output = run_codex(data, args.approval_root)
             publish_preparation(args.runs, args.destination, build_bundle(data, output), validator=validate_bundle)
             bundle = args.runs / args.destination
         else:

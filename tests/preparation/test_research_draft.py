@@ -25,6 +25,8 @@ def _input() -> DraftInput:
                 "evidence": [
                     {
                         "evidence_id": "source-1",
+                        "source_id": "yfinance",
+                        "approval_version": 3,
                         "source_url": "https://example.com/report",
                         "retrieved_at": "2026-10-03T00:00:00+09:00",
                         "text": "Revenue rose by 10 percent.",
@@ -115,3 +117,13 @@ def test_draft_input_requires_transfer_attestation() -> None:
     payload["external_llm_transfer_allowed"] = False
     with pytest.raises(ValueError):
         DraftInput.model_validate(payload)
+
+
+def test_run_codex_rejects_source_without_external_transfer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An input attestation cannot override the registered source approval."""
+    payload = _input().model_dump()
+    payload["evidence"][0]["source_id"] = "toyota-ir"
+    payload["evidence"][0]["approval_version"] = 2
+    monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: pytest.fail("codex must not start"))
+    with pytest.raises(ValueError, match="draft_source_transfer_not_approved"):
+        run_codex(DraftInput.model_validate(payload))
