@@ -246,6 +246,23 @@ python -m stock_research_llm_orchestrator.preparation.research_draft validate \
 出力は暫定調査であり、候補URLの取得、出典内容の真偽確認、最終評価は行いません。
 `analysis_ready=false`を維持し、追加取得依頼を後続の調査へ渡します。
 
+追加取得した公開資料は`preparation.research_follow_up`で前回の依頼と結び付けられます。
+`--intake`のJSONには`request_index`（`draft.json`の`follow_up_requests`の0始まり番号）、
+`source_id`、`approval_version`、実際に確認した`source_url`、`retrieved_at`、
+`media_type`（`text/plain`、`text/html`、`application/pdf`）を指定します。
+資料ファイルはUTF-8のテキスト・HTMLまたはPDFです。提案URLは自動採用せず、
+指定したローカル資料の原本とhashを保存します。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.research_follow_up prepare \
+  --prior runs/my-research-draft --intake runs/follow-up-intake.json \
+  --document runs/downloaded-report.pdf --runs runs --destination my-follow-up
+python -m stock_research_llm_orchestrator.preparation.research_draft run \
+  --input runs/my-follow-up/input.json --runs runs --destination my-reanalysis
+```
+
+汎用のURL自動取得は未接続です。資料が1回のLLM入力容量を超える場合は黙って切り捨てず停止します。
+
 ## 価格証拠の準備
 
 `preparation.market_evidence`は、保存済みJPX一覧の実bytesとhashを照合し、
