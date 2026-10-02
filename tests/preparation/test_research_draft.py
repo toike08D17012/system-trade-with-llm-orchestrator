@@ -12,6 +12,7 @@ from stock_research_llm_orchestrator.preparation.research_draft import (
     build_bundle,
     run_codex,
     validate_bundle,
+    validate_transfer,
 )
 
 
@@ -119,11 +120,23 @@ def test_draft_input_requires_transfer_attestation() -> None:
         DraftInput.model_validate(payload)
 
 
-def test_run_codex_rejects_source_without_external_transfer(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("source_id,version", [("toyota-ir", 2), ("edinet", 5)])
+def test_run_codex_rejects_source_without_external_transfer(
+    monkeypatch: pytest.MonkeyPatch, source_id: str, version: int
+) -> None:
     """An input attestation cannot override the registered source approval."""
     payload = _input().model_dump()
-    payload["evidence"][0]["source_id"] = "toyota-ir"
-    payload["evidence"][0]["approval_version"] = 2
+    payload["evidence"][0]["source_id"] = source_id
+    payload["evidence"][0]["approval_version"] = version
     monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: pytest.fail("codex must not start"))
     with pytest.raises(ValueError, match="draft_source_transfer_not_approved"):
         run_codex(DraftInput.model_validate(payload))
+
+
+@pytest.mark.parametrize("source_id,version", [("toyota-ir", 3), ("edinet", 6)])
+def test_private_analysis_approvals_allow_relevant_excerpts(source_id: str, version: int) -> None:
+    """Current source approvals allow attributed excerpts for private LLM analysis."""
+    payload = _input().model_dump()
+    payload["evidence"][0]["source_id"] = source_id
+    payload["evidence"][0]["approval_version"] = version
+    validate_transfer(DraftInput.model_validate(payload), Path("config/source-approvals"))

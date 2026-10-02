@@ -231,7 +231,9 @@ manifest確定と完全な証拠一式を含む実行ディレクトリへの保
 `exchange`、`external_llm_transfer_allowed: true`、各資料の`evidence_id`、`source_id`、
 `approval_version`、`source_url`、`retrieved_at`、`text`が必要です。実行前に
 `config/source-approvals/<source_id>/v<approval_version>.yaml`を確認し、有効期間内の
-外部Agent移送承認がなければ停止します。承認されたソースでも、許可された最小限の情報だけを入力してください。
+外部Agent移送承認がなければ停止します。Toyota IR v3とEDINET v6は、個人の
+非公開解析に使う関連抜粋・構造化データのLLM送信を認めています。取得した資料は
+出典を付けて解析に使い、全文・大量の原データや認証情報は送信しません。
 
 ```bash
 python -m stock_research_llm_orchestrator.preparation.research_draft run \

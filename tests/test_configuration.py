@@ -23,7 +23,9 @@ def test_validate_configuration_accepts_repository_config_in_path_order(tmp_path
     root = _copy_config(tmp_path)
     artifacts = validate_configuration(root)
     paths = [artifact.path.as_posix() for artifact in artifacts]
-    assert len(paths) == 38
+    assert len(paths) == 40
+    assert "source-approvals/toyota-ir/v3.yaml" in paths
+    assert "source-approvals/edinet/v6.yaml" in paths
     assert "source-approvals/toyota-ir-catalog/v1.yaml" in paths
     assert "source-profiles/toyota-ir-catalog/v1.yaml" in paths
     assert "source-approvals/edinet-code-list/v1.yaml" in paths
