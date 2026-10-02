@@ -275,8 +275,20 @@ python -m stock_research_llm_orchestrator.preparation.research_draft run \
   --input runs/my-follow-up/input.json --runs runs --destination my-reanalysis
 ```
 
-候補URLは自動採用しません。リダイレクト、認証が必要な資料、50 MB超の資料は
+単体取得CLIは候補URLを自動採用しません。リダイレクト、認証が必要な資料、50 MB超の資料は
 この取得経路の対象外です。資料が1回のLLM入力容量を超える場合も黙って切り捨てず停止します。
+
+LLMが追加調査依頼に候補URLを示した場合は、許可するIRホストを指定して
+取得と再分析を1件だけ進められます。既に入力に含まれるURLや許可ホスト外のURLは
+選択されません。新しい暫定調査の`follow_up_requests`を確認して、必要なら次の
+ステップを実行します。候補URLがない場合は取得せずに停止します。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.research_step \
+  --allow-network --prior runs/my-research-draft --allow-host www.example.com \
+  --runtime runs/request-runtime --runs runs --task-id my-research \
+  --follow-up-destination my-follow-up --draft-destination my-reanalysis
+```
 
 ## 価格証拠の準備
 
