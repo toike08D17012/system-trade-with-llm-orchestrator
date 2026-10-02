@@ -5,7 +5,8 @@ Codex、Claude Code、Antigravity CLI を組み合わせ、個別株の調査・
 > [!IMPORTANT]
 > 現在は詳細解析MVPのデータ・証拠準備を実装している段階です。契約検証基盤、offline設定検証CLIに加え、
 > JPX銘柄確認、価格取得・正規化・保存、オフライン再検証、固定期間の価格証拠受入を内部API・CLIで実装済みです。
-> 財務・為替・開示等を含む証拠集合の確定と、Agent分析・レビュー・最終レポートを接続するruntimeは未完成です。
+> 保存済みの出典付き抜粋からCodexによる暫定調査を1回行う内部CLIもあります。
+> Agentの独立分析・追加取得・レビュー・最終レポートを接続するruntimeは未完成です。
 
 ## 目的
 
@@ -78,7 +79,7 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | 構想・アーキテクチャ | 設計資料あり |
 | 詳細解析MVP要件 | P0要件6文書とP1契約基盤文書を承認済み |
 | Pythonパッケージ・アプリケーション | 契約基盤、task入力準備、credential preflight、原子的保存、共有Coordinatorの永続制御・raw公開・single-flight終了連携を実装済み。詳細解析runtimeの統合は未完了 |
-| 実行用CLI | 公開CLIは`config validate`。市場証拠準備・オフライン再検証・価格受入・Dukascopy為替取得と価格結合は内部module CLIで実装済み。詳細解析の調査・運用commandは未実装 |
+| 実行用CLI | 公開CLIは`config validate`。市場証拠準備とCodex暫定調査は内部module CLIで実装済み。詳細解析の独立分析・追加取得・運用commandは未実装 |
 | データソース・評価指標・閾値 | JPX銘柄検証、標準`yfinance`取得、価格正規化・保存・再検証・固定期間の受入を実装済み。通常実行の価格・FX必要期間判定を実装済み。財務・開示等を含む証拠集合の確定は未完了 |
 | Pythonバージョン・依存関係 | Python 3.14、runtime・開発依存関係、品質ツール、ロックファイルを定義済み |
 | テスト・lint・型チェック | 契約、設定、CLI、logging、task準備、credential、request coordinator、市場証拠準備・再検証・価格受入のテストあり |
@@ -222,6 +223,24 @@ stderrへ出力し、設定内容の不正は終了code 3、pathまたはfileの
 [成果物・保持・セキュリティの要件](docs/system-requirements/05-artifact-retention-and-security.md)
 で承認済みです。検証済みbytesを内部準備directoryへ原子的にpublishするprimitiveはありますが、
 manifest確定と完全な証拠一式を含む実行ディレクトリへの保存は未実装です。
+
+## LLMによる暫定調査
+
+内部CLI `preparation.research_draft`は、銘柄と最大20件の出典付き本文抜粋をCodex CLIへ渡し、
+主張、根拠ID、未確認情報、追加取得依頼を`runs/`へ保存します。入力JSONには`security_code`、
+`exchange`、`external_llm_transfer_allowed: true`、各資料の`evidence_id`、`source_url`、
+`retrieved_at`、`text`が必要です。外部LLMへ送れることを確認した資料だけを入力してください。
+このフラグは操作者の申告であり、ソース承認を自動確認する機能ではありません。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.research_draft run \
+  --input runs/my-research-input.json --runs runs --destination my-research-draft
+python -m stock_research_llm_orchestrator.preparation.research_draft validate \
+  --bundle runs/my-research-draft
+```
+
+出力は暫定調査であり、候補URLの取得、出典内容の真偽確認、最終評価は行いません。
+`analysis_ready=false`を維持し、追加取得依頼を後続の調査へ渡します。
 
 ## 価格証拠の準備
 

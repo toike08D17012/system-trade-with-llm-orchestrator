@@ -1,0 +1,117 @@
+"""A provisional model response stays bound to supplied evidence IDs."""
+
+import json
+import subprocess
+from pathlib import Path
+
+import pytest
+
+from stock_research_llm_orchestrator.preparation.research_draft import (
+    DraftInput,
+    DraftOutput,
+    build_bundle,
+    run_codex,
+    validate_bundle,
+)
+
+
+def _input() -> DraftInput:
+    return DraftInput.model_validate_json(
+        json.dumps(
+            {
+                "security_code": "1234",
+                "exchange": "XTKS",
+                "external_llm_transfer_allowed": True,
+                "evidence": [
+                    {
+                        "evidence_id": "source-1",
+                        "source_url": "https://example.com/report",
+                        "retrieved_at": "2026-10-03T00:00:00+09:00",
+                        "text": "Revenue rose by 10 percent.",
+                    }
+                ],
+            }
+        )
+    )
+
+
+def _output(evidence_ids: list[str]) -> DraftOutput:
+    return DraftOutput.model_validate_json(
+        json.dumps(
+            {
+                "claims": [
+                    {
+                        "perspective": "financial",
+                        "claim_type": "fact",
+                        "statement": "Revenue rose by 10 percent.",
+                        "evidence_ids": evidence_ids,
+                        "uncertainty": "The excerpt does not explain the revenue mix.",
+                    }
+                ],
+                "missing_information": ["Revenue by segment"],
+                "follow_up_requests": [
+                    {
+                        "question": "What is the revenue growth by segment?",
+                        "reason": "The excerpt only states consolidated growth.",
+                        "suggested_source_url": None,
+                    }
+                ],
+            }
+        )
+    )
+
+
+def test_draft_bundle_replays_and_rejects_changed_input() -> None:
+    """Input, output, and citations must remain bound after publication."""
+    files = build_bundle(_input(), _output(["source-1"]))
+    validate_bundle(files)
+    changed = dict(files)
+    changed["input.json"] += b" "
+    with pytest.raises(ValueError, match="draft_bundle_binding_invalid"):
+        validate_bundle(changed)
+    with pytest.raises(ValueError, match="draft_evidence_reference_invalid"):
+        build_bundle(_input(), _output(["invented"]))
+    with pytest.raises(ValueError, match="draft_fact_without_evidence"):
+        build_bundle(_input(), _output([]))
+
+
+def test_run_codex_uses_read_only_workspace_and_validates_output(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The subprocess receives bounded evidence and cannot return invented citations."""
+
+    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert command[:4] == ["codex", "exec", "--sandbox", "read-only"]
+        assert "Revenue rose by 10 percent." in str(kwargs["input"])
+        assert Path(command[command.index("--output-schema") + 1]).is_file()
+        output = Path(command[command.index("--output-last-message") + 1])
+        output.write_text(json.dumps(_output(["source-1"]).model_dump()), encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    assert run_codex(_input()).claims[0].evidence_ids == ("source-1",)
+
+
+def test_run_codex_rejects_failed_process(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No draft is adopted when the model process fails."""
+    monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: subprocess.CompletedProcess([], 1))
+    with pytest.raises(RuntimeError, match="codex_execution_failed"):
+        run_codex(_input())
+
+
+def test_run_codex_rejects_invalid_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A successful process with malformed output does not publish a draft."""
+
+    def fake_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        Path(command[command.index("--output-last-message") + 1]).write_text("not json", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    with pytest.raises(ValueError, match="draft_output_invalid"):
+        run_codex(_input())
+
+
+def test_draft_input_requires_transfer_attestation() -> None:
+    """The operator must explicitly attest that excerpts may be sent to the LLM."""
+    payload = _input().model_dump()
+    payload["external_llm_transfer_allowed"] = False
+    with pytest.raises(ValueError):
+        DraftInput.model_validate(payload)
