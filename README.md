@@ -5,8 +5,9 @@ Codex、Claude Code、Antigravity CLI を組み合わせ、個別株の調査・
 > [!IMPORTANT]
 > 現在は詳細解析MVPのデータ・証拠準備を実装している段階です。契約検証基盤、offline設定検証CLIに加え、
 > JPX銘柄確認、価格取得・正規化・保存、オフライン再検証、固定期間の価格証拠受入を内部API・CLIで実装済みです。
-> 保存済みの出典付き抜粋からCodexによる暫定調査を1回行う内部CLIもあります。
-> Agentの独立分析・追加取得・レビュー・最終レポートを接続するruntimeは未完成です。
+> 保存済みの出典付き情報からCodexによる暫定調査を行い、公開IRを1件追加取得して
+> 再分析する内部CLIもあります。複数ソースの汎用探索、Agentの独立分析、レビュー、
+> 最終レポートを接続するruntimeは未完成です。
 
 ## 目的
 
@@ -79,7 +80,7 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 | 構想・アーキテクチャ | 設計資料あり |
 | 詳細解析MVP要件 | P0要件6文書とP1契約基盤文書を承認済み |
 | Pythonパッケージ・アプリケーション | 契約基盤、task入力準備、credential preflight、原子的保存、共有Coordinatorの永続制御・raw公開・single-flight終了連携を実装済み。詳細解析runtimeの統合は未完了 |
-| 実行用CLI | 公開CLIは`config validate`。市場証拠準備とCodex暫定調査は内部module CLIで実装済み。詳細解析の独立分析・追加取得・運用commandは未実装 |
+| 実行用CLI | 公開CLIは`config validate`。市場証拠準備、Codex暫定調査、公開IRの1件取得・再分析は内部module CLIで実装済み。詳細解析の独立分析・汎用追加取得・運用commandは未実装 |
 | データソース・評価指標・閾値 | JPX銘柄検証、標準`yfinance`取得、価格正規化・保存・再検証・固定期間の受入を実装済み。通常実行の価格・FX必要期間判定を実装済み。財務・開示等を含む証拠集合の確定は未完了 |
 | Pythonバージョン・依存関係 | Python 3.14、runtime・開発依存関係、品質ツール、ロックファイルを定義済み |
 | テスト・lint・型チェック | 契約、設定、CLI、logging、task準備、credential、request coordinator、市場証拠準備・再検証・価格受入のテストあり |
@@ -97,6 +98,11 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 旧版で残った「終了済みleaderを参照するactive flight」は、lease取得・復旧・同じ要求の受付時に
 保存済み結果と整合を確認して修復します。不整合は安全停止し、自動再送しません。
 内部SQLiteはschema v8へ移行します。旧版へ戻す場合は移行前DBの退避が必要です。
+
+調査の実装方針は[ADR-0007](docs/decisions/0007-use-llm-led-evidence-follow-up.md)に記録しています。
+取得と数値加工はプログラムで行い、取得済み情報の解釈と不足情報の判断はLLMへ渡します。
+初回調査に企業別の固定資料一覧やparserの完成を要求しません。
+実装済みの1件取得・再分析経路と、未実装の汎用探索・独立分析は区別します。
 
 ## セットアップ
 
@@ -229,10 +235,10 @@ manifest確定と完全な証拠一式を含む実行ディレクトリへの保
 内部CLI `preparation.research_draft`は、銘柄と最大20件の出典付き本文抜粋をCodex CLIへ渡し、
 主張、根拠ID、未確認情報、追加取得依頼を`runs/`へ保存します。入力JSONには`security_code`、
 `exchange`、`external_llm_transfer_allowed: true`、各資料の`evidence_id`、`source_id`、
-`approval_version`、`source_url`、`retrieved_at`、`text`が必要です。実行前に
+`approval_version`、`source_url`、`retrieved_at`、`text`が必要です。登録済みソースは実行前に
 `config/source-approvals/<source_id>/v<approval_version>.yaml`を確認し、有効期間内の
-外部Agent移送承認がなければ停止します。公開企業IRは`source_id: issuer-ir`、
-`approval_version: 1`で入力でき、所有者が非公開LLM解析に使うことを申告します。
+外部Agent移送承認がなければ停止します。公開企業IRは企業別の承認ファイルを要求せず、
+`source_id: issuer-ir`、`approval_version: 1`で入力できます。
 Toyota IR v3、EDINET v6、JPX v2、Dukascopy v2も必要な抜粋・構造化データを
 私的解析へ渡せます。取得した資料には出典を付け、公開・再配布や認証情報の送信は行いません。
 

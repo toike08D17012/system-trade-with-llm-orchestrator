@@ -39,7 +39,7 @@ system requirementsは「何を満たすか」、ADRは「なぜその方式を�
 | [ADR-0003](0003-standardize-agent-adapters-and-session-continuation.md) | `Accepted` | AgentAdapterとsession継続境界を標準化する | [AgentAdapterとsession継続](../system-requirements/08-agent-adapter-and-session-continuation.md) |
 | [ADR-0004](0004-structure-disputes-and-single-issue-audits.md) | `Accepted` | 争点を構造化し1セッション1争点で追加監査する | [Agent・レビュー・監査](../system-requirements/03-agent-review-and-audit-policy.md) |
 | [ADR-0005](0005-own-production-request-runtime-and-artifact-publication.md) | `Accepted` | 本番外部request runtimeとraw artifact公開境界を確定する | [CLI・実行運用 1.1](../system-requirements/04-cli-and-runtime-operations.md)、[成果物・保持・セキュリティ 1.3](../system-requirements/05-artifact-retention-and-security.md) |
-
 | [ADR-0006](0006-remove-source-response-capacity-limits.md) | `Accepted` | 全データソースの取得・解析に容量上限を設けない | [データソースと証拠 1.2、6.1節](../system-requirements/02-data-source-and-evidence-policy.md#61-取得展開解析の容量上限) |
+| [ADR-0007](0007-use-llm-led-evidence-follow-up.md) | `Accepted` | 汎用取得とLLM主導の不足情報判断を調査の基本経路とする | [データソースと証拠の方針](../system-requirements/02-data-source-and-evidence-policy.md) |
 
 <!-- markdownlint-enable MD013 -->
