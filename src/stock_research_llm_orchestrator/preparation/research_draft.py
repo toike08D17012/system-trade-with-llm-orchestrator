@@ -20,14 +20,14 @@ from stock_research_llm_orchestrator.preparation.storage import publish_preparat
 
 
 class DraftEvidence(StrictContractModel):
-    """One bounded excerpt supplied by the caller, with its source identity."""
+    """One source text supplied by the caller, with its source identity."""
 
     evidence_id: str = Field(min_length=1, max_length=100)
     source_id: str = Field(pattern=r"^[a-z0-9-]+$")
     approval_version: int = Field(ge=1)
     source_url: str = Field(min_length=1, max_length=2048)
     retrieved_at: str
-    text: str = Field(min_length=1, max_length=20_000)
+    text: str = Field(min_length=1)
 
     @field_validator("retrieved_at")
     @classmethod
@@ -52,12 +52,12 @@ class DraftEvidence(StrictContractModel):
 
 
 class DraftInput(StrictContractModel):
-    """One security and a small explicit set of available evidence."""
+    """One security and an explicit set of available evidence."""
 
     security_code: str = Field(pattern=r"^[0-9A-Za-z.-]{1,20}$")
     exchange: str = Field(pattern=r"^[A-Z]{4}$")
     external_llm_transfer_allowed: Literal[True]
-    evidence: tuple[DraftEvidence, ...] = Field(min_length=1, max_length=20)
+    evidence: tuple[DraftEvidence, ...] = Field(min_length=1)
 
     @model_validator(mode="after")
     def unique_evidence(self) -> DraftInput:

@@ -8,6 +8,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from stock_research_llm_orchestrator.preparation import public_ir_follow_up, research_follow_up
 from stock_research_llm_orchestrator.preparation.public_ir_follow_up import (
     acquire_public_ir_follow_up,
     validate_public_target,
@@ -193,3 +194,33 @@ def test_invalid_destination_is_rejected_before_get(tmp_path: Path, monkeypatch:
             transport=httpx.MockTransport(respond),
         )
     assert not seen
+
+
+def test_fetch_accepts_response_above_former_fifty_mb_limit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A valid response is not rejected solely for exceeding the old byte cap."""
+    _public_dns(monkeypatch)
+    body = b"x" * 50_000_001
+
+    def short_extraction(raw: bytes, media_type: str) -> str:
+        assert len(raw) == len(body)
+        assert media_type == "text/plain"
+        return "Large document retained"
+
+    monkeypatch.setattr(public_ir_follow_up, "extract_text", short_extraction)
+    monkeypatch.setattr(research_follow_up, "extract_text", short_extraction)
+    output = acquire_public_ir_follow_up(
+        prior=_prior(tmp_path),
+        url="https://example.com/large",
+        allowed_host="example.com",
+        request_index=0,
+        runtime=tmp_path / "runtime",
+        runs=tmp_path / "runs",
+        destination="next",
+        task_id="large-ir-test",
+        clock=lambda: NOW,
+        transport=httpx.MockTransport(
+            lambda _request: httpx.Response(200, content=body, headers={"Content-Type": "text/plain"})
+        ),
+    )
+    assert (output / "source.bin").stat().st_size == len(body)
+    validate_follow_up(read_bundle(output))

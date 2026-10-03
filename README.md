@@ -232,7 +232,7 @@ manifest確定と完全な証拠一式を含む実行ディレクトリへの保
 
 ## LLMによる暫定調査
 
-内部CLI `preparation.research_draft`は、銘柄と最大20件の出典付き本文抜粋をCodex CLIへ渡し、
+内部CLI `preparation.research_draft`は、銘柄と出典付き本文をCodex CLIへ渡し、
 主張、根拠ID、未確認情報、追加取得依頼を`runs/`へ保存します。入力JSONには`security_code`、
 `exchange`、`external_llm_transfer_allowed: true`、各資料の`evidence_id`、`source_id`、
 `approval_version`、`source_url`、`retrieved_at`、`text`が必要です。登録済みソースは実行前に
@@ -281,8 +281,9 @@ python -m stock_research_llm_orchestrator.preparation.research_draft run \
   --input runs/my-follow-up/input.json --runs runs --destination my-reanalysis
 ```
 
-単体取得CLIは候補URLを自動採用しません。リダイレクト、認証が必要な資料、50 MB超の資料は
-この取得経路の対象外です。資料が1回のLLM入力容量を超える場合も黙って切り捨てず停止します。
+単体取得CLIは候補URLを自動採用しません。リダイレクトや認証が必要な資料は
+この取得経路の対象外です。取得量や暫定入力の件数・文字数にアプリ独自の固定上限は設けず、
+全文を保持します。LLM提供者が入力を受け付けない場合は、内容を切り捨てず失敗として扱います。
 
 LLMが追加調査依頼に候補URLを示した場合は、許可するIRホストを指定して
 取得と再分析を1件だけ進められます。既に入力に含まれるURLや許可ホスト外のURLは

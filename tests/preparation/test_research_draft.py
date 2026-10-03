@@ -120,6 +120,16 @@ def test_draft_input_requires_transfer_attestation() -> None:
         DraftInput.model_validate(payload)
 
 
+def test_draft_input_keeps_long_text_and_more_than_twenty_sources() -> None:
+    """The provisional input does not reject information by fixed capacity."""
+    payload = _input().model_dump()
+    payload["evidence"][0]["text"] = "x" * 20_001
+    payload["evidence"] = tuple(dict(payload["evidence"][0], evidence_id=f"source-{index}") for index in range(21))
+    data = DraftInput.model_validate(payload)
+    assert len(data.evidence) == 21
+    assert len(data.evidence[0].text) == 20_001
+
+
 @pytest.mark.parametrize("source_id,version", [("toyota-ir", 2), ("edinet", 5)])
 def test_run_codex_rejects_source_without_external_transfer(
     monkeypatch: pytest.MonkeyPatch, source_id: str, version: int

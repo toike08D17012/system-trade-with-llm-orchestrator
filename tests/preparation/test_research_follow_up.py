@@ -92,11 +92,14 @@ def test_follow_up_rejects_unrequested_or_unreadable_document() -> None:
         build_follow_up(_prior(), pdf, b"not a PDF")
 
 
-def test_follow_up_requires_full_text_capacity() -> None:
-    """Oversized evidence is rejected rather than silently truncating material."""
+def test_follow_up_preserves_text_beyond_previous_capacity() -> None:
+    """All chunks beyond the former evidence-count limit remain in the input."""
     plain = _intake().model_copy(update={"media_type": "text/plain"})
-    with pytest.raises(ValueError):
-        build_follow_up(_prior(), plain, b"x" * 400_001)
+    files = build_follow_up(_prior(), plain, b"x" * 400_001)
+    data = DraftInput.model_validate_json(files["input.json"])
+    assert len(data.evidence) == 22
+    assert "".join(item.text for item in data.evidence[1:]) == "x" * 400_001
+    validate_follow_up(files)
 
 
 def test_follow_up_extracts_real_pdf_text() -> None:

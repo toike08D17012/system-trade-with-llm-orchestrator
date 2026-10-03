@@ -50,7 +50,6 @@ from stock_research_llm_orchestrator.sources.protocol import CredentialFreeSourc
 
 
 _MEDIA_TYPES = ("text/html", "text/plain", "application/pdf")
-_MAX_DOCUMENT_BYTES = 50_000_000
 _DESTINATION_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}")
 
 
@@ -177,8 +176,6 @@ def acquire_public_ir_follow_up(
                     body = bytearray()
                     for chunk in response.iter_bytes():
                         body.extend(chunk)
-                        if len(body) > _MAX_DOCUMENT_BYTES:
-                            raise ValueError("public_ir_document_too_large")
                     media_type = response.headers.get("Content-Type", "").partition(";")[0].strip().lower()
                     status_code = response.status_code
                     final_origin = response.url.host
