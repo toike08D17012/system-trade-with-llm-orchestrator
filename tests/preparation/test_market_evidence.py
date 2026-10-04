@@ -14,6 +14,10 @@ import pandas as pd  # type: ignore[import-untyped]
 import pytest
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence import ApplicablePeriodV1
+from stock_research_llm_orchestrator.preparation.initial_research_input import (
+    build_initial_research_input,
+    validate_initial_research_input,
+)
 from stock_research_llm_orchestrator.preparation.market_evidence import (
     CalendarInput,
     CalendarProvenance,
@@ -23,6 +27,7 @@ from stock_research_llm_orchestrator.preparation.market_evidence import (
     validate_market_preparation,
 )
 from stock_research_llm_orchestrator.preparation.market_evidence_cli import main
+from stock_research_llm_orchestrator.preparation.research_draft import DraftInput
 from stock_research_llm_orchestrator.preparation.task_input import create_human_selected_task
 from stock_research_llm_orchestrator.sources.yfinance.adapter import YfinanceDailyAdapter
 from stock_research_llm_orchestrator.sources.yfinance.native_history import HistoryAcquisitionError, NativeHistoryClient
@@ -177,6 +182,36 @@ def test_native_e2e_resolves_every_artifact_without_claiming_analysis_completion
     other = Scenario(other_root)
     other.prepare(calendar=other.calendar())
     assert all((other_root / "prepared" / name).read_bytes() == value for name, value in files.items())
+
+
+def test_initial_research_input_retains_true_source_references_and_exact_market_bytes(tmp_path: Path) -> None:
+    """The draft cites JPX bytes and a library call without inventing a price HTTP URL."""
+    scenario = Scenario(tmp_path)
+    scenario.prepare(calendar=scenario.calendar())
+    market = {path.name: path.read_bytes() for path in (tmp_path / "prepared").iterdir()}
+    files = build_initial_research_input(market)
+    validate_initial_research_input(files)
+    data = DraftInput.model_validate_json(files["input.json"])
+    assert data.security_code == "7203"
+    assert (
+        data.evidence[0].source_url
+        == "https://www.jpx.co.jp/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_j.xlsx"
+    )
+    assert data.evidence[0].source_sha256 == sha256(market["jpx.xlsx"]).hexdigest()
+    assert data.evidence[1].source_url is None
+    assert data.evidence[1].source_reference == "yfinance:Ticker.history:7203.T"
+    assert data.evidence[1].source_sha256 == sha256(market["prices.csv"]).hexdigest()
+    assert "Yahoo Finance" in data.evidence[1].text
+    assert "http_body_retained" in data.evidence[1].text
+    assert json.loads(files["manifest.json"])["analysis_ready"] is False
+    changed = dict(files)
+    changed["input.json"] += b" "
+    with pytest.raises(ValueError, match="initial_research_input_binding_invalid"):
+        validate_initial_research_input(changed)
+    changed = dict(files)
+    changed["market/prices.csv"] += b" "
+    with pytest.raises(ValueError):
+        validate_initial_research_input(changed)
 
 
 @pytest.mark.parametrize(

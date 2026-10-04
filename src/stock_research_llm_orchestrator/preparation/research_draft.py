@@ -25,7 +25,9 @@ class DraftEvidence(StrictContractModel):
     evidence_id: str = Field(min_length=1, max_length=100)
     source_id: str = Field(pattern=r"^[a-z0-9-]+$")
     approval_version: int = Field(ge=1)
-    source_url: str = Field(min_length=1, max_length=2048)
+    source_url: str | None = Field(default=None, max_length=2048)
+    source_reference: str | None = None
+    source_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     retrieved_at: str
     text: str = Field(min_length=1)
 
@@ -43,12 +45,27 @@ class DraftEvidence(StrictContractModel):
 
     @field_validator("source_url")
     @classmethod
-    def valid_source_url(cls, value: str) -> str:
+    def valid_source_url(cls, value: str | None) -> str | None:
         """Reject ambiguous or local URLs in an evidence citation."""
+        if value is None:
+            return None
         parsed = urlsplit(value)
         if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
             raise ValueError("source_url must be an HTTPS URL")
         return value
+
+    @model_validator(mode="after")
+    def valid_source_reference(self) -> DraftEvidence:
+        """A library-returned table has a call reference, not an invented HTTP URL."""
+        if (self.source_url is None) == (self.source_reference is None):
+            raise ValueError("draft_source_reference_invalid")
+        if self.source_reference is not None and (
+            self.source_id != "yfinance" or not self.source_reference.startswith("yfinance:Ticker.history:")
+        ):
+            raise ValueError("draft_source_reference_invalid")
+        if self.source_reference is not None and self.source_sha256 is None:
+            raise ValueError("draft_source_hash_required")
+        return self
 
 
 class DraftInput(StrictContractModel):

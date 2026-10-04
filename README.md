@@ -230,7 +230,10 @@ manifest確定と完全な証拠一式を含む実行ディレクトリへの保
 内部CLI `preparation.research_draft`は、銘柄と出典付き本文をCodex CLIへ渡し、
 主張、根拠ID、未確認情報、追加取得依頼を`runs/`へ保存します。入力JSONには`security_code`、
 `exchange`、`external_llm_transfer_allowed: true`、各資料の`evidence_id`、`source_id`、
-`approval_version`、`source_url`、`retrieved_at`、`text`が必要です。登録済みソースは実行前に
+`approval_version`、`retrieved_at`、`text`、および資料の種類に応じた`source_url`または
+`source_reference`が必要です。yfinanceのライブラリ返却表はHTTP取得URLを保存していないため、
+`source_reference: yfinance:Ticker.history:<symbol>`で呼び出しを示し、返却表の
+`source_sha256`を必須とします。登録済みソースは実行前に
 `config/source-approvals/<source_id>/v<approval_version>.yaml`を確認し、有効期間内の
 外部Agent移送承認がなければ停止します。公開企業IRは企業別の承認ファイルを要求せず、
 `source_id: issuer-ir`、`approval_version: 1`で入力できます。
@@ -298,6 +301,19 @@ python -m stock_research_llm_orchestrator.preparation.research_step \
 JPX一覧による銘柄確認、標準`Ticker.history()`による価格取得、Dukascopyの日足FX取得、
 価格・FXの日付ラベル結合は内部API・CLIで利用できます。保存した原本、取得時刻、hash、
 正規化結果を検証できます。市場証拠の準備結果は完全な証拠集合や最終評価ではありません。
+
+保存済みの市場準備成果物から、暫定調査の初回入力を生成できます。生成物には元の市場成果物、
+出典別の原本hash、入力hashを含め、オフラインで再検証できます。yfinanceの価格出典は
+ライブラリ呼び出しとして記録し、個別のHTTP URLを推測しません。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.initial_research_input prepare \
+  --market runs/my-market-preparation --runs runs --destination my-initial-input
+python -m stock_research_llm_orchestrator.preparation.initial_research_input validate \
+  --bundle runs/my-initial-input
+python -m stock_research_llm_orchestrator.preparation.research_draft run \
+  --input runs/my-initial-input/input.json --runs runs --destination my-research-draft
+```
 
 | 内部CLI | 用途 |
 | --- | --- |

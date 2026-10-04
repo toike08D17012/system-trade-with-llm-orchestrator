@@ -120,6 +120,21 @@ def test_draft_input_requires_transfer_attestation() -> None:
         DraftInput.model_validate(payload)
 
 
+def test_draft_input_accepts_library_call_reference_without_http_url() -> None:
+    """Library returned data uses a true call reference instead of a fabricated URL."""
+    payload = _input().model_dump()
+    payload["evidence"][0]["source_url"] = None
+    payload["evidence"][0]["source_reference"] = "yfinance:Ticker.history:1234.T"
+    with pytest.raises(ValueError, match="draft_source_hash_required"):
+        DraftInput.model_validate(payload)
+    payload["evidence"][0]["source_sha256"] = "a" * 64
+    data = DraftInput.model_validate(payload)
+    assert data.evidence[0].source_reference == "yfinance:Ticker.history:1234.T"
+    payload["evidence"][0]["source_url"] = "https://example.com/report"
+    with pytest.raises(ValueError, match="draft_source_reference_invalid"):
+        DraftInput.model_validate(payload)
+
+
 def test_draft_input_keeps_long_text_and_more_than_twenty_sources() -> None:
     """The provisional input does not reject information by fixed capacity."""
     payload = _input().model_dump()
