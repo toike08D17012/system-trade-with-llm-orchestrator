@@ -3,8 +3,14 @@
 import argparse
 import re
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlsplit
 
+from stock_research_llm_orchestrator.preparation.jpx_research_follow_up import (
+    acquire_jpx_follow_up,
+    select_jpx_request,
+    validate_jpx_follow_up,
+)
 from stock_research_llm_orchestrator.preparation.public_ir_follow_up import acquire_public_ir_follow_up
 from stock_research_llm_orchestrator.preparation.research_draft import (
     DraftInput,
@@ -50,8 +56,9 @@ def advance_research_step(
     draft_destination: str,
     task_id: str,
     approval_root: Path = Path("config/source-approvals"),
+    source_id: Literal["issuer-ir", "jpx"] = "issuer-ir",
 ) -> tuple[Path, Path]:
-    """Fetch one requested document and produce a new provisional LLM draft."""
+    """Fetch one requested source and produce a new provisional LLM draft."""
     if (
         not _DESTINATION_NAME.fullmatch(follow_up_destination)
         or not _DESTINATION_NAME.fullmatch(draft_destination)
@@ -59,21 +66,36 @@ def advance_research_step(
     ):
         raise ValueError("research_step_destination_invalid")
     prior_files = read_bundle(prior)
-    index, url = select_public_ir_request(prior_files, allowed_host)
     if (runs / draft_destination).exists():
         raise FileExistsError("research_step_draft_exists")
-    follow_up = acquire_public_ir_follow_up(
-        prior=prior,
-        url=url,
-        allowed_host=allowed_host,
-        request_index=index,
-        runtime=runtime,
-        runs=runs,
-        destination=follow_up_destination,
-        task_id=task_id,
-    )
+    if source_id == "jpx":
+        if allowed_host != "www.jpx.co.jp":
+            raise ValueError("research_step_jpx_host_invalid")
+        follow_up = acquire_jpx_follow_up(
+            prior=prior,
+            request_index=select_jpx_request(prior_files),
+            runtime=runtime,
+            runs=runs,
+            destination=follow_up_destination,
+            task_id=task_id,
+            approval_root=approval_root,
+        )
+        validator = validate_jpx_follow_up
+    else:
+        index, url = select_public_ir_request(prior_files, allowed_host)
+        follow_up = acquire_public_ir_follow_up(
+            prior=prior,
+            url=url,
+            allowed_host=allowed_host,
+            request_index=index,
+            runtime=runtime,
+            runs=runs,
+            destination=follow_up_destination,
+            task_id=task_id,
+        )
+        validator = validate_follow_up
     follow_up_files = read_bundle(follow_up)
-    validate_follow_up(follow_up_files)
+    validator(follow_up_files)
     data = DraftInput.model_validate_json(follow_up_files["input.json"])
     draft = run_codex(data, approval_root)
     publish_preparation(runs, draft_destination, build_bundle(data, draft), validator=validate_bundle)
@@ -86,6 +108,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-network", action="store_true", required=True)
     parser.add_argument("--prior", type=Path, required=True)
     parser.add_argument("--allow-host", required=True)
+    parser.add_argument("--source", choices=("issuer-ir", "jpx"), default="issuer-ir")
     parser.add_argument("--runtime", type=Path, required=True)
     parser.add_argument("--runs", type=Path, required=True)
     parser.add_argument("--follow-up-destination", required=True)
@@ -103,6 +126,7 @@ def main(argv: list[str] | None = None) -> int:
             draft_destination=args.draft_destination,
             task_id=args.task_id,
             approval_root=args.approval_root,
+            source_id=args.source,
         )
     except (ValueError, OSError, RuntimeError, RuntimeStorageError, KeyError, TypeError) as error:
         print(f"research_step_failed: {type(error).__name__}")

@@ -296,6 +296,20 @@ python -m stock_research_llm_orchestrator.preparation.research_step \
   --follow-up-destination my-follow-up --draft-destination my-reanalysis
 ```
 
+JPXの上場一覧を更新して確認したい場合は、LLMの追加取得依頼に公式XLSXの固定URLが
+含まれるときだけ、`--source jpx --allow-host www.jpx.co.jp`を指定できます。
+共有runtimeではJPX取得を1日3件、最短60秒間隔、同時1件に制限します。
+原本XLSXはローカルに保存し、Codexには指定銘柄1件の検証結果と原本hashだけを渡します。
+一覧の掲載日と取得時刻は別に記録され、取得しても現在時点の上場状態まで確定しません。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.research_step \
+  --allow-network --source jpx --prior runs/my-research-draft \
+  --allow-host www.jpx.co.jp --runtime runs/request-runtime --runs runs \
+  --task-id my-research --follow-up-destination my-jpx-follow-up \
+  --draft-destination my-jpx-reanalysis
+```
+
 ## 市場・為替証拠の準備
 
 JPX一覧による銘柄確認、標準`Ticker.history()`による価格取得、Dukascopyの日足FX取得、

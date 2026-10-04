@@ -108,6 +108,7 @@ def _assemble(prior: Mapping[str, bytes], intake: FollowUpIntake, body: bytes) -
             source_id=intake.source_id,
             approval_version=intake.approval_version,
             source_url=intake.source_url,
+            source_sha256=digest,
             retrieved_at=intake.retrieved_at,
             text=chunk,
         )

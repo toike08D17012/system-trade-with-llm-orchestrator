@@ -20,7 +20,14 @@ from stock_research_llm_orchestrator.preparation.initial_research_input import (
     build_initial_research_input,
     validate_initial_research_input,
 )
+from stock_research_llm_orchestrator.preparation.jpx_research_follow_up import (
+    acquire_jpx_follow_up,
+    select_jpx_request,
+    validate_jpx_follow_up,
+)
 from stock_research_llm_orchestrator.preparation.market_evidence import (
+    JPX_MEDIA_TYPE,
+    JPX_WORKBOOK_URL,
     CalendarInput,
     CalendarProvenance,
     JpxSnapshotProvenance,
@@ -39,6 +46,7 @@ from stock_research_llm_orchestrator.preparation.research_draft import (
 from stock_research_llm_orchestrator.preparation.research_follow_up import validate_follow_up
 from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.preparation.task_input import create_human_selected_task
+from stock_research_llm_orchestrator.requests.storage import RuntimeStorageError
 from stock_research_llm_orchestrator.sources.yfinance.adapter import YfinanceDailyAdapter
 from stock_research_llm_orchestrator.sources.yfinance.native_history import HistoryAcquisitionError, NativeHistoryClient
 from stock_research_llm_orchestrator.sources.yfinance.normalization import COLUMNS, TradingDates
@@ -317,6 +325,132 @@ def test_second_security_reaches_reanalysis_with_replayable_evidence(
     )
     raw = next((tmp_path / "runs/research-6758").rglob("body.bin"))
     assert sha256(raw.read_bytes()).hexdigest() == json.loads(follow_up_files["manifest.json"])["source_sha256"]
+
+
+def test_jpx_follow_up_replays_only_requested_security_and_reanalyzes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The official workbook is retained while the LLM sees one security's facts."""
+    scenario = Scenario(tmp_path, code="6758")
+    scenario.prepare()
+    data = DraftInput.model_validate_json(
+        build_initial_research_input(read_bundle(tmp_path / "prepared"))["input.json"]
+    )
+    first = DraftOutput.model_validate_json(
+        json.dumps(
+            {
+                "claims": [],
+                "missing_information": ["Current listing status is unconfirmed."],
+                "follow_up_requests": [
+                    {
+                        "question": "Is this security in the latest JPX workbook?",
+                        "reason": "The retained snapshot may be stale.",
+                        "suggested_source_url": JPX_WORKBOOK_URL,
+                    }
+                ],
+            }
+        )
+    )
+    prior = tmp_path / "prior-jpx"
+    prior.mkdir()
+    for name, body in build_bundle(data, first).items():
+        (prior / name).write_bytes(body)
+    workbook = _workbook(code="6758")
+    seen: list[str] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        seen.append(str(request.url))
+        return httpx.Response(200, content=workbook, headers={"Content-Type": JPX_MEDIA_TYPE})
+
+    checked = datetime(2026, 10, 4, 10, tzinfo=UTC)
+
+    def fetch(
+        *,
+        prior: Path,
+        request_index: int,
+        runtime: Path,
+        runs: Path,
+        destination: str,
+        task_id: str,
+        approval_root: Path,
+    ) -> Path:
+        return acquire_jpx_follow_up(
+            prior=prior,
+            request_index=request_index,
+            runtime=runtime,
+            runs=runs,
+            destination=destination,
+            task_id=task_id,
+            approval_root=approval_root,
+            clock=lambda: checked,
+            transport=httpx.MockTransport(respond),
+        )
+
+    def analyze(next_input: DraftInput, _approval_root: Path) -> DraftOutput:
+        assert next_input.security_code == "6758"
+        assert next_input.evidence[-1].source_id == "jpx"
+        assert "6758" in next_input.evidence[-1].text
+        assert "7203" not in next_input.evidence[-1].text
+        return DraftOutput(
+            claims=(), missing_information=("Current date membership remains unconfirmed.",), follow_up_requests=()
+        )
+
+    monkeypatch.setattr(research_step, "acquire_jpx_follow_up", fetch)
+    monkeypatch.setattr(research_step, "run_codex", analyze)
+    follow_up, draft = research_step.advance_research_step(
+        prior=prior,
+        allowed_host="www.jpx.co.jp",
+        runtime=tmp_path / "runtime",
+        runs=tmp_path / "runs",
+        follow_up_destination="jpx-follow-up",
+        draft_destination="jpx-reanalysis",
+        task_id="research-6758",
+        source_id="jpx",
+    )
+    assert seen == [JPX_WORKBOOK_URL]
+    files = read_bundle(follow_up)
+    validate_jpx_follow_up(files)
+    validate_bundle(read_bundle(draft))
+    assert files["jpx-workbook.xlsx"] == workbook
+    assert json.loads(files["jpx-provenance.json"])["sha256"] == sha256(workbook).hexdigest()
+    assert b"7203" not in files["source.bin"]
+    assert select_jpx_request(read_bundle(prior)) == 0
+    changed = dict(files)
+    changed["jpx-workbook.xlsx"] += b"tampered"
+    with pytest.raises(ValueError):
+        validate_jpx_follow_up(changed)
+    assert list((tmp_path / "runs/research-6758").rglob("body.bin"))
+    with pytest.raises((ValueError, RuntimeStorageError)):
+        acquire_jpx_follow_up(
+            prior=prior,
+            request_index=0,
+            runtime=tmp_path / "runtime",
+            runs=tmp_path / "runs",
+            destination="jpx-follow-up-too-soon",
+            task_id="research-6758-second",
+            clock=lambda: checked,
+            transport=httpx.MockTransport(respond),
+        )
+    assert seen == [JPX_WORKBOOK_URL]
+    assert not (tmp_path / "runs/jpx-follow-up-too-soon").exists()
+
+    wrong = DraftOutput.model_validate_json(
+        json.dumps(
+            {
+                "claims": [],
+                "missing_information": [],
+                "follow_up_requests": [
+                    {
+                        "question": "Fetch another workbook",
+                        "reason": "Wrong URL",
+                        "suggested_source_url": "https://www.jpx.co.jp/other.xlsx",
+                    }
+                ],
+            }
+        )
+    )
+    with pytest.raises(ValueError, match="jpx_follow_up_request_missing"):
+        select_jpx_request(build_bundle(data, wrong))
 
 
 @pytest.mark.parametrize(
