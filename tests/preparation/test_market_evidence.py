@@ -10,10 +10,12 @@ from hashlib import sha256
 from pathlib import Path
 from types import SimpleNamespace
 
+import httpx
 import pandas as pd  # type: ignore[import-untyped]
 import pytest
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence import ApplicablePeriodV1
+from stock_research_llm_orchestrator.preparation import research_step
 from stock_research_llm_orchestrator.preparation.initial_research_input import (
     build_initial_research_input,
     validate_initial_research_input,
@@ -27,7 +29,15 @@ from stock_research_llm_orchestrator.preparation.market_evidence import (
     validate_market_preparation,
 )
 from stock_research_llm_orchestrator.preparation.market_evidence_cli import main
-from stock_research_llm_orchestrator.preparation.research_draft import DraftInput
+from stock_research_llm_orchestrator.preparation.public_ir_follow_up import acquire_public_ir_follow_up
+from stock_research_llm_orchestrator.preparation.research_draft import (
+    DraftInput,
+    DraftOutput,
+    build_bundle,
+    validate_bundle,
+)
+from stock_research_llm_orchestrator.preparation.research_follow_up import validate_follow_up
+from stock_research_llm_orchestrator.preparation.storage import read_bundle
 from stock_research_llm_orchestrator.preparation.task_input import create_human_selected_task
 from stock_research_llm_orchestrator.sources.yfinance.adapter import YfinanceDailyAdapter
 from stock_research_llm_orchestrator.sources.yfinance.native_history import HistoryAcquisitionError, NativeHistoryClient
@@ -38,7 +48,7 @@ NOW = datetime(2026, 9, 26, 9, tzinfo=UTC)
 START, END = date(2023, 9, 26), date(2026, 9, 26)
 
 
-def _workbook(category: str = "プライム（内国株式）") -> bytes:
+def _workbook(category: str = "プライム（内国株式）", code: str = "7203") -> bytes:
     header = (
         "日付",
         "コード",
@@ -51,7 +61,7 @@ def _workbook(category: str = "プライム（内国株式）") -> bytes:
         "規模コード",
         "規模区分",
     )
-    row = ("20260831", "7203", "Synthetic issuer", category, "", "", "", "", "", "")
+    row = ("20260831", code, "Synthetic issuer", category, "", "", "", "", "", "")
     shared = (
         '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
         + "".join(f"<si><t>{value}</t></si>" for value in (*header, *row))
@@ -84,7 +94,7 @@ def _provenance(body: bytes) -> JpxSnapshotProvenance:
 class Scenario:
     """Real native client with synthetic source bytes and a recording ticker."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, code: str = "7203") -> None:
         """Keep all policy and normalization logic real while replacing provider I/O."""
         fixture = json.loads((Path(__file__).parents[1] / "fixtures/market_evidence/series.json").read_bytes())
         self.frame = pd.DataFrame(
@@ -94,7 +104,8 @@ class Scenario:
         self.calls = 0
         self.failure = False
         self.currency = "JPY"
-        self.response_symbol = "7203.T"
+        self.response_symbol = f"{code}.T"
+        self.code = code
         self.client = NativeHistoryClient(root / ".rate", ticker_factory=lambda _: self, clock=lambda: NOW.timestamp())
         self.adapter = YfinanceDailyAdapter(history_client=self.client)
         self.root = root
@@ -132,10 +143,11 @@ class Scenario:
         )
 
     def prepare(
-        self, *, body: bytes | None = None, code: str = "7203", calendar: CalendarInput | None = None
+        self, *, body: bytes | None = None, code: str | None = None, calendar: CalendarInput | None = None
     ) -> MarketPreparationResult:
         """Exercise the public internal preparation boundary."""
-        body = _workbook() if body is None else body
+        code = self.code if code is None else code
+        body = _workbook(code=self.code) if body is None else body
         task = create_human_selected_task(
             code, 1, mic="XTKS", task_id_factory=lambda: "task-native-1", accepted_at_factory=lambda: NOW
         )
@@ -212,6 +224,99 @@ def test_initial_research_input_retains_true_source_references_and_exact_market_
     changed["market/prices.csv"] += b" "
     with pytest.raises(ValueError):
         validate_initial_research_input(changed)
+
+
+def test_second_security_reaches_reanalysis_with_replayable_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A different code flows through market, draft, public IR, and another draft."""
+    scenario = Scenario(tmp_path, code="6758")
+    scenario.prepare(calendar=scenario.calendar())
+    initial = build_initial_research_input(read_bundle(tmp_path / "prepared"))
+    validate_initial_research_input(initial)
+    data = DraftInput.model_validate_json(initial["input.json"])
+    assert data.security_code == "6758"
+    assert data.evidence[1].source_reference == "yfinance:Ticker.history:6758.T"
+
+    first = DraftOutput.model_validate_json(
+        json.dumps(
+            {
+                "claims": [],
+                "missing_information": ["Segment results are unavailable."],
+                "follow_up_requests": [
+                    {
+                        "question": "What were the segment results?",
+                        "reason": "The current market slice has no financial filing.",
+                        "suggested_source_url": "https://example.com/ir/segments",
+                    }
+                ],
+            }
+        )
+    )
+    prior = tmp_path / "prior"
+    prior.mkdir()
+    for name, body in build_bundle(data, first).items():
+        (prior / name).write_bytes(body)
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda *_args, **_kwargs: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.215.14", 443))],
+    )
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == "https://example.com/ir/segments"
+        return httpx.Response(200, content=b"Segment revenue was reported.", headers={"Content-Type": "text/plain"})
+
+    def fetch(
+        *,
+        prior: Path,
+        url: str,
+        allowed_host: str,
+        request_index: int,
+        runtime: Path,
+        runs: Path,
+        destination: str,
+        task_id: str,
+    ) -> Path:
+        return acquire_public_ir_follow_up(
+            prior=prior,
+            url=url,
+            allowed_host=allowed_host,
+            request_index=request_index,
+            runtime=runtime,
+            runs=runs,
+            destination=destination,
+            task_id=task_id,
+            clock=lambda: NOW,
+            transport=httpx.MockTransport(respond),
+        )
+
+    def analyze(next_input: DraftInput, _approval_root: Path) -> DraftOutput:
+        assert next_input.security_code == "6758"
+        assert next_input.evidence[-1].text == "Segment revenue was reported."
+        return DraftOutput(
+            claims=(), missing_information=("Profit by segment remains unknown.",), follow_up_requests=()
+        )
+
+    monkeypatch.setattr(research_step, "acquire_public_ir_follow_up", fetch)
+    monkeypatch.setattr(research_step, "run_codex", analyze)
+    follow_up, draft = research_step.advance_research_step(
+        prior=prior,
+        allowed_host="example.com",
+        runtime=tmp_path / "runtime",
+        runs=tmp_path / "runs",
+        follow_up_destination="follow-up-6758",
+        draft_destination="reanalysis-6758",
+        task_id="research-6758",
+    )
+    follow_up_files = read_bundle(follow_up)
+    validate_follow_up(follow_up_files)
+    validate_bundle(read_bundle(draft))
+    assert DraftOutput.model_validate_json((draft / "draft.json").read_bytes()).missing_information == (
+        "Profit by segment remains unknown.",
+    )
+    raw = next((tmp_path / "runs/research-6758").rglob("body.bin"))
+    assert sha256(raw.read_bytes()).hexdigest() == json.loads(follow_up_files["manifest.json"])["source_sha256"]
 
 
 @pytest.mark.parametrize(
