@@ -23,31 +23,13 @@ def test_validate_configuration_accepts_repository_config_in_path_order(tmp_path
     root = _copy_config(tmp_path)
     artifacts = validate_configuration(root)
     paths = [artifact.path.as_posix() for artifact in artifacts]
-    assert len(paths) == 40
-    assert "source-approvals/edinet-code-list/v2.yaml" in paths
+    assert len(paths) == 14
     assert "source-approvals/jpx/v2.yaml" in paths
     assert "source-approvals/dukascopy/v2.yaml" in paths
-    assert "source-approvals/toyota-ir-catalog/v2.yaml" in paths
-    assert "source-approvals/toyota-ir/v3.yaml" in paths
     assert "source-approvals/edinet/v6.yaml" in paths
-    assert "source-approvals/toyota-ir-catalog/v1.yaml" in paths
-    assert "source-profiles/toyota-ir-catalog/v1.yaml" in paths
-    assert "source-approvals/edinet-code-list/v1.yaml" in paths
-    assert "source-profiles/edinet-code-list/v1.yaml" in paths
-    assert "source-approvals/edinet/v5.yaml" in paths
-    assert "source-profiles/edinet/v5.yaml" in paths
-    assert "source-approvals/edinet/v4.yaml" in paths
-    assert "source-profiles/edinet/v4.yaml" in paths
-    assert "source-approvals/edinet/v3.yaml" in paths
-    assert "source-profiles/edinet/v3.yaml" in paths
     assert "source-approvals/jpx/v1.yaml" in paths
     assert "source-profiles/jpx/v1.yaml" in paths
-    assert "source-approvals/edinet/v1.yaml" in paths
-    assert "source-profiles/edinet/v1.yaml" in paths
-    assert "source-approvals/yfinance/v2.yaml" in paths
     assert "source-approvals/yfinance/v3.yaml" in paths
-    assert "source-profiles/yfinance/v3.yaml" in paths
-    assert "source-profiles/yfinance/v2.yaml" in paths
     assert paths == sorted(paths)
 
 
@@ -110,8 +92,8 @@ def test_validate_configuration_rejects_layout_schema_mismatch(tmp_path: Path) -
 def test_validate_configuration_rejects_source_artifact_version_mismatch(tmp_path: Path) -> None:
     """Bind source filenames to artifact revisions while keeping schema v1."""
     root = _copy_config(tmp_path)
-    source = root / "source-profiles" / "yfinance" / "v2.yaml"
-    destination = root / "source-profiles" / "yfinance" / "v3.yaml"
+    source = root / "source-profiles" / "jpx" / "v1.yaml"
+    destination = root / "source-profiles" / "jpx" / "v2.yaml"
     source.rename(destination)
     with pytest.raises(ApplicationError) as exc_info:
         validate_configuration(root)
@@ -122,7 +104,7 @@ def test_validate_configuration_rejects_source_artifact_version_mismatch(tmp_pat
 def test_validate_configuration_rejects_missing_approval(tmp_path: Path) -> None:
     """Reject a source profile whose referenced approval is absent."""
     root = _copy_config(tmp_path)
-    (root / "source-approvals" / "yfinance" / "v1.yaml").unlink()
+    (root / "source-approvals" / "jpx" / "v1.yaml").unlink()
     with pytest.raises(ApplicationError) as exc_info:
         validate_configuration(root)
     assert exc_info.value.exit_code == ExitCode.INVALID_CONFIGURATION
@@ -131,7 +113,7 @@ def test_validate_configuration_rejects_missing_approval(tmp_path: Path) -> None
 def test_validate_configuration_rejects_source_approval_hash_mismatch(tmp_path: Path) -> None:
     """Compare a profile reference against the raw approval-file digest."""
     root = _copy_config(tmp_path)
-    approval = root / "source-approvals" / "yfinance" / "v1.yaml"
+    approval = root / "source-approvals" / "jpx" / "v1.yaml"
     approval.write_text(approval.read_text(encoding="utf-8") + "\n", encoding="utf-8")
     with pytest.raises(ApplicationError) as exc_info:
         validate_configuration(root)
@@ -141,7 +123,7 @@ def test_validate_configuration_rejects_source_approval_hash_mismatch(tmp_path: 
 def test_validate_configuration_rejects_source_approval_metadata_mismatch(tmp_path: Path) -> None:
     """Cross-check approval status and credential scope beyond model-local rules."""
     root = _copy_config(tmp_path)
-    profile = root / "source-profiles" / "yfinance" / "v1.yaml"
+    profile = root / "source-profiles" / "jpx" / "v1.yaml"
     text = profile.read_text(encoding="utf-8")
     text = text.replace("source_approval_status: approved", "source_approval_status: draft")
     text = text.replace("enabled: true", "enabled: false")

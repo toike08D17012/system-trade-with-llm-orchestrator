@@ -1,68 +1,28 @@
-"""Internal offline request types; no production transport is provided."""
+"""Validated source bindings for production request admission."""
 
-import hashlib
-import json
 import math
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Literal
 
-from pydantic import TypeAdapter
-
 from stock_research_llm_orchestrator.configuration import ConfigurationArtifact
-from stock_research_llm_orchestrator.contracts.base import ArtifactReferenceV1, Identifier, StrictContractModel
-from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.external_requests import ExternalRequestEventV1
+from stock_research_llm_orchestrator.contracts.base import ArtifactReferenceV1
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.policies import (
     QuantitativeSettingV1,
     SourceApprovalV1,
     SourceProfileV1,
 )
-from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.research import AgentRoleValue
 
 
 _BINDING_TOKEN = object()
 
 
-class CoordinatorRequest(StrictContractModel):
-    """Non-secret logical identity and an opaque fixture lookup key."""
-
-    task_id: Identifier
-    consumer_role: AgentRoleValue
-    operation: Identifier
-    origin: Identifier
-    resource_key: Identifier
-    logical_request_id: Identifier
-    applicable_period: Identifier
-    freshness_identity: Identifier
-
-
-class TransportResponse(StrictContractModel):
-    """Untrusted normalized response, checked again at the transport boundary."""
-
-    succeeded: bool
-    payload: bytes | None = None
-    status_category: Literal["ok", "provider_error", "rate_limited"] = "ok"
-    retry_after_seconds: float | None = None
-
-    def is_valid(self) -> bool:
-        """Check combinations without including provider content in errors."""
-        retry = self.retry_after_seconds
-        if retry is not None and (isinstance(retry, bool) or not math.isfinite(retry) or retry < 0):
-            return False
-        if self.succeeded:
-            return isinstance(self.payload, bytes) and self.status_category == "ok" and retry is None
-        return self.payload is None and self.status_category in {"provider_error", "rate_limited"}
-
-
 @dataclass(frozen=True)
 class AttemptResult:
-    """Attempt-once outcome with ephemeral payload and immutable audit events."""
+    """Sanitized rejection of a source binding."""
 
     status: Literal["succeeded", "failed", "blocked", "rejected"]
     reason_code: str
-    payload: bytes | None = None
-    retry_after_seconds: float | None = None
-    events: tuple[ExternalRequestEventV1, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -77,7 +37,7 @@ class SourceBinding:
     _factory_token: object | None = field(default=None, repr=False, compare=False)
 
     def limits(self) -> tuple[int, float, int, float, int, str]:
-        """Validate the supported offline subset and return its gate identity."""
+        """Validate the supported source subset and return its gate identity."""
         a, p = self.approval, self.profile
         if not (
             self._factory_token is _BINDING_TOKEN
@@ -108,24 +68,6 @@ class SourceBinding:
         if type(p.rate_requests.value) is not int:
             raise ValueError("unsupported_request_limit")
         return (1, interval, int(count), window, 1, p.cooldown_policy.default_cooldown_seconds.knowledge_status)
-
-    def fingerprint(self, request: CoordinatorRequest) -> str:
-        """Hash canonical identity without invocation IDs or clocks."""
-        identity = request.model_dump(mode="json", exclude={"logical_request_id"})
-        identity.update(
-            {
-                "version": "offline-request-v1",
-                "source_id": self.profile.source_id,
-                "approval": self.approval_reference.model_dump(mode="json"),
-                "profile": self.profile_reference.model_dump(mode="json"),
-                "profile_version": self.profile.profile_version,
-                "policy_version": self.profile.policy_version,
-                "credential_scope_alias": self.profile.credential_scope_alias,
-            }
-        )
-        return hashlib.sha256(
-            json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
-        ).hexdigest()
 
 
 def _positive(setting: QuantitativeSettingV1, unit: str) -> float:
@@ -208,6 +150,3 @@ def bind_source(
         return binding
     except ValueError, TypeError, AttributeError:
         return AttemptResult("rejected", "invalid_source_binding")
-
-
-IDENTIFIER_ADAPTER = TypeAdapter(Identifier)

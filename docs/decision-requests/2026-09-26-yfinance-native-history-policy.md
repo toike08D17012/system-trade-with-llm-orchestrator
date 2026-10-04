@@ -9,8 +9,8 @@ yfinanceへ通信を任せる構成を承認した。過剰アクセス防止は
 標準経路は`yf.Ticker(symbol).history(...)`とし、独自Sessionを注入しない。
 cookie・crumb・consent・redirect・認証方式の切替をyfinance 1.7.0へ委ねる。
 補助応答の形式検査、個別permit、HTTP監査ログ、HTTP本文保存は必須にしない。
-旧profile v3と`CoordinatedSession`は明示的な互換経路に限る。
-通常運用では新旧取得経路を混在させない。旧経路は標準経路のエラー時にも自動選択しない。
+旧profile v3と`CoordinatedSession`を使った経路は2026-10-04に撤去した。
+現在の取得経路は`Ticker.history()`である。
 
 ## 過剰アクセス防止
 
@@ -46,7 +46,7 @@ HTTP単位の間隔制御・送信数計測・`Retry-After`の読取りは保証
 
 ```bash
 python -m stock_research_llm_orchestrator.sources.yfinance.history_cli \
-  --symbol 7203.T --period 1y --output runs/yfinance-check
+  --symbol 1301.T --period 1y --output runs/yfinance-check
 ```
 
 出力先は新しいdirectoryを指定する。過去の結果を上書きしない。
@@ -55,8 +55,6 @@ python -m stock_research_llm_orchestrator.sources.yfinance.history_cli \
 
 - [データソースと証拠の方針](../system-requirements/02-data-source-and-evidence-policy.md)
 - [CLIと実行運用](../system-requirements/04-cli-and-runtime-operations.md)
-- [従来の補助応答方針](2026-09-26-yfinance-auxiliary-response-policy.md)
-- [通信確認結果](2026-09-26-yfinance-live-verification-outcome.md)
 
 ## 調査と検証
 
@@ -64,4 +62,4 @@ python -m stock_research_llm_orchestrator.sources.yfinance.history_cli \
 共通HTTP gateはphysical attemptを作成するため、ライブラリ呼び出しをHTTP1件と偽って流用せず、
 小さな独立した共有guardを実装した。
 標準経路・永続間隔・別processの排他・異常終了・429のcooldown・不正データをテストする。
-実通信の観測値は通信確認結果へ追記する。
+過去の実通信の観測値はGit履歴から参照する。

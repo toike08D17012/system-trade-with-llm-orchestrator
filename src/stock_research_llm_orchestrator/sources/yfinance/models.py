@@ -37,15 +37,15 @@ class YfinanceDownloadMetadata(StrictContractModel):
 
     library: Literal["yfinance"] = "yfinance"
     library_version: Literal["1.7.0"] = "1.7.0"
-    function: Literal["download", "Ticker.history"] = "download"
+    function: Literal["Ticker.history"] = "Ticker.history"
     symbol: str = Field(pattern=r"^[0-9A-Z]{4}\.T$")
     start: str
     end: str
     interval: Literal["1d"] = "1d"
-    threads: Literal[False] | None = False
+    threads: None = None
     repair: Literal[False] = False
     keepna: Literal[True] = True
-    progress: Literal[False] | None = False
+    progress: None = None
     actions: Literal[True] = True
     auto_adjust: Literal[False] = False
     jpx_snapshot_on: str

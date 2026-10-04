@@ -9,7 +9,3 @@ from stock_research_llm_orchestrator.sources.yfinance.native_history import (
     HistoryThrottledError,
     NativeHistoryClient,
 )
-from stock_research_llm_orchestrator.sources.yfinance.production_policy import (
-    YahooProductionPolicy,
-    compose_yahoo_production_policy,
-)

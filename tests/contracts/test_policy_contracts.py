@@ -100,11 +100,7 @@ def test_source_profile_rejects_secret_field() -> None:
         "market-profiles/xtks/v1.yaml",
         "source-approvals/jpx/v1.yaml",
         "source-profiles/jpx/v1.yaml",
-        "source-approvals/yfinance/v1.yaml",
-        "source-approvals/yfinance/v2.yaml",
-        "source-profiles/yfinance/v1.yaml",
-        "source-profiles/yfinance/v2.yaml",
-        "source-profiles/yfinance/v3.yaml",
+        "source-approvals/yfinance/v3.yaml",
     ],
 )
 def test_versioned_yaml_configuration_is_contract_valid(relative_path: str) -> None:
@@ -112,68 +108,3 @@ def test_versioned_yaml_configuration_is_contract_valid(relative_path: str) -> N
     path = CONFIG_ROOT / relative_path
 
     validate_text(path.read_text(encoding="utf-8"), InputFormat.YAML)
-
-
-def test_yfinance_profile_uses_the_approved_conservative_limits() -> None:
-    """Bind enabled yfinance use to the exact approval and conservative rate policy."""
-    import hashlib
-
-    approval_path = CONFIG_ROOT / "source-approvals/yfinance/v1.yaml"
-    profile_path = CONFIG_ROOT / "source-profiles/yfinance/v1.yaml"
-    approval = validate_text(approval_path.read_text(encoding="utf-8"), InputFormat.YAML)
-    profile = validate_text(profile_path.read_text(encoding="utf-8"), InputFormat.YAML)
-
-    assert isinstance(approval, SourceApprovalV1)
-    assert isinstance(profile, SourceProfileV1)
-    assert approval.status.value == "approved"
-    assert approval.online_use_allowed
-    assert approval.external_agent_transfer_allowed
-    assert approval.effective_on == "2026-09-14"
-    assert approval.recheck_due_on == "2026-12-14"
-    assert profile.source_approval_reference.sha256 == hashlib.sha256(approval_path.read_bytes()).hexdigest()
-    assert profile.source_approval_status.value == "approved"
-    assert profile.enabled
-    assert profile.max_concurrency == 1
-    assert profile.min_interval_seconds.value == 2.5
-    assert profile.rate_requests.value == 2
-    assert profile.rate_window_seconds.value == 5
-    assert profile.burst == 1
-    assert not profile.cooldown_policy.automatic_retry_allowed
-    assert not profile.direct_connection_fallback_allowed
-
-
-def test_yfinance_profile_v2_preserves_failed_compatibility_gate() -> None:
-    """Fail closed when the latest stable yfinance cannot disable its status retry."""
-    import hashlib
-
-    approval_path = CONFIG_ROOT / "source-approvals/yfinance/v1.yaml"
-    profile_path = CONFIG_ROOT / "source-profiles/yfinance/v2.yaml"
-    approval = validate_text(approval_path.read_text(encoding="utf-8"), InputFormat.YAML)
-    profile = validate_text(profile_path.read_text(encoding="utf-8"), InputFormat.YAML)
-
-    assert isinstance(approval, SourceApprovalV1)
-    assert isinstance(profile, SourceProfileV1)
-    assert profile.source_approval_reference.sha256 == hashlib.sha256(approval_path.read_bytes()).hexdigest()
-    assert not profile.enabled
-    assert not profile.cooldown_policy.automatic_retry_allowed
-    assert not profile.direct_connection_fallback_allowed
-
-
-def test_latest_yfinance_profile_enables_approved_status_fallback() -> None:
-    """Enable v1.7.0 only under the revised approval and controlled-session boundary."""
-    import hashlib
-
-    approval_path = CONFIG_ROOT / "source-approvals/yfinance/v2.yaml"
-    profile_path = CONFIG_ROOT / "source-profiles/yfinance/v3.yaml"
-    approval = validate_text(approval_path.read_text(encoding="utf-8"), InputFormat.YAML)
-    profile = validate_text(profile_path.read_text(encoding="utf-8"), InputFormat.YAML)
-
-    assert isinstance(approval, SourceApprovalV1)
-    assert isinstance(profile, SourceProfileV1)
-    assert approval.approval_version == 2
-    assert profile.profile_version == 3
-    assert profile.policy_version == 3
-    assert profile.source_approval_reference.sha256 == hashlib.sha256(approval_path.read_bytes()).hexdigest()
-    assert profile.enabled
-    assert not profile.cooldown_policy.automatic_retry_allowed
-    assert not profile.direct_connection_fallback_allowed

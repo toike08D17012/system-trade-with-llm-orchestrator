@@ -92,5 +92,3 @@ media type・encoding等の条件、ADR-0001の通信調整、ADR-0005の公開�
 ## 参照
 
 - [データソースと証拠の方針](../system-requirements/02-data-source-and-evidence-policy.md)
-- [容量上限撤廃の決定と未確定の補助応答形式](../decision-requests/2026-09-26-yfinance-auxiliary-response-policy.md)
-- [従来のPhase 7 source意思決定（DEC-20）](../decision-requests/2026-09-22-phase-7-source-decisions.md)

@@ -7,9 +7,14 @@ import pytest
 
 from stock_research_llm_orchestrator.configuration import ConfigurationArtifact
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.policies import SourceProfileV1
-from stock_research_llm_orchestrator.requests import AttemptResult, bind_source
+from stock_research_llm_orchestrator.requests import AttemptResult, SourceBinding, bind_source
 
-from .test_coordinator import binding
+
+def binding(artifacts: tuple[ConfigurationArtifact, ...]) -> SourceBinding:
+    """Select the approved synthetic source."""
+    result = bind_source(artifacts, "fixture", 1, 1, date(2026, 9, 20))
+    assert isinstance(result, SourceBinding)
+    return result
 
 
 @pytest.mark.parametrize("evaluation", [date(2000, 1, 1), date(2100, 1, 1)])
@@ -36,17 +41,6 @@ def test_unsupported_profile(artifacts: tuple[ConfigurationArtifact, ...], field
         for item in artifacts
     )
     assert isinstance(bind_source(changed, "fixture", 1, 1, date(2026, 9, 20)), AttemptResult)
-
-
-def test_fingerprint_identity(artifacts: tuple[ConfigurationArtifact, ...]) -> None:
-    """Logical invocation IDs do not affect the hash, but task and freshness do."""
-    from .fakes import request
-
-    source = binding(artifacts)
-    initial = source.fingerprint(request())
-    assert initial == source.fingerprint(request(logical_request_id="other"))
-    for changes in ({"task_id": "other"}, {"freshness_identity": "other"}, {"applicable_period": "other"}):
-        assert initial != source.fingerprint(request(**changes))
 
 
 @pytest.mark.parametrize(
@@ -91,10 +85,6 @@ def test_profile_subset(
 
 def test_exact_dates_hash_and_unsealed_binding(artifacts: tuple[ConfigurationArtifact, ...]) -> None:
     """Check inclusive start, exclusive recheck, exact hashes, and factory use."""
-    from stock_research_llm_orchestrator.requests import SourceBinding
-
-    from .fakes import Clock, Transport, coordinator, request
-
     source = binding(artifacts)
     assert source.approval.effective_on is not None
     assert source.approval.recheck_due_on is not None
@@ -109,6 +99,5 @@ def test_exact_dates_hash_and_unsealed_binding(artifacts: tuple[ConfigurationArt
     unsealed = SourceBinding(
         source.approval, source.profile, source.approval_reference, source.profile_reference, source.evaluation_date
     )
-    transport = Transport()
-    assert coordinator(Clock(), transport).attempt(request(), unsealed).status == "rejected"
-    assert not transport.calls
+    with pytest.raises(ValueError, match="unsupported_source_binding"):
+        unsealed.limits()

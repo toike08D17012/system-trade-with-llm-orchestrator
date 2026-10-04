@@ -258,4 +258,3 @@ transactionは単純になるが、大容量・利用条件・秘密情報・破
 - [CLIと実行運用の要件](../system-requirements/04-cli-and-runtime-operations.md)
 - [成果物・保持・セキュリティの要件](../system-requirements/05-artifact-retention-and-security.md)
 - [データソースと証拠の方針](../system-requirements/02-data-source-and-evidence-policy.md)
-- [本番データ取得基盤の再設計](../agent-reports/plans/2026-09-21-production-data-acquisition-reassessment-implementation-plan.md)

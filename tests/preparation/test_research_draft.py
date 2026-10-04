@@ -130,20 +130,17 @@ def test_draft_input_keeps_long_text_and_more_than_twenty_sources() -> None:
     assert len(data.evidence[0].text) == 20_001
 
 
-@pytest.mark.parametrize("source_id,version", [("toyota-ir", 2), ("edinet", 5)])
-def test_run_codex_rejects_source_without_external_transfer(
-    monkeypatch: pytest.MonkeyPatch, source_id: str, version: int
-) -> None:
+def test_run_codex_rejects_source_without_external_transfer(monkeypatch: pytest.MonkeyPatch) -> None:
     """An input attestation cannot override the registered source approval."""
     payload = _input().model_dump()
-    payload["evidence"][0]["source_id"] = source_id
-    payload["evidence"][0]["approval_version"] = version
+    payload["evidence"][0]["source_id"] = "jpx"
+    payload["evidence"][0]["approval_version"] = 1
     monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: pytest.fail("codex must not start"))
     with pytest.raises(ValueError, match="draft_source_transfer_not_approved"):
         run_codex(DraftInput.model_validate(payload))
 
 
-@pytest.mark.parametrize("source_id,version", [("toyota-ir", 3), ("edinet", 6)])
+@pytest.mark.parametrize("source_id,version", [("edinet", 6), ("issuer-ir", 1)])
 def test_private_analysis_approvals_allow_relevant_excerpts(source_id: str, version: int) -> None:
     """Current source approvals allow attributed excerpts for private LLM analysis."""
     payload = _input().model_dump()
@@ -154,7 +151,7 @@ def test_private_analysis_approvals_allow_relevant_excerpts(source_id: str, vers
 
 @pytest.mark.parametrize(
     "source_id,version",
-    [("jpx", 2), ("dukascopy", 2), ("toyota-ir-catalog", 2), ("edinet-code-list", 2), ("issuer-ir", 1)],
+    [("jpx", 2), ("dukascopy", 2), ("issuer-ir", 1)],
 )
 def test_owner_authorized_sources_allow_private_llm_analysis(source_id: str, version: int) -> None:
     """Necessary facts from current sources and public issuer IR can reach the draft."""
