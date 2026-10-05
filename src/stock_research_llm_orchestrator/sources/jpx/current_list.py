@@ -122,7 +122,7 @@ class JpxCurrentListAdapter:
                 rows = _rows(archive.read("xl/worksheets/sheet1.xml"), shared)
             if not rows or tuple(rows[0]) != _HEADERS:
                 raise ValueError
-            issues = tuple(_issue(row) for row in rows[1:])
+            issues = tuple(sorted((_issue(row) for row in rows[1:]), key=lambda issue: issue.code))
             snapshots = {issue.snapshot_on for issue in issues}
             if len(snapshots) != 1:
                 raise ValueError

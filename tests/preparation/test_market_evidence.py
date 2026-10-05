@@ -453,6 +453,70 @@ def test_jpx_follow_up_replays_only_requested_security_and_reanalyzes(
         select_jpx_request(build_bundle(data, wrong))
 
 
+def test_invalid_jpx_workbook_does_not_block_later_acquisition(tmp_path: Path) -> None:
+    """A parser rejection closes its logical request and single flight."""
+    data = DraftInput.model_validate_json(
+        json.dumps(
+            {
+                "security_code": "7203",
+                "exchange": "XTKS",
+                "external_llm_transfer_allowed": True,
+                "evidence": [
+                    {
+                        "evidence_id": "prior-listing",
+                        "source_id": "jpx",
+                        "approval_version": 2,
+                        "source_url": JPX_WORKBOOK_URL,
+                        "retrieved_at": "2026-10-04T00:00:00+00:00",
+                        "text": "An earlier listing snapshot needs rechecking.",
+                    }
+                ],
+            }
+        )
+    )
+    draft = DraftOutput.model_validate_json(
+        json.dumps(
+            {
+                "claims": [],
+                "missing_information": ["Current listing status"],
+                "follow_up_requests": [
+                    {
+                        "question": "Is 7203 in the current JPX list?",
+                        "reason": "The prior snapshot may be stale.",
+                        "suggested_source_url": JPX_WORKBOOK_URL,
+                    }
+                ],
+            }
+        )
+    )
+    prior = tmp_path / "prior"
+    prior.mkdir()
+    for name, body in build_bundle(data, draft).items():
+        (prior / name).write_bytes(body)
+    now = datetime(2026, 10, 5, 12, tzinfo=UTC)
+    responses = iter((_workbook(code="bad"), _workbook(code="7203")))
+    transport = httpx.MockTransport(
+        lambda _request: httpx.Response(200, content=next(responses), headers={"Content-Type": JPX_MEDIA_TYPE})
+    )
+
+    def fetch(destination: str) -> Path:
+        return acquire_jpx_follow_up(
+            prior=prior,
+            request_index=0,
+            runtime=tmp_path / "runtime",
+            runs=tmp_path / "runs",
+            destination=destination,
+            task_id="jpx-recovery-test",
+            clock=lambda: now,
+            transport=transport,
+        )
+
+    with pytest.raises(ValueError, match="jpx_current_list_invalid"):
+        fetch("invalid")
+    now += timedelta(seconds=61)
+    validate_jpx_follow_up(read_bundle(fetch("valid")))
+
+
 @pytest.mark.parametrize(
     "category,code", [("ETF・ETN", "7203"), ("プライム（外国株式）", "7203"), ("プライム（内国株式）", "9999")]
 )

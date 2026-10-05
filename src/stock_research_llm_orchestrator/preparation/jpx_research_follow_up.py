@@ -293,35 +293,45 @@ def acquire_jpx_follow_up(
                 )
             )
 
-        RawArtifactPublisher(runs, repository).publish(
-            candidate,
-            RawPublicationIntent(
-                publication_id=f"jpx-publication-{uid}",
-                task_id=task_id,
-                logical_request_id=logical.logical_request_id,
+        try:
+            RawArtifactPublisher(runs, repository).publish(
+                candidate,
+                RawPublicationIntent(
+                    publication_id=f"jpx-publication-{uid}",
+                    task_id=task_id,
+                    logical_request_id=logical.logical_request_id,
+                    physical_attempt_id=attempt.physical_attempt_id,
+                    source_id="jpx",
+                    operation="current-listed-issues",
+                    content_sha256=candidate.sha256,
+                    byte_count=len(candidate.body),
+                    media_type=candidate.media_type,
+                    encoding=candidate.encoding,
+                    raw_schema_id="jpx-current-listed-issues-xlsx",
+                    raw_schema_version=1,
+                    publication_generation=lease.generation,
+                ),
+                lease,
+                clock(),
+                clock(),
+                validate_body,
+            )
+            provenance = JpxSnapshotProvenance(
                 physical_attempt_id=attempt.physical_attempt_id,
-                source_id="jpx",
-                operation="current-listed-issues",
-                content_sha256=candidate.sha256,
-                byte_count=len(candidate.body),
-                media_type=candidate.media_type,
-                encoding=candidate.encoding,
-                raw_schema_id="jpx-current-listed-issues-xlsx",
-                raw_schema_version=1,
-                publication_generation=lease.generation,
-            ),
-            lease,
-            clock(),
-            clock(),
-            validate_body,
-        )
-        provenance = JpxSnapshotProvenance(
-            physical_attempt_id=attempt.physical_attempt_id,
-            retrieved_at=received[0].isoformat(),
-            sha256=candidate.sha256,
-        )
-        files = _build(previous, candidate.body, provenance, request_index)
-        publish_preparation(runs, destination, files, validator=validate_jpx_follow_up)
+                retrieved_at=received[0].isoformat(),
+                sha256=candidate.sha256,
+            )
+            files = _build(previous, candidate.body, provenance, request_index)
+            publish_preparation(runs, destination, files, validator=validate_jpx_follow_up)
+        except ValueError:
+            coordinator.finalize_logical_request(
+                logical.logical_request_id,
+                LogicalResultOutcome.FAILED,
+                lease,
+                clock(),
+                "jpx_document_invalid",
+            )
+            raise
         coordinator.finalize_logical_request(
             logical.logical_request_id, LogicalResultOutcome.SUCCEEDED, lease, clock(), None
         )

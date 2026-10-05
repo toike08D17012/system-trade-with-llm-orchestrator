@@ -114,6 +114,43 @@ def test_parses_eligible_domestic_common_equity_without_guessing_other_classes()
     assert parsed.issues[1].security_class == "unknown"
 
 
+def test_appended_out_of_order_issue_is_sorted_without_losing_identity() -> None:
+    """The published workbook may append an issue after otherwise sorted rows."""
+    body = _workbook(
+        ("20260930", "1301", "First", "プライム（内国株式）", "", "", "", "", "", ""),
+        ("20260930", "9997", "Last", "スタンダード（内国株式）", "", "", "", "", "", ""),
+        ("20260930", "3670", "Appended", "グロース（内国株式）", "", "", "", "", "", ""),
+    )
+    parsed = JpxCurrentListAdapter().parse(
+        BoundedSourceResponse(
+            physical_attempt_id="attempt-appended",
+            body=body,
+            sha256=hashlib.sha256(body).hexdigest(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            encoding="binary",
+        )
+    )
+    assert tuple(issue.code for issue in parsed.issues) == ("1301", "3670", "9997")
+    assert parsed.issues[1].name == "Appended"
+    assert parsed.snapshot_on == "2026-09-30"
+
+
+def test_duplicate_issue_codes_remain_invalid_after_sorting() -> None:
+    """Sorting never turns duplicate source identities into a valid snapshot."""
+    row = ("20260930", "1301", "Duplicate", "プライム（内国株式）", "", "", "", "", "", "")
+    body = _workbook(row, row)
+    with pytest.raises(JpxCurrentListParseError, match="jpx_current_list_invalid"):
+        JpxCurrentListAdapter().parse(
+            BoundedSourceResponse(
+                physical_attempt_id="attempt-duplicate",
+                body=body,
+                sha256=hashlib.sha256(body).hexdigest(),
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                encoding="binary",
+            )
+        )
+
+
 @pytest.mark.parametrize("body", [b"not-xlsx", _workbook(("20260831",) * 10)])
 def test_rejects_malformed_or_unrecognized_workbook(body: bytes) -> None:
     """Fail closed without exposing workbook content."""
