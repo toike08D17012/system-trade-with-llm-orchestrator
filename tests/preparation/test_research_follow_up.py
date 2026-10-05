@@ -126,6 +126,43 @@ def test_follow_up_extracts_real_pdf_text() -> None:
     assert "Segment revenue grew" in DraftInput.model_validate_json(files["input.json"]).evidence[1].text
 
 
+def test_follow_up_accepts_pdf_with_empty_user_password() -> None:
+    """An issuer PDF readable without a password can supply text evidence."""
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=600, height=800)
+    font = DictionaryObject(
+        {
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/Helvetica"),
+        }
+    )
+    page[NameObject("/Resources")] = DictionaryObject(
+        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})}
+    )
+    content = DecodedStreamObject()
+    content.set_data(b"BT /F1 12 Tf 30 750 Td (Public financial summary) Tj ET")
+    page[NameObject("/Contents")] = content
+    writer.encrypt(user_password="")
+    stream = io.BytesIO()
+    writer.write(stream)
+    pdf = _intake().model_copy(update={"media_type": "application/pdf"})
+    files = build_follow_up(_prior(), pdf, stream.getvalue())
+    assert "Public financial summary" in DraftInput.model_validate_json(files["input.json"]).evidence[1].text
+
+
+def test_follow_up_rejects_password_protected_pdf() -> None:
+    """An issuer PDF requiring a password remains unavailable for analysis."""
+    writer = PdfWriter()
+    writer.add_blank_page(width=600, height=800)
+    writer.encrypt(user_password="secret")
+    stream = io.BytesIO()
+    writer.write(stream)
+    pdf = _intake().model_copy(update={"media_type": "application/pdf"})
+    with pytest.raises(ValueError, match="follow_up_pdf_invalid"):
+        build_follow_up(_prior(), pdf, stream.getvalue())
+
+
 def test_follow_up_cli_publishes_next_input(tmp_path: Path) -> None:
     """The published input can be passed directly to the existing draft runner."""
     prior = tmp_path / "prior"

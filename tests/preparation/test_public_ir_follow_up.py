@@ -2,7 +2,7 @@
 
 import json
 import socket
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx
@@ -98,6 +98,37 @@ def test_fetch_public_ir_publishes_replayable_follow_up(tmp_path: Path, monkeypa
     validate_follow_up(files)
     assert DraftInput.model_validate_json(files["input.json"]).evidence[1].text == "Segments\nCars 10"
     assert list((tmp_path / "runs/public-ir-test").rglob("body.bin"))
+
+
+def test_invalid_document_does_not_block_later_acquisition(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A failed document validation closes its logical request and single flight."""
+    _public_dns(monkeypatch)
+    now = NOW
+    responses = iter((b"\xff", b"Valid document"))
+    transport = httpx.MockTransport(
+        lambda _request: httpx.Response(200, content=next(responses), headers={"Content-Type": "text/plain"})
+    )
+    prior = _prior(tmp_path)
+
+    def fetch(destination: str) -> Path:
+        return acquire_public_ir_follow_up(
+            prior=prior,
+            url="https://example.com/second",
+            allowed_host="example.com",
+            request_index=0,
+            runtime=tmp_path / "runtime",
+            runs=tmp_path / "runs",
+            destination=destination,
+            task_id="public-ir-test",
+            clock=lambda: now,
+            transport=transport,
+        )
+
+    with pytest.raises(ValueError, match="follow_up_encoding_invalid"):
+        fetch("invalid")
+    now += timedelta(seconds=61)
+    output = fetch("valid")
+    validate_follow_up(read_bundle(output))
 
 
 def test_target_rejects_private_address_and_host_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:

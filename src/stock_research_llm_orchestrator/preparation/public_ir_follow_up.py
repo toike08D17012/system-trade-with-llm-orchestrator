@@ -238,38 +238,48 @@ def acquire_public_ir_follow_up(
         def validate_body(body: bytes) -> None:
             extract_text(body, candidate.media_type)
 
-        RawArtifactPublisher(runs, repository).publish(
-            candidate,
-            RawPublicationIntent(
-                publication_id=f"issuer-ir-publication-{uid}",
-                task_id=task_id,
-                logical_request_id=logical.logical_request_id,
-                physical_attempt_id=attempt.physical_attempt_id,
+        try:
+            RawArtifactPublisher(runs, repository).publish(
+                candidate,
+                RawPublicationIntent(
+                    publication_id=f"issuer-ir-publication-{uid}",
+                    task_id=task_id,
+                    logical_request_id=logical.logical_request_id,
+                    physical_attempt_id=attempt.physical_attempt_id,
+                    source_id="issuer-ir",
+                    operation="follow-up-document",
+                    content_sha256=candidate.sha256,
+                    byte_count=len(candidate.body),
+                    media_type=candidate.media_type,
+                    encoding="binary",
+                    raw_schema_id="issuer-ir-public-document-raw",
+                    raw_schema_version=1,
+                    publication_generation=lease.generation,
+                ),
+                lease,
+                clock(),
+                clock(),
+                validate_body,
+            )
+            intake = FollowUpIntake(
+                request_index=request_index,
                 source_id="issuer-ir",
-                operation="follow-up-document",
-                content_sha256=candidate.sha256,
-                byte_count=len(candidate.body),
-                media_type=candidate.media_type,
-                encoding="binary",
-                raw_schema_id="issuer-ir-public-document-raw",
-                raw_schema_version=1,
-                publication_generation=lease.generation,
-            ),
-            lease,
-            clock(),
-            clock(),
-            validate_body,
-        )
-        intake = FollowUpIntake(
-            request_index=request_index,
-            source_id="issuer-ir",
-            approval_version=1,
-            source_url=url,
-            retrieved_at=received[0].isoformat(),
-            media_type=cast(Literal["text/plain", "text/html", "application/pdf"], candidate.media_type),
-        )
-        files = build_follow_up(previous, intake, candidate.body)
-        publish_preparation(runs, destination, files, validator=validate_follow_up)
+                approval_version=1,
+                source_url=url,
+                retrieved_at=received[0].isoformat(),
+                media_type=cast(Literal["text/plain", "text/html", "application/pdf"], candidate.media_type),
+            )
+            files = build_follow_up(previous, intake, candidate.body)
+            publish_preparation(runs, destination, files, validator=validate_follow_up)
+        except ValueError:
+            coordinator.finalize_logical_request(
+                logical.logical_request_id,
+                LogicalResultOutcome.FAILED,
+                lease,
+                clock(),
+                "public_ir_document_invalid",
+            )
+            raise
         coordinator.finalize_logical_request(
             logical.logical_request_id, LogicalResultOutcome.SUCCEEDED, lease, clock(), None
         )

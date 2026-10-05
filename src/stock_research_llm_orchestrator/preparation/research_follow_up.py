@@ -65,7 +65,7 @@ def extract_text(body: bytes, media_type: str) -> str:
     if media_type == "application/pdf":
         try:
             reader = PdfReader(io.BytesIO(body), strict=True)
-            if reader.is_encrypted:
+            if reader.is_encrypted and not reader.decrypt(""):
                 raise ValueError("follow_up_pdf_encrypted")
             text = "\n\n".join(page.extract_text(extraction_mode="layout") for page in reader.pages)
         except OSError, ValueError, TypeError, KeyError, PdfReadError:
