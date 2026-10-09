@@ -58,7 +58,11 @@ class _RunningProcess:
 
 
 class SessionRunner:
-    """Manage local CLI runs while leaving sessions and response parsing to adapters."""
+    """Manage local CLI runs while leaving sessions and response parsing to adapters.
+
+    The caller must also sandbox the child process from the output root. Separate
+    sibling directories alone do not provide OS-level filesystem isolation.
+    """
 
     def __init__(self, root: Path) -> None:
         """Use an existing trusted directory dedicated to agent process output."""
@@ -73,6 +77,10 @@ class SessionRunner:
             raise ValueError("agent_runner_argv_invalid")
         if not invocation.cwd.is_dir() or invocation.cwd.is_symlink():
             raise ValueError("agent_runner_cwd_invalid")
+        workspace = invocation.cwd.resolve()
+        storage = self.root.resolve()
+        if workspace == storage or workspace in storage.parents or storage in workspace.parents:
+            raise ValueError("agent_runner_storage_overlaps_workspace")
         if any("\x00" in key or "\x00" in value for key, value in invocation.env.items()):
             raise ValueError("agent_runner_env_invalid")
         agent_run_id = f"agent-run-{uuid4().hex}"

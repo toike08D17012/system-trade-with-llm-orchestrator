@@ -26,12 +26,14 @@ def test_runner_preserves_exact_output_and_does_not_persist_stdin(tmp_path: Path
     """Return one run ID and exact private output without interpreting provider text."""
     root = tmp_path / "agent-output"
     root.mkdir()
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
     runner = SessionRunner(root)
     script = (
         "import sys; data=sys.stdin.buffer.read(); "
         "sys.stdout.buffer.write(str(len(data)).encode()); sys.stderr.write('warning')"
     )
-    invocation = RunnerInvocation((sys.executable, "-c", script), tmp_path, {}, b"private prompt")
+    invocation = RunnerInvocation((sys.executable, "-c", script), workspace, {}, b"private prompt")
     first = runner.start(invocation)
     second = runner.start(invocation)
     assert first != second
@@ -52,12 +54,14 @@ def test_runner_distinguishes_failure_and_cancellation(tmp_path: Path) -> None:
     """Keep nonzero exit and requested cancellation as different terminal outcomes."""
     root = tmp_path / "agent-output"
     root.mkdir()
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
     runner = SessionRunner(root)
-    failed = runner.start(RunnerInvocation((sys.executable, "-c", "import sys;sys.exit(7)"), tmp_path, {}, b""))
+    failed = runner.start(RunnerInvocation((sys.executable, "-c", "import sys;sys.exit(7)"), workspace, {}, b""))
     assert _finished(runner, failed) is AgentProcessState.FAILED
     assert runner.collect(failed).status.exit_code == 7
 
-    sleeping = runner.start(RunnerInvocation((sys.executable, "-c", "import time;time.sleep(60)"), tmp_path, {}, b""))
+    sleeping = runner.start(RunnerInvocation((sys.executable, "-c", "import time;time.sleep(60)"), workspace, {}, b""))
     try:
         assert runner.get_status(sleeping).process_state is AgentProcessState.RUNNING
         with pytest.raises(ValueError, match="agent_run_not_finished"):
@@ -74,10 +78,23 @@ def test_runner_start_failure_removes_private_files_without_echoing_environment(
     """A failed trusted command leaves no partial run or secret-bearing error text."""
     root = tmp_path / "agent-output"
     root.mkdir()
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
     runner = SessionRunner(root)
     invocation = RunnerInvocation(
-        (str(tmp_path / "missing-cli"),), tmp_path, {"PRIVATE_VALUE": "do-not-print"}, b"input"
+        (str(tmp_path / "missing-cli"),), workspace, {"PRIVATE_VALUE": "do-not-print"}, b"input"
     )
     with pytest.raises(RuntimeError, match="^agent_process_start_failed$"):
+        runner.start(invocation)
+    assert list(root.iterdir()) == []
+
+
+def test_runner_rejects_output_storage_inside_agent_workspace(tmp_path: Path) -> None:
+    """The agent workspace must not contain the process output directory."""
+    root = tmp_path / "agent-output"
+    root.mkdir()
+    runner = SessionRunner(root)
+    invocation = RunnerInvocation((sys.executable, "-c", "pass"), tmp_path, {}, b"")
+    with pytest.raises(ValueError, match="agent_runner_storage_overlaps_workspace"):
         runner.start(invocation)
     assert list(root.iterdir()) == []
