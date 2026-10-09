@@ -17,6 +17,10 @@ import pytest
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence import ApplicablePeriodV1
 from stock_research_llm_orchestrator.preparation import research_step
 from stock_research_llm_orchestrator.preparation.evidence_freeze import build_frozen_market, validate_frozen_market
+from stock_research_llm_orchestrator.preparation.evidence_update import (
+    build_jpx_evidence_update,
+    validate_jpx_evidence_update,
+)
 from stock_research_llm_orchestrator.preparation.initial_research_input import (
     build_initial_research_input,
     validate_initial_research_input,
@@ -57,7 +61,7 @@ NOW = datetime(2026, 9, 26, 9, tzinfo=UTC)
 START, END = date(2023, 9, 26), date(2026, 9, 26)
 
 
-def _workbook(category: str = "プライム（内国株式）", code: str = "7203") -> bytes:
+def _workbook(category: str = "プライム（内国株式）", code: str = "7203", snapshot: str = "20260831") -> bytes:
     header = (
         "日付",
         "コード",
@@ -70,7 +74,7 @@ def _workbook(category: str = "プライム（内国株式）", code: str = "720
         "規模コード",
         "規模区分",
     )
-    row = ("20260831", code, "Synthetic issuer", category, "", "", "", "", "", "")
+    row = (snapshot, code, "Synthetic issuer", category, "", "", "", "", "", "")
     shared = (
         '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
         + "".join(f"<si><t>{value}</t></si>" for value in (*header, *row))
@@ -432,7 +436,7 @@ def test_jpx_follow_up_replays_only_requested_security_and_reanalyzes(
     prior.mkdir()
     for name, body in build_bundle(data, first).items():
         (prior / name).write_bytes(body)
-    workbook = _workbook(code="6758")
+    workbook = _workbook(code="6758", snapshot="20260930")
     seen: list[str] = []
 
     def respond(request: httpx.Request) -> httpx.Response:
@@ -488,6 +492,39 @@ def test_jpx_follow_up_replays_only_requested_security_and_reanalyzes(
     files = read_bundle(follow_up)
     validate_jpx_follow_up(files)
     validate_bundle(read_bundle(draft))
+    market = read_bundle(tmp_path / "prepared")
+    approval_root = Path(__file__).parents[2] / "config/source-approvals"
+    approvals = {
+        "jpx": (approval_root / "jpx/v1.yaml").read_bytes(),
+        "yfinance": (approval_root / "yfinance/v3.yaml").read_bytes(),
+    }
+    previous = build_frozen_market(market, approvals, NOW.isoformat())
+    update = build_jpx_evidence_update(previous, files, "2026-10-04T10:01:00+00:00")
+    validate_jpx_evidence_update(update)
+    updated_evidence = json.loads(update["evidence-set.json"])
+    updated_manifest = json.loads(update["execution-manifest.json"])
+    assert updated_evidence["evidence_set_version"] == 2
+    assert updated_manifest["current_evidence_set_version"] == 2
+    assert (
+        updated_evidence["previous_evidence_set"]["artifact_reference"]["sha256"]
+        == sha256(previous["evidence-set.json"]).hexdigest()
+    )
+    assert updated_evidence["freshness_assessments"][0]["status"] == "missing"
+    assert updated_evidence["freshness_assessments"][0]["evidence_ids"] != ["jpx-raw"]
+    assert update["previous/evidence-set.json"] == previous["evidence-set.json"]
+    tampered = dict(update)
+    tampered["follow-up/jpx-workbook.xlsx"] += b"tampered"
+    with pytest.raises(ValueError):
+        validate_jpx_evidence_update(tampered)
+    with pytest.raises(ValueError):
+        publish_preparation(tmp_path, "invalid-evidence-update", tampered, validator=validate_jpx_evidence_update)
+    assert not (tmp_path / "invalid-evidence-update").exists()
+    mismatched = dict(files)
+    prior_input = json.loads(mismatched["prior-input.json"])
+    prior_input["security_code"] = "7203"
+    mismatched["prior-input.json"] = json.dumps(prior_input).encode()
+    with pytest.raises(ValueError):
+        build_jpx_evidence_update(previous, mismatched, "2026-10-04T10:01:00+00:00")
     assert files["jpx-workbook.xlsx"] == workbook
     assert json.loads(files["jpx-provenance.json"])["sha256"] == sha256(workbook).hexdigest()
     assert b"7203" not in files["source.bin"]
