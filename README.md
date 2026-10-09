@@ -329,6 +329,20 @@ python -m stock_research_llm_orchestrator.preparation.research_draft run \
   --input runs/my-initial-input/input.json --runs runs --destination my-research-draft
 ```
 
+検証済みの市場準備成果物は、承認済みソースの設定とともに初回の共通証拠集合へ凍結できます。
+JPX原本とyfinance返却表、両者の取得記録を保持します。正規化価格の全入力を証拠IDで
+解決できる場合は正規化結果も含めます。参照先とhashは実行manifestと対応表に記録します。
+凍結時刻はCLIが実行時に記録します。これはJPXの現在性や価格の最終受入を証明する
+時刻ではありません。未確認事項は`evidence-set.json`の鮮度評価に残ります。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.evidence_freeze prepare \
+  --market runs/my-market-preparation --approvals config/source-approvals \
+  --runs runs --destination my-frozen-market
+python -m stock_research_llm_orchestrator.preparation.evidence_freeze validate \
+  --bundle runs/my-frozen-market
+```
+
 | 内部CLI | 用途 |
 | --- | --- |
 | `preparation.market_evidence_cli` | JPXで確認した銘柄の価格取得・保存 |
@@ -336,10 +350,12 @@ python -m stock_research_llm_orchestrator.preparation.research_draft run \
 | `preparation.price_acceptance_cli` | 保存済み価格の期間・品質受入 |
 | `preparation.fx_cli` | Dukascopy日足FXの取得、年別receipt検証、価格との結合 |
 | `preparation.price_fx_run_cli` | task単位の価格・FX準備と再検証 |
+| `preparation.evidence_freeze` | 検証済み市場原本の初回凍結と公開manifestの検証 |
 
 各CLIの現在の引数は`python -m stock_research_llm_orchestrator.preparation.<module> --help`で確認してください。
 ソース利用と受入条件は[データソースと証拠の方針](docs/system-requirements/02-data-source-and-evidence-policy.md)を参照してください。
-原本と実行成果物は非公開の`runs/`に保存します。通常実行の証拠集合凍結と最終鮮度確認は未実装です。
+原本と実行成果物は非公開の`runs/`に保存します。初回の市場証拠凍結は実装済みです。
+財務・開示を含む証拠集合の統合、版更新、最終鮮度確認は未実装です。
 
 ## 開発への参加
 

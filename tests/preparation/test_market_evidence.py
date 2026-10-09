@@ -16,6 +16,7 @@ import pytest
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence import ApplicablePeriodV1
 from stock_research_llm_orchestrator.preparation import research_step
+from stock_research_llm_orchestrator.preparation.evidence_freeze import build_frozen_market, validate_frozen_market
 from stock_research_llm_orchestrator.preparation.initial_research_input import (
     build_initial_research_input,
     validate_initial_research_input,
@@ -44,7 +45,7 @@ from stock_research_llm_orchestrator.preparation.research_draft import (
     validate_bundle,
 )
 from stock_research_llm_orchestrator.preparation.research_follow_up import validate_follow_up
-from stock_research_llm_orchestrator.preparation.storage import read_bundle
+from stock_research_llm_orchestrator.preparation.storage import publish_preparation, read_bundle
 from stock_research_llm_orchestrator.preparation.task_input import create_human_selected_task
 from stock_research_llm_orchestrator.requests.storage import RuntimeStorageError
 from stock_research_llm_orchestrator.sources.yfinance.adapter import YfinanceDailyAdapter
@@ -232,6 +233,82 @@ def test_initial_research_input_retains_true_source_references_and_exact_market_
     changed["market/prices.csv"] += b" "
     with pytest.raises(ValueError):
         validate_initial_research_input(changed)
+
+
+def test_market_freeze_retains_raw_provenance_and_unresolved_freshness(tmp_path: Path) -> None:
+    """Freeze only retained bytes while leaving current listing and analysis readiness unresolved."""
+    scenario = Scenario(tmp_path)
+    scenario.prepare(calendar=scenario.calendar())
+    market = read_bundle(tmp_path / "prepared")
+    approval_root = Path(__file__).parents[2] / "config/source-approvals"
+    approvals = {
+        "jpx": (approval_root / "jpx/v1.yaml").read_bytes(),
+        "yfinance": (approval_root / "yfinance/v3.yaml").read_bytes(),
+    }
+    files = build_frozen_market(market, approvals, NOW.isoformat())
+    validate_frozen_market(files)
+    evidence = json.loads(files["evidence-set.json"])
+    manifest = json.loads(files["execution-manifest.json"])
+    paths = json.loads(files["artifact-paths.json"])
+    assert evidence["state"] == "frozen"
+    assert evidence["analysis_completed_at"] is None
+    assert evidence["freshness_assessments"][0]["status"] == "missing"
+    assert manifest["classification_pending_present"] is True
+    assert manifest["primary_review_passed"] is False
+    assert manifest["artifacts"]
+    for artifact in manifest["artifacts"]:
+        reference = artifact["reference"]
+        assert artifact["validation_status"] == "valid"
+        assert sha256(files[paths[reference["artifact_id"]]]).hexdigest() == reference["sha256"]
+    for record in evidence["records"]:
+        reference = record.get("payload_reference") or record.get("source_approval_reference")
+        if reference:
+            assert sha256(files[paths[reference["artifact_id"]]]).hexdigest() == reference["sha256"]
+    changed = dict(files)
+    changed["market/prices.csv"] += b" "
+    with pytest.raises(ValueError):
+        validate_frozen_market(changed)
+    changed = dict(files)
+    del changed["approvals/jpx.yaml"]
+    with pytest.raises(ValueError):
+        validate_frozen_market(changed)
+    changed = dict(files)
+    changed["artifact-paths.json"] += b" "
+    with pytest.raises(ValueError, match="frozen_market_binding_invalid"):
+        validate_frozen_market(changed)
+    changed = dict(files)
+    changed["approvals/jpx.yaml"] = approvals["yfinance"]
+    with pytest.raises(ValueError, match="freeze_source_approval_mismatch"):
+        validate_frozen_market(changed)
+    with pytest.raises(ValueError):
+        publish_preparation(tmp_path, "invalid-freeze", changed, validator=validate_frozen_market)
+    assert not (tmp_path / "invalid-freeze").exists()
+
+
+def test_market_freeze_maps_replayable_normalized_prices_to_exact_inputs(tmp_path: Path) -> None:
+    """Preserve normalized prices when all of their file inputs have evidence records."""
+    scenario = Scenario(tmp_path)
+    scenario.prepare()
+    market = read_bundle(tmp_path / "prepared")
+    approval_root = Path(__file__).parents[2] / "config/source-approvals"
+    approvals = {
+        "jpx": (approval_root / "jpx/v1.yaml").read_bytes(),
+        "yfinance": (approval_root / "yfinance/v3.yaml").read_bytes(),
+    }
+    files = build_frozen_market(market, approvals, NOW.isoformat())
+    validate_frozen_market(files)
+    records = json.loads(files["evidence-set.json"])["records"]
+    normalized = next(item for item in records if item["layer"] == "normalized")
+    assert set(normalized["input_evidence_ids"]) == {
+        "jpx-raw",
+        "jpx-metadata",
+        "yfinance-raw",
+        "yfinance-metadata",
+    }
+    assert normalized["content_sha256"] == sha256(files["market/normalized.json"]).hexdigest()
+    assert json.loads(files["artifact-paths.json"])[normalized["evidence_id"]] == "market/normalized.json"
+    with pytest.raises(ValueError, match="freeze_source_approval_mismatch"):
+        build_frozen_market(market, approvals, "2026-12-25T00:00:00+09:00")
 
 
 def test_second_security_reaches_reanalysis_with_replayable_evidence(
