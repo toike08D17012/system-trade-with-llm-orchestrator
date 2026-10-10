@@ -53,6 +53,7 @@ from stock_research_llm_orchestrator.preparation.research_draft import (
 from stock_research_llm_orchestrator.preparation.research_follow_up import validate_follow_up
 from stock_research_llm_orchestrator.preparation.storage import publish_preparation, read_bundle
 from stock_research_llm_orchestrator.preparation.task_input import create_human_selected_task
+from stock_research_llm_orchestrator.preparation.worker_evidence_packet import build_codex_evidence_packet
 from stock_research_llm_orchestrator.requests.storage import RuntimeStorageError
 from stock_research_llm_orchestrator.sources.yfinance.adapter import YfinanceDailyAdapter
 from stock_research_llm_orchestrator.sources.yfinance.native_history import HistoryAcquisitionError, NativeHistoryClient
@@ -532,6 +533,44 @@ def test_jpx_follow_up_replays_only_requested_security_and_reanalyzes(
     assert context.evidence_set_reference.sha256 == sha256(update["evidence-set.json"]).hexdigest()
     assert context.security.identifier.security_code == "6758"
     assert len(context.source_metadata_evidence_ids) == 3
+    transfer_approval = (approval_root / "jpx/v2.yaml").read_bytes()
+    packet = build_codex_evidence_packet(
+        update,
+        context,
+        (Path(__file__).parents[2] / "config/policies/detailed-analysis/v1.yaml").read_bytes(),
+        transfer_approval,
+        datetime(2026, 10, 4, 10, 1, tzinfo=UTC),
+    )
+    assert packet.evidence_id in context.common_evidence_ids
+    assert packet.security_code == "6758"
+    assert packet.snapshot_on == "2026-09-30"
+    assert all(item.status == "missing" for item in packet.freshness_assessments)
+    assert len(packet.model_dump_json()) < 4000
+    assert '"rows"' not in packet.model_dump_json()
+    with pytest.raises(ValueError, match="codex_packet_transfer_not_approved"):
+        build_codex_evidence_packet(
+            update,
+            context,
+            (Path(__file__).parents[2] / "config/policies/detailed-analysis/v1.yaml").read_bytes(),
+            approvals["jpx"],
+            datetime(2026, 10, 4, 10, 1, tzinfo=UTC),
+        )
+    with pytest.raises(ValueError, match="codex_packet_transfer_not_approved"):
+        build_codex_evidence_packet(
+            update,
+            context,
+            (Path(__file__).parents[2] / "config/policies/detailed-analysis/v1.yaml").read_bytes(),
+            transfer_approval,
+            datetime(2026, 12, 25, tzinfo=UTC),
+        )
+    with pytest.raises(ValueError, match="codex_packet_context_mismatch"):
+        build_codex_evidence_packet(
+            update,
+            context.model_copy(update={"task_id": "other-task"}),
+            (Path(__file__).parents[2] / "config/policies/detailed-analysis/v1.yaml").read_bytes(),
+            transfer_approval,
+            datetime(2026, 10, 4, 10, 1, tzinfo=UTC),
+        )
     updated_evidence = json.loads(update["evidence-set.json"])
     updated_manifest = json.loads(update["execution-manifest.json"])
     assert updated_evidence["evidence_set_version"] == 2
