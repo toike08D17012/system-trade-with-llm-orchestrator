@@ -13,6 +13,7 @@ from types import SimpleNamespace
 import httpx
 import pandas as pd  # type: ignore[import-untyped]
 import pytest
+import yaml
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence import ApplicablePeriodV1
 from stock_research_llm_orchestrator.preparation import research_step
@@ -42,6 +43,7 @@ from stock_research_llm_orchestrator.preparation.market_evidence import (
 )
 from stock_research_llm_orchestrator.preparation.market_evidence_cli import main
 from stock_research_llm_orchestrator.preparation.public_ir_follow_up import acquire_public_ir_follow_up
+from stock_research_llm_orchestrator.preparation.research_context import build_codex_research_context
 from stock_research_llm_orchestrator.preparation.research_draft import (
     DraftInput,
     DraftOutput,
@@ -251,6 +253,26 @@ def test_market_freeze_retains_raw_provenance_and_unresolved_freshness(tmp_path:
     }
     files = build_frozen_market(market, approvals, NOW.isoformat())
     validate_frozen_market(files)
+    policy = (Path(__file__).parents[2] / "config/policies/detailed-analysis/v1.yaml").read_bytes()
+    context = build_codex_research_context(files, policy, NOW.isoformat())
+    assert context.evidence_set_version == 1
+    assert context.security.name == "Synthetic issuer"
+    assert context.evidence_set_reference.sha256 == sha256(files["evidence-set.json"]).hexdigest()
+    assert set(context.common_evidence_ids) == {
+        item["evidence_id"] for item in json.loads(files["evidence-set.json"])["records"]
+    }
+    assert len(context.model_dump_json()) < 5000
+    assert '"rows"' not in context.model_dump_json()
+    with pytest.raises(ValueError, match="research_context_time_invalid"):
+        build_codex_research_context(files, policy, "2026-09-25T00:00:00+00:00")
+    mismatched_policy = yaml.safe_load(policy)
+    mismatched_policy["policy_version"] = 2
+    with pytest.raises(ValueError, match="research_context_input_mismatch"):
+        build_codex_research_context(files, yaml.safe_dump(mismatched_policy).encode(), NOW.isoformat())
+    changed_context_input = dict(files)
+    changed_context_input["market/prices.csv"] += b"tampered"
+    with pytest.raises(ValueError):
+        build_codex_research_context(changed_context_input, policy, NOW.isoformat())
     evidence = json.loads(files["evidence-set.json"])
     manifest = json.loads(files["execution-manifest.json"])
     paths = json.loads(files["artifact-paths.json"])
@@ -501,6 +523,15 @@ def test_jpx_follow_up_replays_only_requested_security_and_reanalyzes(
     previous = build_frozen_market(market, approvals, NOW.isoformat())
     update = build_jpx_evidence_update(previous, files, "2026-10-04T10:01:00+00:00")
     validate_jpx_evidence_update(update)
+    context = build_codex_research_context(
+        update,
+        (Path(__file__).parents[2] / "config/policies/detailed-analysis/v1.yaml").read_bytes(),
+        "2026-10-04T10:01:00+00:00",
+    )
+    assert context.evidence_set_version == 2
+    assert context.evidence_set_reference.sha256 == sha256(update["evidence-set.json"]).hexdigest()
+    assert context.security.identifier.security_code == "6758"
+    assert len(context.source_metadata_evidence_ids) == 3
     updated_evidence = json.loads(update["evidence-set.json"])
     updated_manifest = json.loads(update["execution-manifest.json"])
     assert updated_evidence["evidence_set_version"] == 2

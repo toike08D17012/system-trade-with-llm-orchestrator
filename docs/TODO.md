@@ -50,7 +50,7 @@
 ### P4: Agent実行とオーケストレーション
 
 - [ ] 共通セッションランナーとCodex・ClaudeのAdapterを実装し、同じ対象銘柄と共通証拠から独立した分析を得る。
-  共通processランナーの起動・状態・取消・結果収集は実装した。作業directoryと出力保存先の重複を拒否するが、OSレベルの役割別隔離は別途必要。Codex CLI `0.157.1` の新規・ID指定resume用Adapterを追加し、空の一時workspaceで非対話・read-onlyの実CLI往復と同一session IDを確認した。JSONLからsession ID、最終本文、provider報告usageのfieldを抽出できたが、usageの集計scopeは未確定のため確定値へ変換していない。永続復旧、業務用の証拠送信と構造化分析、Claude接続は残る。
+  共通processランナーの起動・状態・取消・結果収集は実装した。作業directoryと出力保存先の重複を拒否するが、OSレベルの役割別隔離は別途必要。Codex CLI `0.157.1` の新規・ID指定resume用Adapterを追加し、空の一時workspaceで非対話・read-onlyの実CLI往復と同一session IDを確認した。JSONLからsession ID、最終本文、provider報告usageのfieldを抽出できたが、usageの集計scopeは未確定のため確定値へ変換していない。検証済み証拠集合の初回版・JPX更新版から、原本や価格系列を複製しないCodex向け`ResearchContextV1`参照入力を生成でき、7203実データの版2で確認した。永続復旧、業務用の証拠本文選別と送信、構造化分析、Claude接続は残る。
 - [ ] 候補資料を承認済み取得・検証工程へ送り、検証済み資料を両作業者へ共有する。構造化出力と証拠参照を検証する。
 - [ ] 分析統合、一次レビュー、指摘への応答、限定再調査、重要争点の追加監査、人間判断待ちを既存契約に従って制御する。
 - [ ] 状態遷移、中断、再開、手動再実行、providerエラーと安全停止を実装する。
