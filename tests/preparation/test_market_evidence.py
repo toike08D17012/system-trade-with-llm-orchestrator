@@ -16,6 +16,7 @@ import pytest
 import yaml
 
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence import ApplicablePeriodV1
+from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
 from stock_research_llm_orchestrator.preparation import research_step
 from stock_research_llm_orchestrator.preparation.evidence_freeze import build_frozen_market, validate_frozen_market
 from stock_research_llm_orchestrator.preparation.evidence_update import (
@@ -41,7 +42,7 @@ from stock_research_llm_orchestrator.preparation.market_evidence import (
     prepare_market_evidence,
     validate_market_preparation,
 )
-from stock_research_llm_orchestrator.preparation.market_evidence_cli import main
+from stock_research_llm_orchestrator.preparation.market_evidence_cli import _continued_inputs, main
 from stock_research_llm_orchestrator.preparation.public_ir_follow_up import acquire_public_ir_follow_up
 from stock_research_llm_orchestrator.preparation.research_context import build_codex_research_context
 from stock_research_llm_orchestrator.preparation.research_draft import (
@@ -524,6 +525,11 @@ def test_jpx_follow_up_replays_only_requested_security_and_reanalyzes(
     previous = build_frozen_market(market, approvals, NOW.isoformat())
     update = build_jpx_evidence_update(previous, files, "2026-10-04T10:01:00+00:00")
     validate_jpx_evidence_update(update)
+    publish_preparation(tmp_path, "continued-evidence", update, validator=validate_jpx_evidence_update)
+    continued_task, continued_jpx, continued_provenance = _continued_inputs(tmp_path / "continued-evidence")
+    assert continued_task.task_id == "task-native-1"
+    assert continued_jpx == workbook
+    assert continued_provenance.sha256 == sha256(workbook).hexdigest()
     context = build_codex_research_context(
         update,
         (Path(__file__).parents[2] / "config/policies/detailed-analysis/v1.yaml").read_bytes(),
@@ -800,6 +806,51 @@ def test_cli_requires_explicit_network_opt_in() -> None:
     with pytest.raises(SystemExit) as result:
         main(["--code", "7203"])
     assert result.value.code == 2
+
+
+def test_cli_continues_validated_task_before_provider_call(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A continued market request keeps the original task and latest bound source bytes."""
+    from stock_research_llm_orchestrator.preparation import market_evidence_cli
+
+    scenario = Scenario(tmp_path)
+    scenario.prepare()
+    market = read_bundle(tmp_path / "prepared")
+    approval_root = Path(__file__).parents[2] / "config/source-approvals"
+    frozen = build_frozen_market(
+        market,
+        {
+            "jpx": (approval_root / "jpx/v1.yaml").read_bytes(),
+            "yfinance": (approval_root / "yfinance/v3.yaml").read_bytes(),
+        },
+        NOW.isoformat(),
+    )
+    publish_preparation(tmp_path, "frozen", frozen, validator=validate_frozen_market)
+    seen: list[str] = []
+
+    def inspect(**kwargs: object) -> None:
+        task = kwargs["task"]
+        assert isinstance(task, DetailedAnalysisTaskV1)
+        seen.append(task.task_id)
+        assert kwargs["jpx_body"] == market["jpx.xlsx"]
+        raise ValueError("stop_before_provider_call")
+
+    monkeypatch.setattr(market_evidence_cli, "prepare_market_evidence", inspect)
+    arguments = [
+        "--allow-network",
+        "--continue-evidence",
+        str(tmp_path / "frozen"),
+        "--output",
+        str(tmp_path / "continued-market"),
+    ]
+    assert main(arguments) == 1
+    assert seen == ["task-native-1"]
+    with pytest.raises(SystemExit):
+        main([*arguments, "--code", "7203"])
+    changed = dict(frozen)
+    changed["market/prices.csv"] += b"tampered"
+    (tmp_path / "frozen/market/prices.csv").write_bytes(changed["market/prices.csv"])
+    assert main(arguments) == 1
+    assert seen == ["task-native-1"]
 
 
 def test_cli_include_today_uses_exclusive_tomorrow_without_provider_call(

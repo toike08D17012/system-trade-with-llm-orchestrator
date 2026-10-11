@@ -354,9 +354,17 @@ python -m stock_research_llm_orchestrator.preparation.evidence_update validate \
   --bundle runs/my-updated-evidence
 ```
 
+同じtaskの価格を後日再取得する場合は、検証済み証拠bundleを指定します。CLIはbundle内のtaskと最新JPX原本を再検証して再利用し、新しいtask IDを発行しません。取得結果の品質受入と証拠集合の版更新は別工程です。
+
+```bash
+python -m stock_research_llm_orchestrator.preparation.market_evidence_cli \
+  --allow-network --continue-evidence runs/my-updated-evidence \
+  --output runs/my-market-refresh
+```
+
 | 内部CLI | 用途 |
 | --- | --- |
-| `preparation.market_evidence_cli` | JPXで確認した銘柄の価格取得・保存 |
+| `preparation.market_evidence_cli` | JPXで確認した銘柄の価格取得・保存、検証済み証拠bundleのtask継続 |
 | `preparation.market_revalidation_cli` | 保存済み市場証拠のオフライン再検証 |
 | `preparation.price_acceptance_cli` | 保存済み価格の期間・品質受入 |
 | `preparation.fx_cli` | Dukascopy日足FXの取得、年別receipt検証、価格との結合 |
