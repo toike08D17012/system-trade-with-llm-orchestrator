@@ -1,0 +1,31 @@
+{
+  "schema_id": "detailed-analysis.acquisition-snapshot",
+  "schema_version": 1,
+  "task_id": "toyota",
+  "artifact_id": "snapshot-1",
+  "created_at": "2026-11-14T00:00:00Z",
+  "version": 1,
+  "initial_evidence_set_reference": {
+    "artifact_type": "evidence-set",
+    "artifact_id": "initial",
+    "schema_id": "detailed-analysis.evidence-set",
+    "schema_version": 1,
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "evidence": [
+    {
+      "evidence_id": "public-document",
+      "source_id": "public-web",
+      "source_reference": "https://example.com/document",
+      "retrieved_at": "2026-11-14T00:00:00Z",
+      "raw_reference": {
+        "artifact_id": "original",
+        "relative_path": "acquisition/original.txt",
+        "media_type": "text/plain",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "text": "Public company disclosure.",
+      "validation": "verified"
+    }
+  ]
+}

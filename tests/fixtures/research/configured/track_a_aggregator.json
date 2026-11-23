@@ -1,0 +1,211 @@
+{
+  "horizon_analyses": [
+    {
+      "horizon": "medium_term",
+      "summary": "Fixture medium-term analysis.",
+      "positive_factors": [
+        "Verified demand evidence supports the base case."
+      ],
+      "negative_factors": [
+        "Input-cost uncertainty remains material."
+      ],
+      "thesis": [
+        "Execution could support the medium-term operating hypothesis."
+      ],
+      "counter_thesis": [
+        "A demand reversal would break the hypothesis."
+      ],
+      "valuation_view": "Valuation remains conditional on verified inputs.",
+      "watch_conditions": [
+        "Monitor the next verified disclosure."
+      ],
+      "missing_information": [
+        "Current verified financial statements and final freshness verification are missing."
+      ],
+      "claims": [
+        {
+          "claim_id": "track_a_aggregator-mt-financial",
+          "perspective": "financial",
+          "statement": "The supplied synthetic excerpt is insufficient to establish this perspective.",
+          "claim_type": "hypothesis",
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "counterevidence_ids": [],
+          "uncertainty": "This is synthetic test evidence and does not establish an investment case.",
+          "material": true
+        },
+        {
+          "claim_id": "track_a_aggregator-mt-valuation",
+          "perspective": "valuation",
+          "statement": "The supplied synthetic excerpt is insufficient to establish this perspective.",
+          "claim_type": "hypothesis",
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "counterevidence_ids": [],
+          "uncertainty": "This is synthetic test evidence and does not establish an investment case.",
+          "material": true
+        },
+        {
+          "claim_id": "track_a_aggregator-mt-business",
+          "perspective": "business",
+          "statement": "The supplied synthetic excerpt is insufficient to establish this perspective.",
+          "claim_type": "hypothesis",
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "counterevidence_ids": [],
+          "uncertainty": "This is synthetic test evidence and does not establish an investment case.",
+          "material": true
+        },
+        {
+          "claim_id": "track_a_aggregator-mt-technical",
+          "perspective": "technical_reference",
+          "statement": "The supplied synthetic excerpt is insufficient to establish this perspective.",
+          "claim_type": "hypothesis",
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "counterevidence_ids": [],
+          "uncertainty": "This is synthetic test evidence and does not establish an investment case.",
+          "material": false
+        },
+        {
+          "claim_id": "track_a_aggregator-mt-risk",
+          "perspective": "risk_and_counterevidence",
+          "statement": "The supplied synthetic excerpt is insufficient to establish this perspective.",
+          "claim_type": "hypothesis",
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "counterevidence_ids": [],
+          "uncertainty": "This is synthetic test evidence and does not establish an investment case.",
+          "material": true
+        }
+      ],
+      "evaluability": "not_evaluable",
+      "assessment": null
+    },
+    {
+      "horizon": "long_term",
+      "summary": "Fixture long-term analysis.",
+      "positive_factors": [
+        "The verified balance-sheet fixture supports resilience."
+      ],
+      "negative_factors": [
+        "Long-term competitive durability remains uncertain."
+      ],
+      "thesis": [
+        "Durable execution could support long-term value creation."
+      ],
+      "counter_thesis": [
+        "Structural share loss would invalidate the thesis."
+      ],
+      "valuation_view": "Long-term valuation depends on unverified durability assumptions.",
+      "watch_conditions": [
+        "Monitor verified market-share evidence."
+      ],
+      "missing_information": [
+        "Current verified financial statements and final freshness verification are missing."
+      ],
+      "claims": [
+        {
+          "claim_id": "track_a_aggregator-lt-financial",
+          "perspective": "financial",
+          "statement": "The supplied synthetic excerpt is insufficient to establish this perspective.",
+          "claim_type": "hypothesis",
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "counterevidence_ids": [],
+          "uncertainty": "This is synthetic test evidence and does not establish an investment case.",
+          "material": true
+        },
+        {
+          "claim_id": "track_a_aggregator-lt-valuation",
+          "perspective": "valuation",
+          "statement": "The supplied synthetic excerpt is insufficient to establish this perspective.",
+          "claim_type": "hypothesis",
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "counterevidence_ids": [],
+          "uncertainty": "This is synthetic test evidence and does not establish an investment case.",
+          "material": true
+        },
+        {
+          "claim_id": "track_a_aggregator-lt-business",
+          "perspective": "business",
+          "statement": "The supplied synthetic excerpt is insufficient to establish this perspective.",
+          "claim_type": "hypothesis",
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "counterevidence_ids": [],
+          "uncertainty": "This is synthetic test evidence and does not establish an investment case.",
+          "material": true
+        },
+        {
+          "claim_id": "track_a_aggregator-lt-technical",
+          "perspective": "technical_reference",
+          "statement": "The supplied synthetic excerpt is insufficient to establish this perspective.",
+          "claim_type": "hypothesis",
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "counterevidence_ids": [],
+          "uncertainty": "This is synthetic test evidence and does not establish an investment case.",
+          "material": false
+        },
+        {
+          "claim_id": "track_a_aggregator-lt-risk",
+          "perspective": "risk_and_counterevidence",
+          "statement": "The supplied synthetic excerpt is insufficient to establish this perspective.",
+          "claim_type": "hypothesis",
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "counterevidence_ids": [],
+          "uncertainty": "This is synthetic test evidence and does not establish an investment case.",
+          "material": true
+        }
+      ],
+      "evaluability": "not_evaluable",
+      "assessment": null
+    }
+  ],
+  "cross_horizon_summary": {
+    "agreements": [
+      "Execution quality matters in both horizons."
+    ],
+    "differences": [
+      "Long-term durability has a larger evidence gap."
+    ],
+    "summary": "The horizons share drivers but have different uncertainty."
+  },
+  "entry_exit_context": {
+    "price_as_of": null,
+    "current_price_context": "Current price is context only and not a direction forecast.",
+    "entry_reference_conditions": [
+      "Reassess only after verified valuation inputs update."
+    ],
+    "technical_exit_reference_conditions": [
+      "A verified structural break would require reassessment."
+    ],
+    "thesis_invalidation_conditions": [
+      "Verified structural share loss."
+    ],
+    "upcoming_event_risks": [
+      "Next disclosure may change the evidence set."
+    ],
+    "volatility_context": "Fixture volatility is elevated.",
+    "evidence_ids": [
+      "ir-excerpt"
+    ],
+    "missing_information": [
+      "No current price is supplied. The timestamp is a synthetic test observation only."
+    ],
+    "reference_only_not_trade_instruction": true
+  }
+}

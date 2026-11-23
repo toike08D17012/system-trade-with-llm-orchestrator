@@ -26,5 +26,13 @@
   "detailed-analysis.synthesis-result": "synthesis-result/valid/two-worker.json",
   "detailed-analysis.validation-error": "validation-error/valid/schema-failure.json",
   "detailed-analysis.web-research-policy": "web-research-policy/valid/independent-search.json",
-  "detailed-analysis.worker-analysis": "worker-analysis/valid/codex-worker.json"
+  "detailed-analysis.worker-analysis": "worker-analysis/valid/codex-worker.json",
+  "detailed-analysis.specialist-analysis": "specialist-analysis/valid/minimum.json",
+  "detailed-analysis.investment-conclusions": "investment-conclusions/valid/minimum.json",
+  "detailed-analysis.agent-configuration": "agent-configuration/valid/minimum.json",
+  "detailed-analysis.configured-analysis": "configured-analysis/valid/minimum.json",
+  "detailed-analysis.web-analysis": "web-analysis/valid/minimum.json",
+  "detailed-analysis.acquisition-analysis": "acquisition-analysis/valid/minimum.json",
+  "detailed-analysis.acquisition-result": "acquisition-result/valid/minimum.json",
+  "detailed-analysis.acquisition-snapshot": "acquisition-snapshot/valid/minimum.json"
 }

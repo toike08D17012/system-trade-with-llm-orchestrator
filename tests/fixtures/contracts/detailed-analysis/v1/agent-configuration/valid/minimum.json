@@ -1,0 +1,33 @@
+{
+  "schema_id": "detailed-analysis.agent-configuration",
+  "schema_version": 1,
+  "artifact_id": "agents-gpt-only-v1",
+  "agents": {
+    "gpt": {
+      "adapter": "codex_cli",
+      "model": "gpt-6.2-sol",
+      "model_family": "openai_gpt",
+      "reasoning": {
+        "effort": "high"
+      }
+    }
+  },
+  "roles": {
+    "track_a": {
+      "capital": "gpt",
+      "income": "gpt",
+      "aggregator": "gpt"
+    },
+    "track_b": {
+      "capital": "gpt",
+      "income": "gpt",
+      "aggregator": "gpt"
+    },
+    "orchestrator": "gpt",
+    "primary_reviewer": "gpt",
+    "translation": "gpt"
+  },
+  "review_policy": {
+    "mode": "single_family_development"
+  }
+}

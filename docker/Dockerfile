@@ -155,7 +155,7 @@ COPY --chown=${USER_UID}:${USER_GID} \
 
 RUN --mount=type=cache,target=${HOME}/.cache/uv,uid=${USER_UID},gid=${USER_GID},mode=0755 \
     uv python install ${PYTHON_VERSION} \
-    && uv sync --frozen --no-install-project
+    && uv sync --frozen --extra pdf --no-install-project
 
 CMD ["/bin/bash"]
 

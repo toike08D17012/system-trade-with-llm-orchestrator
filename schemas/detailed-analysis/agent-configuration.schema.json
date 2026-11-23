@@ -1,0 +1,195 @@
+{
+  "$defs": {
+    "AgentDefinition": {
+      "additionalProperties": false,
+      "description": "One implemented transport with an explicit model and declared family.",
+      "properties": {
+        "adapter": {
+          "enum": [
+            "codex_cli",
+            "claude_cli"
+          ],
+          "title": "Adapter",
+          "type": "string"
+        },
+        "model": {
+          "$ref": "#/$defs/ModelId"
+        },
+        "model_family": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Model Family",
+          "type": "string"
+        },
+        "reasoning": {
+          "$ref": "#/$defs/ReasoningSettings"
+        }
+      },
+      "required": [
+        "adapter",
+        "model",
+        "model_family",
+        "reasoning"
+      ],
+      "title": "AgentDefinition",
+      "type": "object"
+    },
+    "ModelId": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/+-]{0,199}$",
+      "type": "string"
+    },
+    "ReasoningSettings": {
+      "additionalProperties": false,
+      "description": "Requested effort; unsupported settings never trigger a lower-effort fallback.",
+      "properties": {
+        "effort": {
+          "enum": [
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max",
+            "ultra"
+          ],
+          "title": "Effort",
+          "type": "string"
+        }
+      },
+      "required": [
+        "effort"
+      ],
+      "title": "ReasoningSettings",
+      "type": "object"
+    },
+    "ReviewPolicy": {
+      "additionalProperties": false,
+      "description": "Explicitly distinguish development self-review from cross-family requirements.",
+      "properties": {
+        "mode": {
+          "enum": [
+            "single_family_development",
+            "cross_family_required"
+          ],
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "title": "ReviewPolicy",
+      "type": "object"
+    },
+    "RoleBindings": {
+      "additionalProperties": false,
+      "description": "Stable workflow roles; assigning the same agent never shares a session.",
+      "properties": {
+        "orchestrator": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Orchestrator",
+          "type": "string"
+        },
+        "primary_reviewer": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Primary Reviewer",
+          "type": "string"
+        },
+        "track_a": {
+          "$ref": "#/$defs/TrackRoles"
+        },
+        "track_b": {
+          "$ref": "#/$defs/TrackRoles"
+        },
+        "translation": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Translation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "track_a",
+        "track_b",
+        "orchestrator",
+        "primary_reviewer",
+        "translation"
+      ],
+      "title": "RoleBindings",
+      "type": "object"
+    },
+    "TrackRoles": {
+      "additionalProperties": false,
+      "description": "Two objectives and a separate aggregation session.",
+      "properties": {
+        "aggregator": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Aggregator",
+          "type": "string"
+        },
+        "capital": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Capital",
+          "type": "string"
+        },
+        "income": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Income",
+          "type": "string"
+        }
+      },
+      "required": [
+        "capital",
+        "income",
+        "aggregator"
+      ],
+      "title": "TrackRoles",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.agent-configuration:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Versioned, credential-free personal execution profile.",
+  "properties": {
+    "agents": {
+      "minProperties": 1,
+      "patternProperties": {
+        "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$": {
+          "$ref": "#/$defs/AgentDefinition"
+        }
+      },
+      "title": "Agents",
+      "type": "object"
+    },
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "review_policy": {
+      "$ref": "#/$defs/ReviewPolicy"
+    },
+    "roles": {
+      "$ref": "#/$defs/RoleBindings"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.agent-configuration",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_id",
+    "schema_version",
+    "artifact_id",
+    "agents",
+    "roles",
+    "review_policy"
+  ],
+  "title": "AgentConfigurationV1",
+  "type": "object"
+}

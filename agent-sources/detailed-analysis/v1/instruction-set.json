@@ -1,12 +1,16 @@
 {
   "instruction_set_id": "detailed-analysis-instructions",
   "instruction_set_version": 1,
-  "composition_order": ["common", "role", "task_scoped"],
+  "composition_order": [
+    "common",
+    "role",
+    "task_scoped"
+  ],
   "common": {
     "instruction_id": "common",
     "instruction_version": 1,
     "relative_path": "agent-sources/detailed-analysis/v1/common.md",
-    "content_sha256": "56afb58fe716db0fcbaf53829516126843710a1db2b4946145c59b9a2bb13d79"
+    "content_sha256": "fc5e0240051b30691cea1a534c1c24f5a15589fe9d1c17575b798a6680dbab57"
   },
   "roles": {
     "orchestrator": {
@@ -54,7 +58,9 @@
       "instruction_version": 1,
       "relative_path": "agent-sources/detailed-analysis/v1/primary-reviewer.md",
       "content_sha256": "6c4c262e6bb7c841ca447d03bb59eecb18361eed01f6a1be608dbfe45e92e709",
-      "output_schema_ids": ["detailed-analysis.primary-review"],
+      "output_schema_ids": [
+        "detailed-analysis.primary-review"
+      ],
       "permission_profile": "reviewer-read-only",
       "workspace_profile": "task-scoped-read-only"
     },
@@ -63,7 +69,9 @@
       "instruction_version": 1,
       "relative_path": "agent-sources/detailed-analysis/v1/antigravity-auditor.md",
       "content_sha256": "49d8ea2e7398c9c68a150a391ffaec261488c5ce8fc859828f8c9f62d66bffc5",
-      "output_schema_ids": ["detailed-analysis.audit-result"],
+      "output_schema_ids": [
+        "detailed-analysis.audit-result"
+      ],
       "permission_profile": "auditor-read-only",
       "workspace_profile": "single-dispute-read-only"
     }

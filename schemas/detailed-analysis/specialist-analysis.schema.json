@@ -1,0 +1,402 @@
+{
+  "$defs": {
+    "AnalysisClaimV1": {
+      "additionalProperties": false,
+      "description": "One typed claim with evidence and explicit uncertainty.",
+      "properties": {
+        "claim_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Claim Id",
+          "type": "string"
+        },
+        "claim_type": {
+          "$ref": "#/$defs/ClaimType"
+        },
+        "counterevidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Counterevidence Ids",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "material": {
+          "title": "Material",
+          "type": "boolean"
+        },
+        "perspective": {
+          "$ref": "#/$defs/AnalysisPerspective"
+        },
+        "statement": {
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "uncertainty": {
+          "minLength": 1,
+          "title": "Uncertainty",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim_id",
+        "perspective",
+        "statement",
+        "claim_type",
+        "evidence_ids",
+        "counterevidence_ids",
+        "uncertainty",
+        "material"
+      ],
+      "title": "AnalysisClaimV1",
+      "type": "object"
+    },
+    "AnalysisPerspective": {
+      "description": "Five perspectives required for both evaluation horizons.",
+      "enum": [
+        "financial",
+        "valuation",
+        "business",
+        "technical_reference",
+        "risk_and_counterevidence"
+      ],
+      "title": "AnalysisPerspective",
+      "type": "string"
+    },
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "ClaimType": {
+      "description": "Required semantic classification for an analysis claim.",
+      "enum": [
+        "fact",
+        "inference",
+        "hypothesis"
+      ],
+      "title": "ClaimType",
+      "type": "string"
+    },
+    "Confidence": {
+      "description": "Qualitative confidence supported by the cited evidence.",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Confidence",
+      "type": "string"
+    },
+    "Evaluability": {
+      "description": "Whether the approved policy has enough usable evidence for evaluation.",
+      "enum": [
+        "evaluable",
+        "not_evaluable"
+      ],
+      "title": "Evaluability",
+      "type": "string"
+    },
+    "Horizon": {
+      "enum": [
+        "medium_term",
+        "long_term"
+      ],
+      "type": "string"
+    },
+    "MonetaryAmount": {
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+      "type": "string"
+    },
+    "Objective": {
+      "enum": [
+        "capital_gain",
+        "income_gain"
+      ],
+      "type": "string"
+    },
+    "ObjectiveHorizonV1": {
+      "additionalProperties": false,
+      "description": "One specialist's story, uncertainty and counterevidence for one horizon.",
+      "properties": {
+        "claims": {
+          "items": {
+            "$ref": "#/$defs/AnalysisClaimV1"
+          },
+          "minItems": 1,
+          "title": "Claims",
+          "type": "array"
+        },
+        "confidence": {
+          "$ref": "#/$defs/Confidence"
+        },
+        "counter_thesis": {
+          "minLength": 1,
+          "title": "Counter Thesis",
+          "type": "string"
+        },
+        "evaluability": {
+          "$ref": "#/$defs/Evaluability"
+        },
+        "horizon": {
+          "$ref": "#/$defs/Horizon"
+        },
+        "missing_information": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Missing Information",
+          "type": "array"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "scenarios": {
+          "items": {
+            "$ref": "#/$defs/ScenarioV1"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Scenarios",
+          "type": "array"
+        },
+        "thesis": {
+          "minLength": 1,
+          "title": "Thesis",
+          "type": "string"
+        },
+        "watch_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Watch Conditions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "horizon",
+        "evaluability",
+        "confidence",
+        "rationale",
+        "thesis",
+        "counter_thesis",
+        "watch_conditions",
+        "missing_information",
+        "claims",
+        "scenarios"
+      ],
+      "title": "ObjectiveHorizonV1",
+      "type": "object"
+    },
+    "ScenarioV1": {
+      "additionalProperties": false,
+      "description": "Explicit future assumptions; observed purchase prices come from common input.",
+      "properties": {
+        "assumptions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "case": {
+          "enum": [
+            "bear",
+            "base",
+            "bull"
+          ],
+          "title": "Case",
+          "type": "string"
+        },
+        "cumulative_dividends": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MonetaryAmount"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currency": {
+          "const": "JPY",
+          "title": "Currency",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "missing_information": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Missing Information",
+          "type": "array"
+        },
+        "months": {
+          "maximum": 60,
+          "minimum": 12,
+          "title": "Months",
+          "type": "integer"
+        },
+        "per_share_basis": {
+          "minLength": 1,
+          "title": "Per Share Basis",
+          "type": "string"
+        },
+        "story": {
+          "minLength": 1,
+          "title": "Story",
+          "type": "string"
+        },
+        "terminal_price": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MonetaryAmount"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "case",
+        "story",
+        "assumptions",
+        "evidence_ids",
+        "months",
+        "currency",
+        "per_share_basis",
+        "terminal_price",
+        "cumulative_dividends",
+        "missing_information"
+      ],
+      "title": "ScenarioV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.specialist-analysis:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One isolated objective analysis bound to exact common evidence.",
+  "properties": {
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "created_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Created At",
+      "type": "string"
+    },
+    "evidence_set_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "horizons": {
+      "items": {
+        "$ref": "#/$defs/ObjectiveHorizonV1"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Horizons",
+      "type": "array"
+    },
+    "objective": {
+      "$ref": "#/$defs/Objective"
+    },
+    "provider": {
+      "enum": [
+        "codex",
+        "claude"
+      ],
+      "title": "Provider",
+      "type": "string"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.specialist-analysis",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "horizons",
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "created_at",
+    "provider",
+    "objective",
+    "evidence_set_reference"
+  ],
+  "title": "SpecialistAnalysisV1",
+  "type": "object"
+}

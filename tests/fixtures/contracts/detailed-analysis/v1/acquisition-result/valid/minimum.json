@@ -1,0 +1,43 @@
+{
+  "schema_id": "detailed-analysis.acquisition-result",
+  "schema_version": 1,
+  "request_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "status": "acquired",
+  "validation": "verified",
+  "requested_at": "2026-11-14T00:00:00Z",
+  "completed_at": "2026-11-14T00:00:01Z",
+  "attempt_references": [
+    {
+      "artifact_id": "original",
+      "relative_path": "acquisition/original.txt",
+      "media_type": "text/plain",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "files": [
+    {
+      "artifact_id": "original",
+      "relative_path": "acquisition/original.txt",
+      "media_type": "text/plain",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "public-document",
+      "source_id": "public-web",
+      "source_reference": "https://example.com/document",
+      "retrieved_at": "2026-11-14T00:00:00Z",
+      "raw_reference": {
+        "artifact_id": "original",
+        "relative_path": "acquisition/original.txt",
+        "media_type": "text/plain",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "text": "Public company disclosure.",
+      "validation": "verified"
+    }
+  ],
+  "reuse_reference": null,
+  "detail": "Public document original acquired."
+}

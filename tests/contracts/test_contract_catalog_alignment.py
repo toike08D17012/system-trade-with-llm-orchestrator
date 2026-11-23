@@ -10,14 +10,14 @@ from stock_research_llm_orchestrator.contracts.registry import default_registry
 
 REPOSITORY_ROOT = Path(__file__).parents[2]
 CATALOG_PATH = REPOSITORY_ROOT / "docs" / "system-requirements" / "09-detailed-analysis-contract-catalog.md"
-SCHEMA_ROOT = REPOSITORY_ROOT / "schemas" / "detailed-analysis" / "v1"
+SCHEMA_ROOT = REPOSITORY_ROOT / "schemas" / "detailed-analysis"
 FIXTURE_ROOT = REPOSITORY_ROOT / "tests" / "fixtures" / "contracts" / "detailed-analysis" / "v1"
 INSTRUCTION_ROOT = REPOSITORY_ROOT / "agent-sources" / "detailed-analysis" / "v1"
 TEMPLATE_ROOT = REPOSITORY_ROOT / "templates" / "detailed-analysis" / "v1"
 
 
 def test_catalog_public_schema_names_match_generated_files_and_fixtures() -> None:
-    """Keep the approved 28-name catalog aligned with registry, files, and fixture index."""
+    """Keep the approved 36-name catalog aligned with registry, files, and fixture index."""
     catalog = CATALOG_PATH.read_text(encoding="utf-8")
     catalog_names = set(re.findall(r"`([a-z0-9-]+\.schema\.json)`", catalog))
     generated_names = {path.name for path in SCHEMA_ROOT.glob("*.schema.json")}
@@ -29,7 +29,7 @@ def test_catalog_public_schema_names_match_generated_files_and_fixtures() -> Non
     fixture_names = {f"{schema_id.removeprefix('detailed-analysis.')}.schema.json" for schema_id in fixture_ids}
 
     assert catalog_names == generated_names == registry_names == fixture_names
-    assert len(catalog_names) == 28
+    assert len(catalog_names) == 36
 
 
 def test_catalog_templates_and_instruction_sources_exist() -> None:

@@ -126,7 +126,8 @@ def test_follow_up_extracts_real_pdf_text() -> None:
     assert "Segment revenue grew" in DraftInput.model_validate_json(files["input.json"]).evidence[1].text
 
 
-def test_follow_up_accepts_pdf_with_empty_user_password() -> None:
+@pytest.mark.parametrize("algorithm", ["RC4-128", "AES-256"])
+def test_follow_up_accepts_pdf_with_empty_user_password(algorithm: str) -> None:
     """An issuer PDF readable without a password can supply text evidence."""
     writer = PdfWriter()
     page = writer.add_blank_page(width=600, height=800)
@@ -143,7 +144,7 @@ def test_follow_up_accepts_pdf_with_empty_user_password() -> None:
     content = DecodedStreamObject()
     content.set_data(b"BT /F1 12 Tf 30 750 Td (Public financial summary) Tj ET")
     page[NameObject("/Contents")] = content
-    writer.encrypt(user_password="")
+    writer.encrypt(user_password="", algorithm=algorithm)
     stream = io.BytesIO()
     writer.write(stream)
     pdf = _intake().model_copy(update={"media_type": "application/pdf"})

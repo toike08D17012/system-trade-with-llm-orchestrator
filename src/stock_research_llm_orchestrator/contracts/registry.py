@@ -3,8 +3,15 @@
 from collections.abc import Iterator
 
 from stock_research_llm_orchestrator.contracts.base import StrictContractModel
+from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.acquisition_analysis import (
+    AcquisitionAnalysisV1,
+    AcquisitionResult,
+    AcquisitionSnapshotV1,
+)
+from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.agent_configuration import AgentConfigurationV1
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.agent_execution import AgentExecutionV1
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.analysis import SynthesisResultV1, WorkerAnalysisV1
+from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.configured_analysis import ConfiguredAnalysisV1
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.dispute_audit import (
     AuditRequestV1,
     AuditResultV1,
@@ -15,6 +22,10 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.evidence imp
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.external_requests import ExternalRequestEventV1
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.final_output import FinalAnalysisResultV1
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.instructions import InstructionApplicationV1
+from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.objectives import (
+    InvestmentConclusionsV1,
+    SpecialistAnalysisV1,
+)
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.operations import (
     OperationRequestV1,
     OperationResultV1,
@@ -36,6 +47,7 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.research imp
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.review import PrimaryReviewV1, ReviewResponseV1
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.runtime import ExecutionManifestV1
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.task import DetailedAnalysisTaskV1
+from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.web_analysis import WebAnalysisV1
 from stock_research_llm_orchestrator.contracts.errors import ValidationErrorV1
 
 
@@ -121,3 +133,15 @@ default_registry.register("detailed-analysis.research-context", 1, ResearchConte
 default_registry.register("detailed-analysis.search-record", 1, SearchRecordV1)
 default_registry.register("detailed-analysis.common-evidence-update", 1, CommonEvidenceUpdateV1)
 default_registry.register("detailed-analysis.validation-error", 1, ValidationErrorV1)
+
+default_registry.register("detailed-analysis.specialist-analysis", 1, SpecialistAnalysisV1)
+default_registry.register("detailed-analysis.investment-conclusions", 1, InvestmentConclusionsV1)
+
+default_registry.register("detailed-analysis.agent-configuration", 1, AgentConfigurationV1)
+default_registry.register("detailed-analysis.configured-analysis", 1, ConfiguredAnalysisV1)
+
+default_registry.register("detailed-analysis.web-analysis", 1, WebAnalysisV1)
+
+default_registry.register("detailed-analysis.acquisition-analysis", 1, AcquisitionAnalysisV1)
+default_registry.register("detailed-analysis.acquisition-result", 1, AcquisitionResult)
+default_registry.register("detailed-analysis.acquisition-snapshot", 1, AcquisitionSnapshotV1)

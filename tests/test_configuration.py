@@ -23,7 +23,13 @@ def test_validate_configuration_accepts_repository_config_in_path_order(tmp_path
     root = _copy_config(tmp_path)
     artifacts = validate_configuration(root)
     paths = [artifact.path.as_posix() for artifact in artifacts]
-    assert len(paths) == 14
+    assert len(paths) == 20
+    assert "source-approvals/jpx/v3.yaml" in paths
+    assert "source-profiles/jpx/v2.yaml" in paths
+    assert "source-approvals/public-web/v1.yaml" in paths
+    assert "source-profiles/public-web/v1.yaml" in paths
+    assert "agent-configurations/gpt-only/v1.yaml" in paths
+    assert "agent-configurations/cross-family/v1.yaml" in paths
     assert "source-approvals/jpx/v2.yaml" in paths
     assert "source-approvals/dukascopy/v2.yaml" in paths
     assert "source-approvals/edinet/v6.yaml" in paths

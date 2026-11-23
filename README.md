@@ -64,7 +64,7 @@ Antigravity系は通常の作業者や「第三票」ではなく、Codex系とC
 初期実装では、次の範囲から開始します。
 
 - 人間が指定した1銘柄を対象とし、自動一次スクリーニングは実行しない
-- Codex系とClaude系の作業者を1つずつ利用する
+- Codex系・Claude系それぞれにキャピタルゲイン担当とインカムゲイン担当を置き、系統別の整理をメインが統合する
 - 各実行で、オーケストレーターと異なるモデル系統の一次レビューワーを1つ利用する
 - システム独自の時間、token、費用、Web検索、再調査、合議往復、再レビュー、
   異なる争点数の固定上限を設けない
@@ -147,7 +147,8 @@ image内のUID/GIDを改めて確認してください。
 
 Pythonは3.14を使用します。`pyproject.toml` には契約基盤のruntime依存関係、
 開発用のRuff、Mypy、Pytest、pre-commitと、VS Code上でNotebookを実行するための
-`ipykernel` を定義しています。実行可能な個別株調査アプリケーションはまだありません。
+`ipykernel` を定義しています。指定銘柄の暫定調査を実行する内部CLIと、独立分析・一次レビューを接続する暫定実行CLIがあります。
+最終評価までを完了するアプリケーションは未完成です。
 
 ### Coding Agent CLIのインストール補助
 
@@ -160,6 +161,51 @@ Pythonは3.14を使用します。`pyproject.toml` には契約基盤のruntime�
 ```
 
 これらは本プロジェクトをインストールまたは起動するスクリプトではありません。ネットワークから取得したスクリプトをシェルへ直接渡すため、実行前に内容と提供元を確認してください。各CLIの認証と利用設定も別途必要です。
+
+### Antigravityの推論水準付き起動
+
+`./scripts/run-antigravity.sh`は`agy`を起動する補助スクリプトです。
+引数なしでも`--effort high`を明示し、個人設定のeffort既定値に依存しません。
+モデルは`agy`の選択状態を引き継ぐため、Flashを確実に使う場合は`--model`も明示してください。
+2026-11-09に確認した環境では、Gemini 3.8 Flashの最高水準はHighです。
+
+```bash
+# Inspect available models before choosing a slug.
+agy models
+
+# Start an interactive session with an explicit model and High effort.
+./scripts/run-antigravity.sh --model gemini-3.8-flash-high
+
+# Run a single prompt; --effort high is also the default when omitted.
+./scripts/run-antigravity.sh --model gemini-3.8-flash-high --effort high -p 'Review the supplied research assumptions.'
+
+# Read the prompt from stdin.
+printf '%s\n' 'Review the supplied research assumptions.' | ./scripts/run-antigravity.sh --model gemini-3.8-flash-high -p
+
+# Resume using the same model and effort as the original session.
+./scripts/run-antigravity.sh --model gemini-3.8-flash-high --conversation '<conversation-id>' -p 'Continue the review.'
+
+# Inspect the current effort configuration without requesting a generated analysis.
+./scripts/run-antigravity.sh --model gemini-3.8-flash-high -p '/effort'
+
+# Run inside the development container using the existing Docker entrypoint.
+./docker/run-docker.sh ./scripts/run-antigravity.sh --model gemini-3.8-flash-high --effort high -p 'Review the supplied research assumptions.'
+```
+
+`--effort=high`形式も使用できます。`xhigh`・`max`は対応が確認できたモデルでのみ明示指定してください。
+現在のFlashで`max`が使えるという意味ではなく、対応水準の自動検出も行いません。
+Low・Medium、不明な値、値の欠落、effortの重複指定は起動前に拒否します。
+対応しない値をCLIが拒否した場合も、低い水準での再試行は行いません。
+新規実行と再開の両方で同じ指定が付きますが、元sessionの設定照合は利用者が行ってください。
+
+promptなどのリテラル引数として`--effort`を渡す場合は、CLIの`--`区切りを使用できます。
+その他の引数、stdin、作業ディレクトリ、CLIの終了codeは保持し、認証・個人設定は変更しません。
+利用方法は[公式effort仕様](https://antigravity.google/docs/cli/commands/effort/)も参照してください。
+これは手動起動の補助であり、正式な争点監査、適用値の検証・manifest保存、
+中断・復旧を行うAntigravity Adapterは別途実装が必要です。
+
+シェルの回帰テストは`bash tests/scripts/test-run-antigravity.sh`で実行できます。
+偽の`agy`で検証するため、認証情報・モデル呼び出し・ネットワークは使用しません。
 
 ## 使い方
 
@@ -175,7 +221,8 @@ python -m stock_research_llm_orchestrator config validate
 成功時は検証済みartifact数をstdoutへ出力します。失敗時はsecret-safeなmessageを
 stderrへ出力し、設定内容の不正は終了code 3、pathまたはfileの問題は終了code 4を返します。
 
-個別株の調査・運用commandは未実装です。現段階では、最初に
+公開CLIに`research run`、固定応答用の`research replay`、保存結果用の`research validate`があります。
+状態確認・取消・再開などの運用commandは未実装です。現段階では、最初に
 [システム要件文書の管理方針](docs/system-requirements/README.md)で承認済み要件と
 変更手順を確認し、次の設計資料をレビューします。設計資料に記載された将来の構成は、
 対応する実装と検証が完了するまで実装済みとして扱いません。
@@ -202,7 +249,7 @@ stderrへ出力し、設定内容の不正は終了code 3、pathまたはfileの
 | `reports/finalized-reports/` | 人間向けに確定した個別株調査・スクリーニングレポート | 空。形式は今後確定 |
 | `docker/` | 標準開発環境のDockerfile、Compose設定、実行ラッパー | 構成あり |
 | `scripts/` | Coding Agent CLIの導入補助、pre-commit・CI検証ラッパー | 構成あり |
-| `schemas/` | 生成JSON Schema | P1フェーズ3までの28公開Schemaあり |
+| `schemas/` | 生成JSON Schema | 既存28契約と目的別分析・役割設定・独立Web調査の追加5契約、計33公開Schemaあり |
 | `src/` | PythonアプリケーションとPython開発指示 | 契約基盤、offline設定検証CLI、task準備、credential preflight、保存・request coordinator基盤あり |
 | `tests/` | Python実装の追跡対象テスト | 契約、生成Schema、設定、CLI、logging、task準備、credential、request coordinatorのテストあり |
 | `AGENTS.md` | スクリーニング実行時の共通原則、安全境界、成果物配置、最小限のリポジトリ構成 | 定義済み |
@@ -224,6 +271,213 @@ stderrへ出力し、設定内容の不正は終了code 3、pathまたはfileの
 [成果物・保持・セキュリティの要件](docs/system-requirements/05-artifact-retention-and-security.md)
 で承認済みです。検証済みbytesを内部準備directoryへ原子的にpublishするprimitiveはありますが、
 manifest確定と完全な証拠一式を含む実行ディレクトリへの保存は未実装です。
+
+## 独立分析・一次レビューの暫定実行
+
+役割ごとの実行Agentは`--agents`でYAMLを指定して変更できます。GPT単独の構成ではClaudeの
+インストール・契約・認証は不要です。利用するCLIだけを認証し、利用可能なモデルIDを設定してください。
+
+```bash
+stock-research config validate --config-dir config
+stock-research research run \
+  --agents config/agent-configurations/gpt-only/v1.yaml \
+  --task runs/my-market-preparation/task.json --prior runs/my-research-draft \
+  --runtime runtime --runs runs --destination my-gpt-only-research
+stock-research research validate --bundle runs/my-gpt-only-research
+```
+
+設定例は`config/agent-configurations/gpt-only/v1.yaml`と`cross-family/v1.yaml`です。
+`agents`で`adapter`、`model`、`model_family`、`reasoning.effort`を定義し、
+`roles`からAgent名を参照します。同じAgent定義を複数役割へ割り当てても、各役割は新規実行です。
+`track_a`と`track_b`にはそれぞれ`capital`、`income`、`aggregator`を指定し、
+残る`orchestrator`、`primary_reviewer`、`translation`と合わせて9役割です。
+初期資料探索と、追加取得・証拠更新後の再分析でもLLMを呼ぶため、呼び出し回数は9回に限りません。
+
+対応Adapterは`codex_cli`と`claude_cli`です。モデルIDは固定の選択肢ではなく設定から渡し、
+effortはCodexでは`minimal/low/medium/high/xhigh/max/ultra`、Claudeでは`low/medium/high/max`を
+明示して渡します。CLI・モデルごとの利用可否は利用環境で確認してください。未対応値を代替せず、
+実行失敗時は停止します。要求値と確認できた実適用値を区別し、実適用値が取得できない場合は未確認と記録します。
+同梱のGPT単独・複数系統設定は全役割を`medium`にしています。モデルと担当構成はそのままです。
+独自設定の`low`や`high`も明示した値を使用します。旧実行の再開には、変更後のサンプルではなく
+その実行に保存されたAgent設定を指定してください。異なるeffortで完了応答を完全一致再利用はできません。
+
+GPT単独用の`review_policy.mode: single_family_development`は同一系統による開発用レビューです。
+`cross_family_required`では両trackの系統集合が重ならず、統合役と一次レビューワーも別系統であることを
+開始前に検証します。`model_family`は利用者の宣言であり、自動検出した実測値ではありません。
+Ollamaや他社APIの実行は未対応で、今後Adapterを追加して接続する境界を設けています。
+
+`--agents`指定の新規実行は形式5を保存します。最初にJPX銘柄確認とnative yfinanceによる価格・
+配当実績・分割の取得を実行し、既存資料を保持したまま、最新公開開示も探索して共通入力へ追加します。
+`--prior`がIR資料だけでも、別途市場bundleを手作業で準備する必要はありません。
+初期取得に不足が残っても調査を開始します。
+
+新規実行は`parallel_incremental_v5`方式です。初回は4専門担当を別々のコンテキストで並列実行し、
+続く2統合担当も並列実行します。標準取得・共有資料・成果物の確定は実行側が順序を管理します。
+各担当に他担当の途中分析は渡しません。並列化によるToken増加は許容し、
+実行予算・調査回数による新しい打ち切り条件は設けていません。
+
+各調査担当は独立したWeb検索・ページ閲覧に加え、構造化した追加取得要求で同じ標準取得処理を
+呼び出せます。取得結果を受け取って再分析し、検証済みの中立資料が増えた場合は、統合担当が
+変更資料の目録と前回分析を確認し、追加調査が必要な専門担当だけを選びます。
+対象なしも選べます。他の専門分析は引き継ぎ、整理・統合・レビューは最新の資料で更新します。
+公開資料は原本・抽出全文を保存し、モデルには出典・全文hash・行数の索引を渡します。
+担当は`search_evidence`で該当行を検索し、`read_evidence`で必要な行範囲を読めます。
+選択した行と原文の対応も保存・再検証し、全文を黙って切り捨てる方式にはしません。
+最初の4専門担当には他担当の検索・結論を渡しません。整理担当・メイン・レビュー担当も
+必要な追加検索を行えます。公開情報の取得に都度の承認は不要です。
+同一ホストへの高頻度アクセスを避け、取得できない情報と検索の試行を記録します。
+`--runtime`は全担当で共有し、通信制御を分離して回避しないでください。
+検索ツール記録は`provider-traces/`、標準取得は`baseline/`と`acquisitions/`へ保存します。
+実行途中の応答と原本は`runtime/research-executions/`にも保持し、中断を完了として扱いません。
+初期取得が完了した実行記録は、同じ`--task`・`--prior`・`--agents`に
+`--resume-from runtime/research-executions/<実行記録>`を追加し、新しい`--destination`で再開できます。
+保存した入力・設定・原本の照合後に初期資料を再利用し、各調査役割は新規実行します。
+同じ実行記録に保存された追加取得の原本も、出典と取得時刻を保持して再利用できます。
+失敗した応答を採用したり、提供者の会話セッションを復元した扱いにはしません。
+利用上限などで途中停止した場合は、さらに`--resume-completed-turns`を指定すると、
+入力・指示・出力schema・Agent設定が完全一致する完了済みの実応答だけを再利用して続行できます。
+一致しない記録や失敗応答は再利用しません。再利用元と実行の区別を成果物に保存します。
+共通証拠が更新された際は、各担当が自分の前回分析・取得状態・内容hashが一致する確認済み箇所を
+引き継いで再評価します。他担当の未統合の分析は共有せず、追加検索・取得は引き続き可能です。
+新方式の専門担当は追加・実質変更資料を確認し、重要な変更がなければ理由付きの`unchanged`を返せます。
+その場合は元の分析本文をそのまま継承し、現在の証拠版と前回分析への対応を記録します。
+影響が不明なら必要な調査を続けます。周回が変わったことだけを理由に新しいWeb検索は強制しません。
+差分判断は`incremental-decisions.json`に保持し、統合・一次レビューにも渡します。
+新方式では専門担当・整理・統合・一次レビューの再評価時に、前回成果物のhashと変更箇所だけを
+返す`delta`にも対応します。変更箇所はpayload内のJSON pointerと、置換値を表す`value_json`です。
+既存項目の置換だけを認め、項目追加・削除はその配列・オブジェクト全体の置換で表します。
+プログラムが前回版の照合・差分適用を行い、復元した完全版を通常のschema・出典・参照検証へ通します。
+生の差分応答と完全版を保存し、前回hashと更新パスを差分判断記録へ残します。
+変更がなければ下流担当も`unchanged`を返せますが、更新後の依存成果物との検証は省略しません。
+大幅な変更では全文出力も可能です。継続状態には未解決点・次の操作を簡潔に残し、原文や取得結果を重複記載しません。
+既存の`parallel_incremental_v1`〜`parallel_incremental_v4`や旧方式の保存記録は当時の要求・schemaで検証・再生・再開します。
+内容・原本hash・検証状態が同じ資料の再取得は記録を保持し、取得時刻や保存先だけの変更では
+全担当の再評価を増やしません。再評価の方針も実行記録に保存し、再開時の入力一致を維持します。
+整理・統合・レビューが追加した中立資料は、レビューの区切りでまとめて統合担当の再調査判断に渡します。
+未配布の追加資料がある場合は全担当が再評価してから最終レポートを生成します。
+取引カレンダー等の検証保留と株価の未取得を区別し、条件付き計算に十分な観測値を扱います。
+実行方式はmanifestと実行記録へ保存します。旧記録に新方式を混ぜず、旧方式の再開・再生も維持します。
+並列処理の一部が失敗しても成功した担当の応答は保存し、完全一致する要求なら再開時に再利用します。
+各呼び出しの開始・終了・経過時間は実行記録の`execution-timing.json`へ保存します。
+
+新方式では、取得した公開文書を資料単位の独立した要約担当へ一度だけ渡します。
+メインに設定されたAgentを別コンテキストで使用し、投資判断・他担当の分析・保有情報は渡しません。
+要約担当のWeb検索・外部ツールは無効にし、全文の抽出テキストから中立な概要、主題、セクションの
+原文行範囲、改訂・留保の所在を作ります。株価系列とJPX銘柄一覧はこの文書要約の対象外です。
+
+```mermaid
+flowchart LR
+    A[公開資料の取得とテキスト抽出] --> B[資料単位の要約を生成または再利用]
+    B --> C[各担当が概要と原文行の案内で必要性を判断]
+    C --> D[必要な原文だけ検索・読み出し]
+```
+
+要約は`document-summaries.json`で原文と対応付け、`summaries/document_summary-<hash>/`へ
+`summary.json`・`summary.md`・`source.txt`・`source.md`を保存します。`source.txt`は既存の
+抽出テキストと同一で、Markdownは行番号付きの派生閲覧用です。PDFの再抽出が正規化テキストと
+完全一致する場合だけ、物理ページと原文行の対応を`page-map.json`へ保存します。表・画像の完全な
+Markdown復元やOCRは行わず、抽出の制約を明記します。長い資料も黙って切り捨てません。
+
+PDFは、DockerのPython環境に同梱する[Docling](docs/pdf-conversion.md)と
+1つのCodex担当で共有資料へ変換し、`pdf-readers/`に保存します。目録にはその要約を掲載し、
+`search_evidence`・`read_evidence`は補正済みMarkdownを対象にします。図のファイルは
+成果物に保存します。現行の調査担当への図画像入力には対応していません。
+PDF原本を読むのは変換担当だけです。各調査担当はWeb上のPDFも標準取得に回し、変換済みMarkdownを読みます。
+変換環境がない場合や変換に失敗した場合、そのPDFは参照不可として記録します。
+
+調査担当には要約付きの資料目録を渡すので、不要な資料の原文を読まない選択ができます。
+要約だけを事実の出典にはせず、判断に使う情報は原文で確認します。要約に載っていないことを
+情報が存在しない証拠とは扱いません。ファイルパスを渡すだけでは現行CLIから直接読めないため、
+原文の部分取得には既存の`search_evidence`・`read_evidence`を使用します。
+
+同じ原本・抽出全文・要約指示・schema・モデル設定なら、実行内と`runtime/document-summaries/`
+のキャッシュで再利用します。URLや取得時刻だけの変更では再生成しません。同時実行でもキー単位の
+ロックで生成を一度にし、失敗した結果は成功キャッシュへ保存しません。追加資料の要約も、原文と同じ
+可視性境界で配布します。要約を作るコストも加わるため、総トークン削減率は実測で評価してください。
+
+Web出典は担当者が報告した参照として、機械照合済みの初期証拠と区別します。
+検索結果だけの抜粋は原文確認済みの事実として採用しません。メインは取得した株価・日付・
+株式単位を明記して条件付き収益率を計算し、担当者間の不一致を残して結論を判断します。
+価格未取得時は取得を試みたうえで不足を表示します。
+
+形式3–5とも中立的な役割名を持ちます。設定snapshot・hashと各役割の要求値も保存し、
+`research validate`は元のYAMLを変更した後も保存snapshotだけで再検証します。
+形式3–5の`research replay`には元と同じ設定を`--agents`で指定します。
+保存した`agent-configuration.json`もYAMLとして読み込めるため、そのまま指定できます。
+形式3–5の実行結果を再生する場合は、`--responses`に`responses/`だけでなく元bundleのディレクトリ全体を
+指定してください。保存した作成時刻・指示を維持し、レビュー指摘の対象hashを変えずに再生します。
+入力・設定が元bundleと異なる場合は拒否します。固定応答fixtureは従来どおり応答ディレクトリを指定できます。
+
+新方式の`report.md`は[レポートテンプレート](docs/templates/investment-analysis-report.md)の章立てに沿って、
+結論、基準、判断根拠、中期・長期シナリオ、リスク、判断変更条件、出典・検証、計算前提を整理します。
+本文に表示する分析・前提・不足情報を1回で翻訳し、プログラムで描画します。
+追加の自由作文・分類確認・読み手レビューを必須工程にしません。
+一次レビューは構造化した統合分析と計算に対するもので、翻訳後の文書を別途レビューしたとは表示しません。
+EPS・PERや配当日程が構造化されていない場合は推測で数値を埋めません。
+
+従来方式の形式3–5で人間が読む成果物は短い`report.md`の1件です。中期・長期の結論、利益の狙い、
+想定ストーリー、シナリオ別の収益、判断変更条件、主な不足情報と優先度の高い指摘に絞ります。
+翻訳はこのレポート用の最大30文章項目だけに行います。内部分析の全翻訳、英語原文の併記、
+専門担当別レポートの通読は前提にしません。詳細な分析・全不足情報・全指摘はJSONで保持し、
+表示を絞った件数と参照先をレポートに示します。レビュー未通過状態は必ず表示します。
+
+`--agents`を省略した場合は以下の従来構成を使用します。
+
+親taskと検証済み`research_draft` bundleを指定し、Codex・Claudeそれぞれの
+キャピタルゲイン担当・インカムゲイン担当による独立分析、系統別整理、
+Codexによる統合結論、別の新規Claude実行による一次レビュー、日本語レポート保存を実行できます。
+専門担当は個別の新規CLI実行として起動します。既定は形式2で、分析から翻訳まで9回実行します。
+リポジトリのルートから実行し、両CLIのインストールと認証を済ませてください。
+分析開始前に両CLIの認証状態を確認し、未認証の場合は資料を送信せず停止します。
+`--runs`は既存の非公開ディレクトリ、`--destination`は未使用の保存名を指定します。
+
+```bash
+stock-research research run \
+  --task runs/my-market-preparation/task.json --prior runs/my-research-draft \
+  --runs runs --destination my-reviewed-research
+stock-research research validate --bundle runs/my-reviewed-research
+```
+
+4つの専門担当へは同じ出典付き抜粋を渡し、他担当の分析や以前の暫定結論を渡しません。
+系統別整理には自系統の2成果物、メインと一次レビューには4専門成果物と両系統の整理を渡します。
+旧形式の実行・固定応答replayには`--workflow-version 1`を指定できます。
+`research validate`は保存済み形式を判別し、旧形式も引き続き検証します。
+
+レポートでは中期・長期ごとに、主目的・副目的、想定ストーリー、強気・基本・弱気の
+シナリオ、現在価格での購入候補・待機・見送り・判断保留、判断変更条件を示します。
+従来形式では品質確認済みの単一JPY観測値を採用します。形式4では別枠で取得元を表示した
+担当者報告のJPY価格も条件付き計算に利用します。いずれも将来の価格・累計配当は仮定として区別します。
+同じ株式単位・期間の前提から、値上がり益と配当を一度ずつ合算して累計収益率を計算します。
+計算は税引前・手数料控除前・配当再投資なしで、価格や資料の不足時は算出不能と表示します。
+現時点の暫定経路の数値計算はJPYに限定します。
+yfinance入力は既存の`initial_research_input`形式を受け付け、全価格系列ではなく
+最後の観測行・通貨・品質上の問題・制約だけを選びます。欠損値は補完しません。
+原入力、抜粋、取得元hash、抜粋hash、承認snapshot、適用指示、実際の要求と応答、
+構造化分析・統合・レビュー、`report.md`を保存し、オフラインで再検証できます。
+新しいtaskを発行し、指定したtaskを`parent_task_id`へ記録します。
+証拠集合は新taskの抜粋snapshotとして版1から開始し、親taskの市場証拠集合は更新しません。
+取得日を抜粋snapshotの適用日として記録し、財務対象期間や公表日とは扱いません。
+
+すべての出力は**暫定**です。レビュー合格と正式な分析完了を区別し、
+`analysis_ready=false`、`analysis_completed=false`を維持します。
+最終鮮度確認、独立Web探索の収束、指摘応答・再レビュー、争点監査、永続復旧は未接続です。
+未解決指摘は保持し、正式な`FinalAnalysisResultV1`は生成しません。
+日本語訳と英語原文を併記し、構造化JSONを確認できるようにします。
+実Agentの失敗時に固定応答へ切り替えることはありません。
+
+保存済みの応答を明示的に再生する場合は、元の`input/evidence-set.json`の
+`evidence_frozen_at`を`--at`へ指定します。対応するtask、prior、policy、承認snapshotと
+同じバージョンの実装・指示を使用してください。再生には外部Agent呼び出しはありません。
+元の保存結果をそのまま検証する場合は`research validate`を使います。
+
+```bash
+stock-research research replay \
+  --task runs/my-reviewed-research/input/parent-task.json \
+  --prior runs/my-reviewed-research/input/prior \
+  --responses runs/my-reviewed-research/responses \
+  --policy runs/my-reviewed-research/input/policy.yaml \
+  --at '2026-10-30T00:00:00+00:00' --runs runs --destination my-replayed-research
+```
 
 ## LLMによる暫定調査
 
@@ -441,7 +695,7 @@ Pytestの終了コード5は、テストの未収集を検出する失敗とし�
 
 ## 注意事項
 
-本リポジトリおよび将来生成されるレポートは、投資助言、購入推奨、注文指示を提供するものではありません。出力には誤り、古い情報、不完全な情報が含まれる可能性があります。最終的な投資判断は、利用者自身の責任で一次資料と最新情報を確認したうえで行ってください。
+本リポジトリのレポートは、明示した仮定に基づく購入候補・待機・見送りなどの調査上の結論を示します。注文指示や利益の保証は行いません。出力には誤り、古い情報、不完全な情報が含まれる可能性があります。最終的な投資判断は、利用者自身の責任で一次資料と最新情報を確認したうえで行ってください。
 
 ## ライセンス
 

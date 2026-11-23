@@ -116,6 +116,16 @@ Policy版および出力契約版を明示し、providerの履歴より検証済
 
 ## 9. Antigravity監査
 
+推論水準の選択は[モデル配置と推論方針](03-agent-review-and-audit-policy.md#2-モデル配置)に従う。
+調整可能な場合は、モデルが対応する最高水準を`start`・`resume`の各起動で明示し、
+保存済みの個人設定やCLIの既定値へ依存しない。同じ論理sessionの再開ではモデルと推論水準を維持する。
+
+公式の[effort仕様](https://antigravity.google/docs/cli/commands/effort/)では、
+非対話実行の`--effort`で実行ごとの水準を指定できる。
+`agy -p "/effort"`は現在値・対応水準の確認に使えるが、
+`agy -p "/effort high"`では設定できないため、非対話の適用には`--effort high`などを使う。
+正確な引数と適用結果は対象CLI版で検証し、未対応・未確認をHigh適用と混同しない。
+
 同一`dispute_id`、同一`logical_audit_id`および同一監査目的の未完了runをresumeして完了させる処理は、
 2回目の論理監査に数えない。完了した監査へ新しい問いまたは監査目的を追加する処理は、同じprovider
 sessionを使用しても別監査として扱い、同一争点1回の制限を迂回しない。
@@ -149,7 +159,25 @@ provider報告値、派生値、run値、session累積値、未取得、provider
 - 使用量項目、値の意味および取得不能時の表現
 - 標準出力・標準エラーから秘密情報を除去して保持できる範囲
 
-## 14. 参照資料
+## 14. 暫定実行の個人設定
+
+`research run/replay --agents <path>`は`detailed-analysis.agent-configuration`のYAMLを読み、
+役割、Agent定義、実行Adapterを分離する。`codex_cli`と`claude_cli`に対応し、
+モデル名・モデル系統の宣言・effortを役割から参照する。未使用Adapterの認証を要求しない。
+設定snapshotとhash、各実行の要求値を形式3–5成果物へ保存し、CLIから実適用値が取得できなければ未確認と記録する。
+
+新規live実行の形式5では、初期入力準備で標準情報取得を行い、専門担当・整理担当・統合・レビューの
+各役割も取得要求を返せる。プログラムが同じ標準取得処理を実行し、保存した結果を新規ターンへ渡す。
+native Web調査も併用する。取得要求、原本、検証状態、各ターンで提示した証拠版を保存し、
+同じ原本の再利用を独立した実取得と表示しない。翻訳担当にはこの取得往復を要求しない。
+証拠の共通更新後は古い分析・整理・レビューを再評価し、保存結果の再生ではネットワークとLLMを呼ばない。
+
+契約前の検証では`single_family_development`によるGPT単独実行を許可する。
+同一系統によるレビューを明記し、異系統クロスレビューの代わりに扱わない。
+`cross_family_required`は両trackの系統集合の非重複と統合役・レビューワーの別系統を検証する。
+Ollama・他社APIは追加Adapterとして接続する将来拡張であり、現時点では起動しない。
+
+## 15. 参照資料
 
 - [ADR-0003](../decisions/0003-standardize-agent-adapters-and-session-continuation.md)
 - [機械可読契約と人間向け成果物の要件](07-machine-readable-contracts.md)

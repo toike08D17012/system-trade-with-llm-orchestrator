@@ -10,23 +10,24 @@ from stock_research_llm_orchestrator.contracts.registry import ContractRegistry,
 JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
 
 
-def schema_relative_path(schema_id: str, schema_version: int) -> Path:
+def schema_relative_path(schema_id: str) -> Path:
     """Return the approved output path for one public schema."""
     prefix = "detailed-analysis."
     if not schema_id.startswith(prefix):
         raise ValueError("schema_id is outside the detailed-analysis namespace")
     artifact_name = schema_id.removeprefix(prefix)
-    return Path("schemas") / "detailed-analysis" / f"v{schema_version}" / f"{artifact_name}.schema.json"
+    return Path("schemas") / "detailed-analysis" / f"{artifact_name}.schema.json"
 
 
 def generate_schema_documents(registry: ContractRegistry = default_registry) -> dict[Path, str]:
-    """Generate stable schema documents keyed by repository-relative path."""
+    """Generate the latest schema for each contract at a stable path."""
     documents: dict[Path, str] = {}
     for (schema_id, schema_version), model in registry.items():
         schema = model.model_json_schema(mode="validation")
         schema["$schema"] = JSON_SCHEMA_DIALECT
         schema["$id"] = f"urn:stock-research-llm-orchestrator:{schema_id}:v{schema_version}"
-        path = schema_relative_path(schema_id, schema_version)
+        path = schema_relative_path(schema_id)
+        # Registry keys are sorted, so newer versions replace older ones.
         documents[path] = json.dumps(schema, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     return documents
 

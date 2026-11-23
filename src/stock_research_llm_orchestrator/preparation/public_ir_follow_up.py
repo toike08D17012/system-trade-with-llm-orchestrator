@@ -2,12 +2,15 @@
 
 import argparse
 import ipaddress
+import math
 import os
 import re
 import socket
 import stat
 from collections.abc import Callable
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from email.utils import parsedate_to_datetime
 from hashlib import sha256
 from pathlib import Path
 from typing import Literal, cast
@@ -89,52 +92,73 @@ def validate_public_target(url: str, allowed_host: str) -> str:
     return host
 
 
-def acquire_public_ir_follow_up(
+def _retry_after(value: str | None, now: datetime) -> float | None:
+    """Honor numeric and HTTP-date provider cooldowns without exposing response headers."""
+    if value is None:
+        return None
+    try:
+        delay = float(value)
+    except ValueError:
+        try:
+            delay = (parsedate_to_datetime(value) - now).total_seconds()
+        except ValueError, TypeError, OverflowError:
+            return None
+    return max(0.0, delay) if math.isfinite(delay) else None
+
+
+@dataclass(frozen=True)
+class PublicDocumentReceipt:
+    """Retained original bytes and actual production transport identity."""
+
+    body: bytes
+    media_type: str
+    retrieved_at: str
+    physical_attempt_id: str
+    sha256: str
+
+
+def acquire_public_document(
     *,
-    prior: Path,
     url: str,
     allowed_host: str,
-    request_index: int,
     runtime: Path,
     runs: Path,
-    destination: str,
     task_id: str,
+    source_id: str = "issuer-ir",
+    operation: str = "follow-up-document",
+    raw_schema_id: str = "issuer-ir-public-document-raw",
+    approval_version: int = 1,
+    media_types: tuple[str, ...] = _MEDIA_TYPES,
+    profile_version: int = 1,
+    audit: Callable[[dict[str, object]], None] | None = None,
+    validate_body: Callable[[bytes, str], None] | None = None,
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     transport: httpx.BaseTransport | None = None,
-) -> Path:
+) -> PublicDocumentReceipt:
     """Fetch one public document and publish a replayable next-pass input."""
     host = validate_public_target(url, allowed_host)
-    previous = read_bundle(prior)
-    validate_bundle(previous)
-    requests = DraftOutput.model_validate_json(previous["draft.json"]).follow_up_requests
-    if request_index < 0 or request_index >= len(requests):
-        raise ValueError("follow_up_request_missing")
-    if not _DESTINATION_NAME.fullmatch(destination):
-        raise ValueError("public_ir_destination_invalid")
     runtime, runs = _safe_path(runtime), _safe_path(runs)
     runtime.mkdir(mode=0o700, parents=True, exist_ok=True)
     runs.mkdir(mode=0o700, parents=True, exist_ok=True)
     if runs.stat().st_uid != os.geteuid() or stat.S_IMODE(runs.stat().st_mode) != 0o700:
         raise ValueError("public_ir_runs_not_private")
-    if (runs / destination).exists():
-        raise FileExistsError("public_ir_destination_exists")
     started = clock()
     uid = uuid4().hex
     intent = CredentialFreeSourceIntent(
-        source_id="issuer-ir",
-        operation="follow-up-document",
+        source_id=source_id,
+        operation=operation,
         origin=host,
         resource_key=sha256(url.encode()).hexdigest(),
     )
-    fingerprint = sha256((intent.model_dump_json() + url + "issuer-ir-public-fetch-v1").encode()).hexdigest()
+    fingerprint = sha256((intent.model_dump_json() + url + source_id + "-public-fetch-v1").encode()).hexdigest()
     logical = ProductionLogicalRequest(
         logical_request_id=f"issuer-ir-{uid}",
         task_id=task_id,
-        source_id="issuer-ir",
-        operation="follow-up-document",
+        source_id=source_id,
+        operation=operation,
         request_fingerprint=fingerprint,
-        source_approval_version=1,
-        source_profile_version=1,
+        source_approval_version=approval_version,
+        source_profile_version=profile_version,
         credential_scope_alias=None,
         egress_scope="default-egress",
         created_at=started.isoformat(),
@@ -158,11 +182,15 @@ def acquire_public_ir_follow_up(
             created_at=clock().isoformat(),
         )
         received: list[datetime] = []
+        if audit is not None:
+            audit({"event": "logical_request", "logical_request": logical.model_dump(mode="json")})
 
         def send(request: PhysicalTransportRequest, _envelope: object) -> tuple[UntrustedTransportResponse, object]:
             if request != intent.to_transport_request(logical.logical_request_id, attempt.physical_attempt_id):
                 raise ValueError("public_ir_request_mismatch")
             validate_public_target(url, allowed_host)
+            if audit is not None:
+                audit({"event": "transport_started", "physical_attempt_id": attempt.physical_attempt_id})
             try:
                 with (
                     httpx.Client(
@@ -178,11 +206,20 @@ def acquire_public_ir_follow_up(
                         body.extend(chunk)
                     media_type = response.headers.get("Content-Type", "").partition(";")[0].strip().lower()
                     status_code = response.status_code
+                    retry_after_seconds = _retry_after(response.headers.get("Retry-After"), clock())
                     final_origin = response.url.host
                     redirected = response.is_redirect
             except httpx.HTTPError:
                 raise RuntimeError("public_ir_transport_failed") from None
             received.append(clock())
+            if audit is not None:
+                audit(
+                    {
+                        "event": "transport_completed",
+                        "status_code": status_code,
+                        "physical_attempt_id": attempt.physical_attempt_id,
+                    }
+                )
             return (
                 UntrustedTransportResponse(
                     status_code=status_code,
@@ -191,6 +228,7 @@ def acquire_public_ir_follow_up(
                     encoding="binary",
                     final_origin=final_origin,
                     redirected=redirected,
+                    retry_after_seconds=retry_after_seconds,
                 ),
                 None,
             )
@@ -199,35 +237,53 @@ def acquire_public_ir_follow_up(
             raise RuntimeError("public_ir_direct_send_forbidden")
 
         coordinator = ProductionTransportCoordinator(repository, no_direct_send, lambda: f"permit-{uuid4().hex}")
-        exchange = coordinator.execute_exchange_with_callback(
-            intent.to_transport_request(logical.logical_request_id, attempt.physical_attempt_id),
-            attempt,
-            f"reservation-{uid}",
-            GateKeys(
-                egress="default-egress",
-                provider="issuer-ir-public",
-                origin=host,
-                credential="anonymous",
-                operation="follow-up-document",
-                task=task_id,
-                role="source-acquisition",
-            ),
-            HierarchicalGatePolicy(
-                limits={
-                    scope: GateLimit(
-                        max_concurrency=1, min_interval_seconds=60, requests_per_window=1, window_seconds=60
-                    )
-                    for scope in GateScope
-                }
-            ),
-            TransportValidationPolicy(allowed_media_types=_MEDIA_TYPES, allowed_encodings=("binary",)),
-            lease,
-            clock(),
-            clock,
-            None,
-            send,
-        )
+        try:
+            exchange = coordinator.execute_exchange_with_callback(
+                intent.to_transport_request(logical.logical_request_id, attempt.physical_attempt_id),
+                attempt,
+                f"reservation-{uid}",
+                GateKeys(
+                    egress="default-egress",
+                    provider="public-web",
+                    origin=host,
+                    credential="anonymous",
+                    operation=operation,
+                    task=task_id,
+                    role="source-acquisition",
+                ),
+                HierarchicalGatePolicy(
+                    limits={
+                        scope: GateLimit(
+                            max_concurrency=1, min_interval_seconds=60, requests_per_window=1, window_seconds=60
+                        )
+                        for scope in GateScope
+                    }
+                ),
+                TransportValidationPolicy(allowed_media_types=media_types, allowed_encodings=("binary",)),
+                lease,
+                clock(),
+                clock,
+                None,
+                send,
+            )
+        except RuntimeStorageError as error:
+            if audit is not None:
+                audit(
+                    {
+                        "event": "gate_wait" if str(error).startswith("gate_blocked:") else "runtime_rejected",
+                        "reason_code": str(error),
+                        "retry_at": (clock() + timedelta(seconds=60)).timestamp()
+                        if str(error).endswith((":minimum_interval", ":rolling_window"))
+                        else None,
+                    }
+                )
+            coordinator.finalize_logical_request(
+                logical.logical_request_id, LogicalResultOutcome.FAILED, lease, clock(), "acquisition_gate_not_admitted"
+            )
+            raise
         result = exchange.execution
+        if audit is not None:
+            audit({"event": "gate_result", "status": result.status, "reason_code": result.reason_code})
         if result.status != "succeeded" or result.candidate is None:
             coordinator.finalize_logical_request(
                 logical.logical_request_id, LogicalResultOutcome(result.status), lease, clock(), result.reason_code
@@ -235,8 +291,11 @@ def acquire_public_ir_follow_up(
             raise ValueError(result.reason_code)
         candidate = result.candidate
 
-        def validate_body(body: bytes) -> None:
-            extract_text(body, candidate.media_type)
+        def check_body(body: bytes) -> None:
+            if validate_body is None:
+                extract_text(body, candidate.media_type)
+            else:
+                validate_body(body, candidate.media_type)
 
         try:
             RawArtifactPublisher(runs, repository).publish(
@@ -246,31 +305,21 @@ def acquire_public_ir_follow_up(
                     task_id=task_id,
                     logical_request_id=logical.logical_request_id,
                     physical_attempt_id=attempt.physical_attempt_id,
-                    source_id="issuer-ir",
-                    operation="follow-up-document",
+                    source_id=source_id,
+                    operation=operation,
                     content_sha256=candidate.sha256,
                     byte_count=len(candidate.body),
                     media_type=candidate.media_type,
                     encoding="binary",
-                    raw_schema_id="issuer-ir-public-document-raw",
+                    raw_schema_id=raw_schema_id,
                     raw_schema_version=1,
                     publication_generation=lease.generation,
                 ),
                 lease,
                 clock(),
                 clock(),
-                validate_body,
+                check_body,
             )
-            intake = FollowUpIntake(
-                request_index=request_index,
-                source_id="issuer-ir",
-                approval_version=1,
-                source_url=url,
-                retrieved_at=received[0].isoformat(),
-                media_type=cast(Literal["text/plain", "text/html", "application/pdf"], candidate.media_type),
-            )
-            files = build_follow_up(previous, intake, candidate.body)
-            publish_preparation(runs, destination, files, validator=validate_follow_up)
         except ValueError:
             coordinator.finalize_logical_request(
                 logical.logical_request_id,
@@ -283,9 +332,56 @@ def acquire_public_ir_follow_up(
         coordinator.finalize_logical_request(
             logical.logical_request_id, LogicalResultOutcome.SUCCEEDED, lease, clock(), None
         )
-        return runs / destination
+        return PublicDocumentReceipt(
+            candidate.body, candidate.media_type, received[0].isoformat(), attempt.physical_attempt_id, candidate.sha256
+        )
     finally:
         repository.release_lease(lease, clock())
+
+
+def acquire_public_ir_follow_up(
+    *,
+    prior: Path,
+    url: str,
+    allowed_host: str,
+    request_index: int,
+    runtime: Path,
+    runs: Path,
+    destination: str,
+    task_id: str,
+    clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    transport: httpx.BaseTransport | None = None,
+) -> Path:
+    """Fetch one public document and publish a replayable legacy next-pass input."""
+    previous = read_bundle(prior)
+    validate_bundle(previous)
+    requests = DraftOutput.model_validate_json(previous["draft.json"]).follow_up_requests
+    if request_index < 0 or request_index >= len(requests):
+        raise ValueError("follow_up_request_missing")
+    if not _DESTINATION_NAME.fullmatch(destination):
+        raise ValueError("public_ir_destination_invalid")
+    if (runs / destination).exists():
+        raise FileExistsError("public_ir_destination_exists")
+    receipt = acquire_public_document(
+        url=url,
+        allowed_host=allowed_host,
+        runtime=runtime,
+        runs=runs,
+        task_id=task_id,
+        clock=clock,
+        transport=transport,
+    )
+    intake = FollowUpIntake(
+        request_index=request_index,
+        source_id="issuer-ir",
+        approval_version=1,
+        source_url=url,
+        retrieved_at=receipt.retrieved_at,
+        media_type=cast(Literal["text/plain", "text/html", "application/pdf"], receipt.media_type),
+    )
+    files = build_follow_up(previous, intake, receipt.body)
+    publish_preparation(runs, destination, files, validator=validate_follow_up)
+    return runs / destination
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -1,0 +1,60 @@
+schema_id: detailed-analysis.source-profile
+schema_version: 1
+artifact_id: jpx-source-profile-v2
+source_id: jpx
+profile_version: 2
+policy_version: 2
+source_approval_reference:
+  artifact_type: source_approval
+  artifact_id: jpx-source-approval-v3
+  schema_id: detailed-analysis.source-approval
+  schema_version: 1
+  sha256: b0cc93b4bbb433ce4b34f033f96163a740dc8293c5220bda8b933315e03fc877
+source_approval_status: approved
+enabled: true
+rate_domain: jpx-public-web
+credential_scope_alias: null
+egress_scope: default-egress
+max_concurrency: 1
+min_interval_seconds:
+  knowledge_status: known
+  value: 60
+  unit: second
+  evidence_reference_ids: [jpx-owner-public-acquisition-policy-2026-11-14]
+rate_requests:
+  knowledge_status: known
+  value: 1
+  unit: request
+  evidence_reference_ids: [jpx-owner-public-acquisition-policy-2026-11-14]
+rate_window_seconds:
+  knowledge_status: known
+  value: 60
+  unit: second
+  evidence_reference_ids: [jpx-owner-public-acquisition-policy-2026-11-14]
+burst: 1
+cache_policy:
+  enabled: false
+  ttl_seconds:
+    knowledge_status: unsupported
+    value: null
+    unit: second
+    evidence_reference_ids: []
+  varies_by_credential_scope: true
+  varies_by_freshness_and_period: true
+  varies_by_source_policy_version: true
+batch_policy:
+  support_status: unsupported
+  max_batch_size:
+    knowledge_status: unsupported
+    value: null
+    unit: item
+    evidence_reference_ids: []
+cooldown_policy:
+  honor_provider_retry_after: true
+  default_cooldown_seconds:
+    knowledge_status: unsupported
+    value: null
+    unit: second
+    evidence_reference_ids: []
+  automatic_retry_allowed: false
+direct_connection_fallback_allowed: false

@@ -1,0 +1,5 @@
+# Main Investment Analysis
+
+Compare both family summaries and all four specialist artifacts. Return the existing synthesis fields plus conclusions. Preserve disagreements without voting or averaging. Cite actual claim IDs in source_claim_ids for each horizon's conclusion, covering all four specialists, including their limitations.
+
+For each horizon state the primary and optional secondary objective, investment story, conditional decision at the observed price, rationale and change conditions. Check whether growth expenditure, debt repayment and dividends are mutually compatible. Build one coherent set of bear/base/bull assumptions; never sum incompatible optimistic forecasts. Discuss capital loss as well as income. The system computes total returns once from terminal price plus cumulative dividends; do not double count income. If the observed price is unavailable or both objectives lack evidence, use insufficient_information and leave numerical forecasts null. If one objective is not evaluable, retain its limitations and never select it as the primary objective.

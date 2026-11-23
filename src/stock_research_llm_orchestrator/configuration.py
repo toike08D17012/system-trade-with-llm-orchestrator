@@ -26,6 +26,7 @@ _LAYOUT_SCHEMAS = {
     "policies/web-research": "detailed-analysis.web-research-policy",
     "policies/review-audit": "detailed-analysis.review-audit-policy",
     "policies/session-continuation": "detailed-analysis.session-continuation-policy",
+    "agent-configurations": "detailed-analysis.agent-configuration",
     "market-profiles": "detailed-analysis.market-profile",
     "source-approvals": "detailed-analysis.source-approval",
     "source-profiles": "detailed-analysis.source-profile",
@@ -104,9 +105,14 @@ def _validate_layout(relative: Path, model: StrictContractModel) -> None:
     identity: str | None = None
     if len(parts) == 3 and parts[0] == "policies":
         expected_schema = _LAYOUT_SCHEMAS.get(f"policies/{parts[1]}")
-    elif len(parts) == 3 and parts[0] in {"market-profiles", "source-approvals", "source-profiles"}:
+    elif len(parts) == 3 and parts[0] in {
+        "market-profiles",
+        "source-approvals",
+        "source-profiles",
+        "agent-configurations",
+    }:
         expected_schema = _LAYOUT_SCHEMAS[parts[0]]
-        identity = parts[1]
+        identity = parts[1] if parts[0] != "agent-configurations" else None
     if expected_schema is None or version_match is None:
         raise ApplicationError("Configuration artifact uses an unsupported layout.", ExitCode.INVALID_CONFIGURATION)
     version = int(version_match.group(1))

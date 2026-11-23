@@ -1,0 +1,11 @@
+{
+  "instruction_set_version": 1,
+  "files": {
+    "aggregate.md": "7fbd2a94dcdbeef484507be948dbd60744ab41b63779d9f1cc6ce54fad8d745c",
+    "capital.md": "bc6fd6534066324f4be61db8136abf7857efff3c9227e505e587f777ccb99059",
+    "common.md": "ee0a437e120cba19a6613aa76b7335a815fcb920c162a95f022439c965a629a8",
+    "income.md": "7cd6f7ebfcce00f9d724ff5588314ad9920e359fb7104b6b28b8426799f3145b",
+    "main.md": "94ae6cac277f427db74cdea6778f95507db2881dc62a66ee20406d775535ae6f",
+    "review.md": "dcc72370ffe74bc9028131c942384452909e88bb37c70af226dbf3618d3a52db"
+  }
+}

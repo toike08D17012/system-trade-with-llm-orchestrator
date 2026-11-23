@@ -1,0 +1,80 @@
+schema_id: detailed-analysis.source-approval
+schema_version: 1
+artifact_id: public-web-source-approval-v1
+approval_id: public-web-source-approval
+approval_version: 1
+source_id: public-web
+status: approved
+provider: Public document publishers selected during research
+service: Anonymous public HTML, text and PDF acquisition
+dataset: Public documents requested by baseline preparation or research roles
+reviewer: repository-owner
+reviewed_on: "2026-11-14"
+approved_by: repository-owner
+effective_on: "2026-11-14"
+recheck_due_on: "2026-12-24"
+status_reason: Repository owner authorizes necessary low-frequency public research and private LLM processing under ADR-0007; this is not a representation of a publisher grant or redistribution license.
+usage_entity: private_individual_internal_analysis
+usage_purposes:
+  - Necessary public document acquisition for private stock research
+  - Private LLM analysis of necessary per-security facts
+contract_plan: Review quarterly and on any public, commercial, third-party, or redistribution scope change.
+credential_scope_alias: null
+secret_value_storage_allowed: false
+online_use_allowed: true
+external_agent_transfer_allowed: true
+official_references:
+  - reference_id: owner-public-research-policy
+    document_type: owner_policy
+    url: docs/decisions/0007-use-llm-led-evidence-follow-up.md
+    document_version_or_sha256: ADR-0007-owner-authorization-2026-11-14
+    reviewed_on: "2026-11-14"
+conditions:
+  - category: terms
+    knowledge_status: known
+    summary: Owner authorization is for necessary publicly accessible research, private storage and private LLM interpretation. It does not assert publisher permission, public redistribution rights, or access to restricted services.
+    official_reference_ids: [owner-public-research-policy]
+  - category: rate_limit
+    knowledge_status: known
+    summary: Requests are serialized with at least 60 seconds between sends and honor provider cooldown. No artificial daily count is imposed.
+    official_reference_ids: [owner-public-research-policy]
+  - category: external_processing
+    knowledge_status: known
+    summary: Necessary acquired public text may be sent to configured private research roles; credentials and private endpoints are excluded.
+    official_reference_ids: [owner-public-research-policy]
+  - category: pricing
+    knowledge_status: unsupported
+    summary: No paid entitlement or account is supplied; paid or authenticated access is outside this executor.
+    official_reference_ids: [owner-public-research-policy]
+  - category: authentication
+    knowledge_status: unsupported
+    summary: Anonymous public GET only; no credentials are forwarded.
+    official_reference_ids: [owner-public-research-policy]
+  - category: redistribution
+    knowledge_status: known
+    summary: Acquired originals remain in private repository run storage; this approval grants no redistribution rights.
+    official_reference_ids: [owner-public-research-policy]
+  - category: derived_output
+    knowledge_status: known
+    summary: Analysis is prepared for private owner review.
+    official_reference_ids: [owner-public-research-policy]
+  - category: provider_retention
+    knowledge_status: unsupported
+    summary: Anonymous public endpoints expose no retention control to this client.
+    official_reference_ids: [owner-public-research-policy]
+  - category: provider_training
+    knowledge_status: unsupported
+    summary: Anonymous public endpoints expose no training control to this client.
+    official_reference_ids: [owner-public-research-policy]
+  - category: freshness
+    knowledge_status: known
+    summary: Exact retrieval time and bytes are retained; retrieval time alone does not establish publication date or financial freshness.
+    official_reference_ids: [owner-public-research-policy]
+  - category: available_period
+    knowledge_status: known
+    summary: Only the requested accessible document is acquired; no complete history is asserted.
+    official_reference_ids: [owner-public-research-policy]
+  - category: failure_behavior
+    knowledge_status: known
+    summary: HTTP, public target validation, extraction and communication gate failures are retained without automatic retries or fake data.
+    official_reference_ids: [owner-public-research-policy]

@@ -59,3 +59,7 @@ policy, schema, evidence, and role-specific instructions supplied for this run a
 - Do not claim completion while required references, review outcomes, or human decisions remain unresolved.
 
 <!-- markdownlint-enable MD013 -->
+
+## Web Access Enabled
+
+All research roles may independently search and read public Web pages whenever needed. Do not rely on the orchestrator to select all sources. Avoid high-frequency repeated access to the same host. Preserve search records and distinguish discovered sources from machine-validated evidence.

@@ -38,7 +38,7 @@ if [[ -f "${WORKSPACE}/pyproject.toml" ]]; then
     echo "📦 Installing project dependencies using UV..."
     # Expand the positional workspace argument in the child shell.
     # shellcheck disable=SC2016
-    gosu "${CONTAINER_USER}" bash -c 'cd -- "$1" && uv sync --frozen' bash "${WORKSPACE}"
+    gosu "${CONTAINER_USER}" bash -c 'cd -- "$1" && uv sync --frozen --extra pdf' bash "${WORKSPACE}"
 fi
 
 if [[ -f "${WORKSPACE}/.pre-commit-config.yaml" ]]; then

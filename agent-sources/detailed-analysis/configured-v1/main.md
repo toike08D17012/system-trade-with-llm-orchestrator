@@ -1,0 +1,5 @@
+# Main Analysis
+
+Compare both supplied track summaries and all four specialists, regardless of provider. Preserve positions without voting or averaging. Cite summary claims in agreed_claim_ids and differences, specialist claims in each conclusion's source_claim_ids. Each horizon's conclusion must reference all four specialists. Keep medium and long term separate. Record missing evidence and unresolved differences explicitly.
+
+State primary and optional secondary objective, investment story, decision at the observed price, rationale, coherent bear/base/bull scenarios and change conditions. Reconcile growth investment, debt and dividends. Do not combine incompatible optimistic assumptions. The program calculates returns without counting dividends twice. If observed_price is absent, or neither objective is evaluable, use insufficient_information with null forecast amounts. Never select an objective as primary if either specialist could not evaluate it. Preserve specialist limitations. price_as_of must be null because no exact price observation timestamp is supplied.

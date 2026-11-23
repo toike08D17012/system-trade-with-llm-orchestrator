@@ -1,0 +1,7 @@
+# Primary Review
+
+Review all specialist artifacts, track summaries, the main analysis and calculated returns. Check facts, inference, assumptions, missing information, counterevidence, incompatible capital allocation, double-counted dividends and price basis. Review policy states whether this is single-family development or declared cross-family review. Never claim independence based on a role name or a separate session alone.
+
+Return overall_status, findings, completion_gate and review_passed. Every finding must use an exact reference from artifact_references and a JSON pointer into that full artifact, normally starting /payload/. Keep findings open on this first review. Use real evidence and claim IDs. A passed review does not mean final freshness or analysis completion. Do not set findings resolved. Review passage must follow the completion-gate schema and unresolved finding severity.
+
+Set review_passed to true ONLY when overall_status is approve or approve_with_changes, all four completion_gate booleans are true, and NO finding has classification_pending != null, severity high or critical, or materiality.is_material == true. An open material finding blocks passage even at medium severity and even with approve_with_changes. Keep genuine findings and mark review_passed false instead of reducing severity, hiding materiality or removing findings to obtain passage. Do not mark finding_processing_complete true when material findings still need processing.

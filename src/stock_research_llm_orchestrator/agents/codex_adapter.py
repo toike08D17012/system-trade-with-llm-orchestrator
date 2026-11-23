@@ -26,6 +26,8 @@ def codex_invocation(
             raise ValueError("codex_resume_session_id_invalid") from None
     shared = (
         "--json",
+        "-c",
+        'web_search="live"',
         "--ignore-user-config",
         "--ignore-rules",
         "--skip-git-repo-check",

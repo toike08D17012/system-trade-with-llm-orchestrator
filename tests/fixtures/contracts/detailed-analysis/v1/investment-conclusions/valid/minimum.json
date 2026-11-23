@@ -1,0 +1,219 @@
+{
+  "schema_id": "detailed-analysis.investment-conclusions",
+  "schema_version": 1,
+  "task_id": "objective-fixture",
+  "artifact_id": "investment-conclusions",
+  "created_at": "2026-11-07T00:00:00Z",
+  "evidence_set_reference": {
+    "artifact_type": "evidence_set",
+    "artifact_id": "evidence-v1",
+    "schema_id": "detailed-analysis.evidence-set",
+    "schema_version": 1,
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "specialist_references": [
+    {
+      "artifact_type": "specialist_analysis",
+      "artifact_id": "codex_capital",
+      "schema_id": "detailed-analysis.specialist-analysis",
+      "schema_version": 1,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "artifact_type": "specialist_analysis",
+      "artifact_id": "codex_income",
+      "schema_id": "detailed-analysis.specialist-analysis",
+      "schema_version": 1,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "artifact_type": "specialist_analysis",
+      "artifact_id": "claude_capital",
+      "schema_id": "detailed-analysis.specialist-analysis",
+      "schema_version": 1,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "artifact_type": "specialist_analysis",
+      "artifact_id": "claude_income",
+      "schema_id": "detailed-analysis.specialist-analysis",
+      "schema_version": 1,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "synthesis_reference": {
+    "artifact_type": "synthesis_result",
+    "artifact_id": "research-synthesis",
+    "schema_id": "detailed-analysis.synthesis-result",
+    "schema_version": 1,
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "conclusions": [
+    {
+      "horizon": "medium_term",
+      "primary_objective": null,
+      "secondary_objective": null,
+      "decision": "insufficient_information",
+      "rationale": "Neither objective can be evaluated at a verified current price.",
+      "story": "Verify business growth and cash generation before considering a purchase.",
+      "capital_allocation_consistency": "Investment expenditure and dividends cannot yet be reconciled.",
+      "source_claim_ids": [
+        "codex_capital-medium_term",
+        "codex_income-medium_term",
+        "claude_capital-medium_term",
+        "claude_income-medium_term"
+      ],
+      "specialist_limitations": [
+        "Both capital and income evidence are insufficient."
+      ],
+      "unresolved_differences": [
+        "Business durability is unresolved."
+      ],
+      "change_conditions": [
+        "Obtain financial forecasts, dividend history and a verified price."
+      ],
+      "missing_information": [
+        "Financial statements and current price."
+      ],
+      "scenarios": [
+        {
+          "case": "bear",
+          "story": "Further verified evidence is required before a numeric scenario.",
+          "assumptions": [
+            "No verified financial forecasts available."
+          ],
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "months": 18,
+          "currency": "JPY",
+          "per_share_basis": "Unavailable",
+          "terminal_price": null,
+          "cumulative_dividends": null,
+          "missing_information": [
+            "Financial statements, dividend history and observed price."
+          ]
+        },
+        {
+          "case": "base",
+          "story": "Further verified evidence is required before a numeric scenario.",
+          "assumptions": [
+            "No verified financial forecasts available."
+          ],
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "months": 18,
+          "currency": "JPY",
+          "per_share_basis": "Unavailable",
+          "terminal_price": null,
+          "cumulative_dividends": null,
+          "missing_information": [
+            "Financial statements, dividend history and observed price."
+          ]
+        },
+        {
+          "case": "bull",
+          "story": "Further verified evidence is required before a numeric scenario.",
+          "assumptions": [
+            "No verified financial forecasts available."
+          ],
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "months": 18,
+          "currency": "JPY",
+          "per_share_basis": "Unavailable",
+          "terminal_price": null,
+          "cumulative_dividends": null,
+          "missing_information": [
+            "Financial statements, dividend history and observed price."
+          ]
+        }
+      ]
+    },
+    {
+      "horizon": "long_term",
+      "primary_objective": null,
+      "secondary_objective": null,
+      "decision": "insufficient_information",
+      "rationale": "Neither objective can be evaluated at a verified current price.",
+      "story": "Verify business growth and cash generation before considering a purchase.",
+      "capital_allocation_consistency": "Investment expenditure and dividends cannot yet be reconciled.",
+      "source_claim_ids": [
+        "codex_capital-long_term",
+        "codex_income-long_term",
+        "claude_capital-long_term",
+        "claude_income-long_term"
+      ],
+      "specialist_limitations": [
+        "Both capital and income evidence are insufficient."
+      ],
+      "unresolved_differences": [
+        "Business durability is unresolved."
+      ],
+      "change_conditions": [
+        "Obtain financial forecasts, dividend history and a verified price."
+      ],
+      "missing_information": [
+        "Financial statements and current price."
+      ],
+      "scenarios": [
+        {
+          "case": "bear",
+          "story": "Further verified evidence is required before a numeric scenario.",
+          "assumptions": [
+            "No verified financial forecasts available."
+          ],
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "months": 36,
+          "currency": "JPY",
+          "per_share_basis": "Unavailable",
+          "terminal_price": null,
+          "cumulative_dividends": null,
+          "missing_information": [
+            "Financial statements, dividend history and observed price."
+          ]
+        },
+        {
+          "case": "base",
+          "story": "Further verified evidence is required before a numeric scenario.",
+          "assumptions": [
+            "No verified financial forecasts available."
+          ],
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "months": 36,
+          "currency": "JPY",
+          "per_share_basis": "Unavailable",
+          "terminal_price": null,
+          "cumulative_dividends": null,
+          "missing_information": [
+            "Financial statements, dividend history and observed price."
+          ]
+        },
+        {
+          "case": "bull",
+          "story": "Further verified evidence is required before a numeric scenario.",
+          "assumptions": [
+            "No verified financial forecasts available."
+          ],
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "months": 36,
+          "currency": "JPY",
+          "per_share_basis": "Unavailable",
+          "terminal_price": null,
+          "cumulative_dividends": null,
+          "missing_information": [
+            "Financial statements, dividend history and observed price."
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -21,6 +21,9 @@ def build_parser() -> argparse.ArgumentParser:
     config_commands = config_parser.add_subparsers(dest="config_command", required=True)
     validate_parser = config_commands.add_parser("validate", help="Validate configuration without network access.")
     validate_parser.add_argument("--config-dir", type=Path, default=Path("./config"))
+    from stock_research_llm_orchestrator.research.cli import add_commands
+
+    add_commands(commands)
     return parser
 
 
@@ -28,6 +31,10 @@ def run(argv: Sequence[str] | None = None) -> int:
     """Parse arguments and execute one CLI command."""
     args = build_parser().parse_args(argv)
     configure_logging(args.log_level)
+    if args.command == "research":
+        from stock_research_llm_orchestrator.research.cli import execute
+
+        return execute(args)
     artifacts = validate_configuration(args.config_dir)
     display_path = str(args.config_dir)
     print(f"Validated {len(artifacts)} configuration artifacts under {display_path}.")

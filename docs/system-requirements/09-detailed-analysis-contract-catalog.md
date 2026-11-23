@@ -81,7 +81,7 @@ src/stock_research_llm_orchestrator/
     schema_generation.py
     validation/
     detailed_analysis/v1/
-schemas/detailed-analysis/v1/
+schemas/detailed-analysis/
 templates/detailed-analysis/v1/
 config/policies/<policy-name>/v1.yaml
 config/market-profiles/xtks/v1.yaml
@@ -99,7 +99,7 @@ agent-sources/detailed-analysis/v1/
 - registry key: `(schema_id, schema_version)`。重複登録を起動時に拒否する。
 - Python class: `DetailedAnalysisTaskV1`のようなPascalCaseとversion suffixを使う。
 - Python module: snake_caseを使う。
-- JSON Schema: `<artifact-name>.schema.json`のkebab-caseを使う。
+- JSON Schema: `<artifact-name>.schema.json`のkebab-caseを使う。契約ごとの最新版を配置し、過去版はGit履歴で参照する。
 - fixture: `<case-id>.json`とし、`valid/`と`invalid/<error-code>/`へ分ける。
 - Policy: `<policy-name>/v1.yaml`とする。
 - Agent指示: kebab-caseのMarkdownとし、合成定義を`instruction-set.json`に置く。
@@ -122,7 +122,15 @@ agent-sources/detailed-analysis/v1/
 | `research-context.schema.json` | orchestrator | worker、reviewer、auditor | `02`、`03` |
 | `search-record.schema.json` | Web探索を行うAgent | orchestrator、data preparation、監査ログ | `02`、`03` |
 | `common-evidence-update.schema.json` | data preparation | orchestrator、両worker | `02`、`03` |
+| `agent-configuration.schema.json` | 利用者設定 | CLI、Agent実行、再検証 | `03`、`08` |
+| `configured-analysis.schema.json` | 役割別Agent | 統合、レビュー、レポート、再検証 | `01`、`03`、`08` |
+| `web-analysis.schema.json` | 独立Web調査の役割別Agent | 独立検索・Web引用・報告株価と初期証拠を分離して保持 | `03`、`08` |
+| `acquisition-analysis.schema.json` | 標準取得対応の役割別Agent | 各役割へ実際に提示した証拠snapshotと分析を束縛 | `03`、`08` |
+| `acquisition-result.schema.json` | 標準取得実行器 | 未実施・待機・失敗・取得済みと検証状態、実試行、原本を記録 | `03`、`08` |
+| `acquisition-snapshot.schema.json` | 標準取得対応runtime | 初期証拠と追加取得証拠の提示集合を固定 | `03`、`08` |
 | `agent-execution.schema.json` | AgentAdapter、SessionRunner | orchestrator、manifest、運用表示 | `04`、`08` |
+| `specialist-analysis.schema.json` | 目的別専門担当 | 系統別整理、メイン、reviewer | `01`、`03` |
+| `investment-conclusions.schema.json` | メイン | reviewer、report generator | `01`、`03` |
 | `worker-analysis.schema.json` | Codex・Claude worker | orchestrator、reviewer | `01`、`03` |
 | `synthesis-result.schema.json` | orchestrator | reviewer、report generator | `03` |
 | `primary-review.schema.json` | primary reviewer | orchestrator、worker、report generator | `03`、ADR-0004 |
@@ -386,3 +394,12 @@ MVPでは時間、token、費用、Web検索、再調査、合議往復、再レ
 - [ADR-0002](../decisions/0002-use-pydantic-contracts-and-json-interchange.md)
 - [ADR-0003](../decisions/0003-standardize-agent-adapters-and-session-continuation.md)
 - [ADR-0004](../decisions/0004-structure-disputes-and-single-issue-audits.md)
+
+## 利益目的別の追加契約
+
+既存v1契約の構造は維持し、`specialist-analysis.schema.json`でモデル系統・利益目的・証拠参照・
+中期長期のストーリーと3シナリオを保持する。`investment-conclusions.schema.json`は4専門成果物と
+統合結果への参照、期間別の狙い、条件付き判断、前提、反証と判断変更条件を保持する。
+暫定実行形式2の指示は`agent-sources/detailed-analysis/objectives-v1/`に別管理し、
+`instruction-set.json`に版と各本文hashを記録する。既存5役割の定義には混在させない。
+一次レビューは既存契約を使い、指摘先には統合結果と追加の投資結論を指定できる。

@@ -82,7 +82,9 @@ def test_run_codex_uses_read_only_workspace_and_validates_output(monkeypatch: py
     """The subprocess receives bounded evidence and cannot return invented citations."""
 
     def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-        assert command[:4] == ["codex", "exec", "--sandbox", "read-only"]
+        assert command[:2] == ["codex", "exec"]
+        assert command[command.index("--sandbox") + 1] == "read-only"
+        assert command[command.index("-c") + 1] == 'web_search="live"'
         assert "Revenue rose by 10 percent." in str(kwargs["input"])
         assert Path(command[command.index("--output-schema") + 1]).is_file()
         output = Path(command[command.index("--output-last-message") + 1])

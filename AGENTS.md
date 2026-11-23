@@ -88,3 +88,11 @@ If checks cannot be run or are not relevant, explain why. In the final response,
 - Follow the existing language style of user-facing documentation.
 - Keep agent-facing notes concise and avoid repeating instructions already defined in this file or in language-specific instruction files.
 - Prefer English for private reasoning where possible. Do not expose private chain-of-thought. When explaining decisions, provide a concise Japanese summary of the rationale, evidence, changes made, and validation results.
+
+## 10. Stock Analysis Requests
+
+- Treat requests to analyze a security, assess dividends, or decide whether to hold, buy more, or sell as requests to execute this repository's research workflow, unless the user explicitly requests a direct answer outside that workflow.
+- Before giving investment conclusions or price targets, read the current research execution instructions in `README.md`, inspect the applicable agent configuration, and run the supported `stock-research research run` path with attributed source inputs. Preserve independent objective specialists, aggregation, synthesis, primary review, and report generation.
+- Use the established session agent profile when applicable. Do not silently substitute a different model family, bypass an unavailable provider, or replace workflow execution with the main agent's own Web research. Report blockers and retain resumable execution records.
+- Treat earlier conversational conclusions and price bands as unreviewed hypotheses, not source evidence or constraints on independent analysts. Keep user portfolio context distinct from issuer disclosures.
+- Validate the resulting bundle with `stock-research research validate` and perform supported offline replay. Link the saved report and identify the actual review mode, incomplete stages, and remaining limitations. Never describe a started or interrupted run as completed analysis.

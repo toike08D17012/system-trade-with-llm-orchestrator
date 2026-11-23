@@ -1,0 +1,186 @@
+{
+  "horizons": [
+    {
+      "horizon": "medium_term",
+      "evaluability": "not_evaluable",
+      "confidence": "low",
+      "rationale": "The excerpt cannot substantiate investment returns.",
+      "thesis": "Business durability may support future returns if verified.",
+      "counter_thesis": "Weak cash generation or demand could invalidate the story.",
+      "watch_conditions": [
+        "Obtain current financial statements."
+      ],
+      "missing_information": [
+        "Current verified financial statements and observed price."
+      ],
+      "claims": [
+        {
+          "claim_id": "codex_capital-medium_term",
+          "perspective": "business",
+          "statement": "Durability and cash generation require further evidence.",
+          "claim_type": "hypothesis",
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "counterevidence_ids": [],
+          "uncertainty": "No verified financial history.",
+          "material": true
+        }
+      ],
+      "scenarios": [
+        {
+          "case": "bear",
+          "story": "Further verified evidence is required before a numeric scenario.",
+          "assumptions": [
+            "No verified financial forecasts available."
+          ],
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "months": 18,
+          "currency": "JPY",
+          "per_share_basis": "Unavailable",
+          "terminal_price": null,
+          "cumulative_dividends": null,
+          "missing_information": [
+            "Financial statements, dividend history and observed price."
+          ]
+        },
+        {
+          "case": "base",
+          "story": "Further verified evidence is required before a numeric scenario.",
+          "assumptions": [
+            "No verified financial forecasts available."
+          ],
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "months": 18,
+          "currency": "JPY",
+          "per_share_basis": "Unavailable",
+          "terminal_price": null,
+          "cumulative_dividends": null,
+          "missing_information": [
+            "Financial statements, dividend history and observed price."
+          ]
+        },
+        {
+          "case": "bull",
+          "story": "Further verified evidence is required before a numeric scenario.",
+          "assumptions": [
+            "No verified financial forecasts available."
+          ],
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "months": 18,
+          "currency": "JPY",
+          "per_share_basis": "Unavailable",
+          "terminal_price": null,
+          "cumulative_dividends": null,
+          "missing_information": [
+            "Financial statements, dividend history and observed price."
+          ]
+        }
+      ]
+    },
+    {
+      "horizon": "long_term",
+      "evaluability": "not_evaluable",
+      "confidence": "low",
+      "rationale": "The excerpt cannot substantiate investment returns.",
+      "thesis": "Business durability may support future returns if verified.",
+      "counter_thesis": "Weak cash generation or demand could invalidate the story.",
+      "watch_conditions": [
+        "Obtain current financial statements."
+      ],
+      "missing_information": [
+        "Current verified financial statements and observed price."
+      ],
+      "claims": [
+        {
+          "claim_id": "codex_capital-long_term",
+          "perspective": "business",
+          "statement": "Durability and cash generation require further evidence.",
+          "claim_type": "hypothesis",
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "counterevidence_ids": [],
+          "uncertainty": "No verified financial history.",
+          "material": true
+        }
+      ],
+      "scenarios": [
+        {
+          "case": "bear",
+          "story": "Further verified evidence is required before a numeric scenario.",
+          "assumptions": [
+            "No verified financial forecasts available."
+          ],
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "months": 36,
+          "currency": "JPY",
+          "per_share_basis": "Unavailable",
+          "terminal_price": null,
+          "cumulative_dividends": null,
+          "missing_information": [
+            "Financial statements, dividend history and observed price."
+          ]
+        },
+        {
+          "case": "base",
+          "story": "Further verified evidence is required before a numeric scenario.",
+          "assumptions": [
+            "No verified financial forecasts available."
+          ],
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "months": 36,
+          "currency": "JPY",
+          "per_share_basis": "Unavailable",
+          "terminal_price": null,
+          "cumulative_dividends": null,
+          "missing_information": [
+            "Financial statements, dividend history and observed price."
+          ]
+        },
+        {
+          "case": "bull",
+          "story": "Further verified evidence is required before a numeric scenario.",
+          "assumptions": [
+            "No verified financial forecasts available."
+          ],
+          "evidence_ids": [
+            "ir-excerpt"
+          ],
+          "months": 36,
+          "currency": "JPY",
+          "per_share_basis": "Unavailable",
+          "terminal_price": null,
+          "cumulative_dividends": null,
+          "missing_information": [
+            "Financial statements, dividend history and observed price."
+          ]
+        }
+      ]
+    }
+  ],
+  "schema_id": "detailed-analysis.specialist-analysis",
+  "schema_version": 1,
+  "task_id": "objective-fixture",
+  "artifact_id": "codex_capital",
+  "created_at": "2026-11-07T00:00:00Z",
+  "provider": "codex",
+  "objective": "capital_gain",
+  "evidence_set_reference": {
+    "artifact_type": "evidence_set",
+    "artifact_id": "evidence-v1",
+    "schema_id": "detailed-analysis.evidence-set",
+    "schema_version": 1,
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}

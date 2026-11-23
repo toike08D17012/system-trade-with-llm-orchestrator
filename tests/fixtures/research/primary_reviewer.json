@@ -1,0 +1,11 @@
+{
+  "overall_status": "approve",
+  "findings": [],
+  "completion_gate": {
+    "structured_output_valid": true,
+    "evidence_references_valid": true,
+    "finding_processing_complete": true,
+    "policy_deviation_records_complete": true
+  },
+  "review_passed": true
+}

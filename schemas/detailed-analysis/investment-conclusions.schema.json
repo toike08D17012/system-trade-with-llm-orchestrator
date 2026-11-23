@@ -1,0 +1,347 @@
+{
+  "$defs": {
+    "ArtifactReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to an exact artifact and contract version.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_id": {
+          "pattern": "^detailed-analysis\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Schema Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "schema_id",
+        "schema_version",
+        "sha256"
+      ],
+      "title": "ArtifactReferenceV1",
+      "type": "object"
+    },
+    "Horizon": {
+      "enum": [
+        "medium_term",
+        "long_term"
+      ],
+      "type": "string"
+    },
+    "InvestmentConclusionV1": {
+      "additionalProperties": false,
+      "description": "A conditional research decision with compatible, explicit return assumptions.",
+      "properties": {
+        "capital_allocation_consistency": {
+          "minLength": 1,
+          "title": "Capital Allocation Consistency",
+          "type": "string"
+        },
+        "change_conditions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Change Conditions",
+          "type": "array"
+        },
+        "decision": {
+          "enum": [
+            "candidate",
+            "wait",
+            "reject",
+            "insufficient_information"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "horizon": {
+          "$ref": "#/$defs/Horizon"
+        },
+        "missing_information": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Missing Information",
+          "type": "array"
+        },
+        "primary_objective": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Objective"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "scenarios": {
+          "items": {
+            "$ref": "#/$defs/ScenarioV1"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Scenarios",
+          "type": "array"
+        },
+        "secondary_objective": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Objective"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_claim_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Claim Ids",
+          "type": "array"
+        },
+        "specialist_limitations": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Specialist Limitations",
+          "type": "array"
+        },
+        "story": {
+          "minLength": 1,
+          "title": "Story",
+          "type": "string"
+        },
+        "unresolved_differences": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Unresolved Differences",
+          "type": "array"
+        }
+      },
+      "required": [
+        "horizon",
+        "primary_objective",
+        "secondary_objective",
+        "decision",
+        "rationale",
+        "story",
+        "capital_allocation_consistency",
+        "source_claim_ids",
+        "specialist_limitations",
+        "unresolved_differences",
+        "change_conditions",
+        "missing_information",
+        "scenarios"
+      ],
+      "title": "InvestmentConclusionV1",
+      "type": "object"
+    },
+    "MonetaryAmount": {
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+      "type": "string"
+    },
+    "Objective": {
+      "enum": [
+        "capital_gain",
+        "income_gain"
+      ],
+      "type": "string"
+    },
+    "ScenarioV1": {
+      "additionalProperties": false,
+      "description": "Explicit future assumptions; observed purchase prices come from common input.",
+      "properties": {
+        "assumptions": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "case": {
+          "enum": [
+            "bear",
+            "base",
+            "bull"
+          ],
+          "title": "Case",
+          "type": "string"
+        },
+        "cumulative_dividends": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MonetaryAmount"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currency": {
+          "const": "JPY",
+          "title": "Currency",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "missing_information": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Missing Information",
+          "type": "array"
+        },
+        "months": {
+          "maximum": 60,
+          "minimum": 12,
+          "title": "Months",
+          "type": "integer"
+        },
+        "per_share_basis": {
+          "minLength": 1,
+          "title": "Per Share Basis",
+          "type": "string"
+        },
+        "story": {
+          "minLength": 1,
+          "title": "Story",
+          "type": "string"
+        },
+        "terminal_price": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MonetaryAmount"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "case",
+        "story",
+        "assumptions",
+        "evidence_ids",
+        "months",
+        "currency",
+        "per_share_basis",
+        "terminal_price",
+        "cumulative_dividends",
+        "missing_information"
+      ],
+      "title": "ScenarioV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.investment-conclusions:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Main conclusions linked to all four specialist artifacts and synthesis.",
+  "properties": {
+    "artifact_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "conclusions": {
+      "items": {
+        "$ref": "#/$defs/InvestmentConclusionV1"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Conclusions",
+      "type": "array"
+    },
+    "created_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Created At",
+      "type": "string"
+    },
+    "evidence_set_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "schema_id": {
+      "const": "detailed-analysis.investment-conclusions",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "specialist_references": {
+      "items": {
+        "$ref": "#/$defs/ArtifactReferenceV1"
+      },
+      "maxItems": 4,
+      "minItems": 4,
+      "title": "Specialist References",
+      "type": "array"
+    },
+    "synthesis_reference": {
+      "$ref": "#/$defs/ArtifactReferenceV1"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "title": "Task Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "conclusions",
+    "schema_id",
+    "schema_version",
+    "task_id",
+    "artifact_id",
+    "created_at",
+    "evidence_set_reference",
+    "specialist_references",
+    "synthesis_reference"
+  ],
+  "title": "InvestmentConclusionsV1",
+  "type": "object"
+}

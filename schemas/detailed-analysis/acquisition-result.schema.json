@@ -1,0 +1,195 @@
+{
+  "$defs": {
+    "AcquiredEvidence": {
+      "additionalProperties": false,
+      "description": "A program-acquired original or normalized observation, never an agent Web claim.",
+      "properties": {
+        "evidence_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "raw_reference": {
+          "$ref": "#/$defs/FileReferenceV1"
+        },
+        "retrieved_at": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+          "title": "Retrieved At",
+          "type": "string"
+        },
+        "source_id": {
+          "enum": [
+            "jpx",
+            "yfinance",
+            "issuer-ir",
+            "public-web"
+          ],
+          "title": "Source Id",
+          "type": "string"
+        },
+        "source_reference": {
+          "minLength": 1,
+          "title": "Source Reference",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "validation": {
+          "$ref": "#/$defs/AcquisitionValidation",
+          "default": "verified"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "source_id",
+        "source_reference",
+        "retrieved_at",
+        "raw_reference",
+        "text"
+      ],
+      "title": "AcquiredEvidence",
+      "type": "object"
+    },
+    "AcquisitionValidation": {
+      "enum": [
+        "pending",
+        "verified",
+        "rejected"
+      ],
+      "type": "string"
+    },
+    "FileReferenceV1": {
+      "additionalProperties": false,
+      "description": "Immutable reference to a non-schema file artifact under a task workspace.",
+      "properties": {
+        "artifact_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "media_type": {
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
+        },
+        "relative_path": {
+          "minLength": 1,
+          "title": "Relative Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "relative_path",
+        "media_type",
+        "sha256"
+      ],
+      "title": "FileReferenceV1",
+      "type": "object"
+    }
+  },
+  "$id": "urn:stock-research-llm-orchestrator:detailed-analysis.acquisition-result:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "An exact request outcome with physical attempts and immutable file references.",
+  "properties": {
+    "attempt_references": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/FileReferenceV1"
+      },
+      "title": "Attempt References",
+      "type": "array"
+    },
+    "completed_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Completed At",
+      "type": "string"
+    },
+    "detail": {
+      "minLength": 1,
+      "title": "Detail",
+      "type": "string"
+    },
+    "evidence": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/AcquiredEvidence"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "files": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/FileReferenceV1"
+      },
+      "title": "Files",
+      "type": "array"
+    },
+    "request_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Request Sha256",
+      "type": "string"
+    },
+    "requested_at": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "title": "Requested At",
+      "type": "string"
+    },
+    "reuse_reference": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FileReferenceV1"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "schema_id": {
+      "const": "detailed-analysis.acquisition-result",
+      "default": "detailed-analysis.acquisition-result",
+      "title": "Schema Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "not_attempted",
+        "waiting",
+        "failed",
+        "acquired"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "validation": {
+      "$ref": "#/$defs/AcquisitionValidation"
+    }
+  },
+  "required": [
+    "request_sha256",
+    "status",
+    "validation",
+    "requested_at",
+    "completed_at",
+    "detail"
+  ],
+  "title": "AcquisitionResult",
+  "type": "object"
+}

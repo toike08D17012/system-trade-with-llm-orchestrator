@@ -16,7 +16,7 @@ from stock_research_llm_orchestrator.contracts.validation.wrapper import (
 
 
 FIXTURE_ROOT = Path(__file__).parents[1] / "fixtures" / "contracts" / "detailed-analysis" / "v1"
-SCHEMA_ROOT = Path(__file__).parents[2] / "schemas" / "detailed-analysis" / "v1"
+SCHEMA_ROOT = Path(__file__).parents[2] / "schemas" / "detailed-analysis"
 FIXTURE_INDEX: dict[str, str] = json.loads((FIXTURE_ROOT / "fixture-index.json").read_text(encoding="utf-8"))
 PUBLIC_CASES = tuple(sorted(FIXTURE_INDEX.items()))
 
@@ -39,7 +39,7 @@ def test_fixture_index_matches_the_public_registry() -> None:
     registry_ids = {schema_id for (schema_id, version), _model in default_registry.items() if version == 1}
 
     assert set(FIXTURE_INDEX) == registry_ids
-    assert len(FIXTURE_INDEX) == 28
+    assert len(FIXTURE_INDEX) == 36
 
 
 @pytest.mark.parametrize(("schema_id", "relative_path"), PUBLIC_CASES)
