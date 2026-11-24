@@ -1,6 +1,7 @@
 """Exercise the public format-five live boundary and provider-free offline replay."""
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +10,7 @@ from pydantic import JsonValue
 
 from stock_research_llm_orchestrator import cli
 from stock_research_llm_orchestrator.agents.configuration import load_agent_configuration
-from stock_research_llm_orchestrator.agents.research_provider import WebTurnResult
+from stock_research_llm_orchestrator.agents.research_provider import ProviderResponseValidationError, WebTurnResult
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.acquisition_analysis import (
     AcquisitionRequest,
     AcquisitionResult,
@@ -44,6 +45,7 @@ def test_public_live_default_prepares_baseline_and_supports_all_role_acquisition
     summary_calls: list[str] = []
     asked: set[str] = set()
     original_prepare = baseline.prepare_baseline
+    corrected_reviews: list[ResearchRequest] = []
 
     def executor_factory(**kwargs: Any) -> object:
         assert kwargs["runtime"] == tmp_path / "runtime"
@@ -80,12 +82,20 @@ def test_public_live_default_prepares_baseline_and_supports_all_role_acquisition
             return _acquisition_turn(request.stage)
         if request.data.get("own_previous_turns"):
             assert request.data["last_acquisition_results"]
+        if request.stage == "primary_reviewer":
+            if "Correct the previous review below" not in request.instructions:
+                raise ProviderResponseValidationError(
+                    b'{"kind":"final"}',
+                    [{"msg": "Value error, retained low or medium findings require an unresolved retention reason"}],
+                )
+            corrected_reviews.append(request)
         return _final(request)
 
     monkeypatch.setattr(research_acquisition, "ResearchAcquisitionExecutor", executor_factory)
     monkeypatch.setattr(baseline, "prepare_baseline", prepare)
     monkeypatch.setattr("stock_research_llm_orchestrator.research.cli.preflight_research", lambda *_: None)
     monkeypatch.setattr("stock_research_llm_orchestrator.research.cli.invoke_web_research", invoke)
+    reports = tmp_path / "reports"
     args = [
         "research",
         "run",
@@ -96,17 +106,16 @@ def test_public_live_default_prepares_baseline_and_supports_all_role_acquisition
         "--prior",
         str(prior_root),
         "--runs",
-        str(tmp_path),
-        "--destination",
-        "live",
+        str(reports),
         "--runtime",
         str(tmp_path / "runtime"),
     ]
     assert cli.main(args) == 0
-    live = tmp_path / "live"
+    (live,) = (reports / "JP" / "1234").iterdir()
+    assert re.fullmatch(r"[0-9]{8}T[0-9]{12}Z-[0-9a-f]{12}", live.name)
     manifest = json.loads((live / "manifest.json").read_bytes())
     assert manifest["format_version"] == 5
-    assert manifest["execution_profile"] == "parallel_incremental_v5"
+    assert manifest["execution_profile"] == "parallel_incremental_v7"
     assert manifest["reassessment_from_epoch"] == 2
     assert manifest["stable_evidence_from_epoch"] == 1
     assert manifest["batch_common_updates_from_epoch"] == 1
@@ -118,12 +127,16 @@ def test_public_live_default_prepares_baseline_and_supports_all_role_acquisition
     assert {entry["role"] for entry in log} == set(RESEARCH_ROLES)
     assert (live / "report.md").is_file()
     assert len(summary_calls) == 1
+    assert len(corrected_reviews) == 1
+    (invalid_review,) = (tmp_path / "runtime").glob(
+        "research-executions/*/*-primary_reviewer/validation-retry/response.json"
+    )
+    assert invalid_review.read_bytes() == b'{"kind":"final"}'
     asked.clear()
-    cached_args = list(args)
-    cached_args[cached_args.index("--destination") + 1] = "cached-live"
+    cached_args = [*args, "--destination", "cached-live"]
     assert cli.main(cached_args) == 0
     assert len(summary_calls) == 1
-    cached_origins = json.loads((tmp_path / "cached-live/execution-origins.json").read_bytes())
+    cached_origins = json.loads((reports / "cached-live/execution-origins.json").read_bytes())
     assert cached_origins[summary_calls[0]] == "retained_exact_request"
 
     def forbidden(*_args: object, **_kwargs: object) -> None:

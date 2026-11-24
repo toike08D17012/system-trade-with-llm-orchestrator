@@ -17,6 +17,7 @@ from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.acquisition_
 )
 from stock_research_llm_orchestrator.preparation.research_acquisition import request_sha256
 from stock_research_llm_orchestrator.research.acquisition import replay_saved_bundle, run_workflow, validate_bundle
+from stock_research_llm_orchestrator.research.directed import DirectedMainTurn, ReviewResponse
 from stock_research_llm_orchestrator.research.workflow import ResearchRequest
 
 from .test_configured import PROFILE, ROOT
@@ -90,13 +91,15 @@ def _acquire(request: AcquisitionRequest, role: str, turn: int) -> tuple[Acquisi
 
 
 def _final(request: ResearchRequest) -> WebTurnResult:
+    if request.response_model is ReviewResponse:
+        return WebTurnResult(b'{"decision":"accept","reason":"The synthesis stands.","rerun_request":null}', b"")
     turn = web_response(request)
     if request.stage == "translation":
         return turn
-    return WebTurnResult(
-        json.dumps({"kind": "final", "requests": [], "state": "done", "payload": json.loads(turn.body)}).encode(),
-        turn.trace,
-    )
+    body: dict[str, object] = {"kind": "final", "requests": [], "state": "done", "payload": json.loads(turn.body)}
+    if request.response_model is DirectedMainTurn:
+        body["rerun_request"] = None
+    return WebTurnResult(json.dumps(body).encode(), turn.trace)
 
 
 def _acquisition_turn(purpose: str = "Read an original filing") -> WebTurnResult:

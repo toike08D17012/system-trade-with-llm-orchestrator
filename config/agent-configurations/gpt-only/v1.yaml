@@ -7,7 +7,7 @@ agents:
     model: gpt-6.2-sol
     model_family: openai_gpt
     reasoning:
-      effort: medium
+      effort: low
 roles:
   track_a:
     capital: gpt

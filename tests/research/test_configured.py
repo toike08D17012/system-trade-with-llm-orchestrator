@@ -46,7 +46,7 @@ def test_all_gpt_roles_are_isolated_and_never_labeled_claude() -> None:
     files = run_workflow(_inputs(), load_agent_configuration(PROFILE), invoke, INSTRUCTIONS, mode="replay")
     assert tuple(request.stage for request in seen) == STAGES
     assert all(request.provider == "codex" and request.agent is not None for request in seen)
-    assert all(request.agent is not None and request.agent.reasoning.effort == "medium" for request in seen)
+    assert all(request.agent is not None and request.agent.reasoning.effort == "low" for request in seen)
     for request in seen[:4]:
         assert "specialists" not in request.data and "summaries" not in request.data
     assert set(cast(dict[str, JsonValue], seen[4].data["specialists"])) == {"track_a_capital", "track_a_income"}
@@ -135,7 +135,7 @@ def test_model_and_effort_are_explicit_in_restricted_provider_invocation(
     """The selected model and reasoning settings survive without exposing prompt text in argv."""
     profile = load_agent_configuration(ROOT / "config/agent-configurations/cross-family/v1.yaml")
     alias = "gpt" if provider == "codex" else "claude"
-    assert profile.agents[alias].reasoning.effort == "medium"
+    assert profile.agents[alias].reasoning.effort == "low"
     if effort_override is not None:
         payload = profile.model_dump(mode="json")
         payload["agents"][alias]["reasoning"]["effort"] = effort_override

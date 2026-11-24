@@ -7,13 +7,13 @@ agents:
     model: gpt-6.2-sol
     model_family: openai_gpt
     reasoning:
-      effort: medium
+      effort: low
   claude:
     adapter: claude_cli
-    model: claude-sonnet-4-6
+    model: claude-opus-5-5
     model_family: anthropic_claude
     reasoning:
-      effort: medium
+      effort: low
 roles:
   track_a:
     capital: gpt

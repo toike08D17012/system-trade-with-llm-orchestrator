@@ -59,6 +59,18 @@ from stock_research_llm_orchestrator.research.delta import (
     resolve_adoption,
     resolve_delta,
 )
+from stock_research_llm_orchestrator.research.directed import (
+    DIRECTED_PROFILE,
+    MAIN_RERUN_INSTRUCTIONS,
+    RECOVERY_PROFILE,
+    REVIEW_RESPONSE_INSTRUCTIONS,
+    SHARED_EVIDENCE_INSTRUCTIONS,
+    DirectedMainTurn,
+    RerunRequest,
+    ReviewResponse,
+    SecondOpinion,
+    second_opinion_prompt,
+)
 from stock_research_llm_orchestrator.research.document_summary import (
     NAVIGATION_INSTRUCTIONS,
     DocumentSummary,
@@ -296,6 +308,7 @@ def _execute(
     batch_common_updates_from_epoch: int | None = None,
     execution_profile: str | None = None,
     build_pdf_reader: PdfReaderBuilder | None = None,
+    second_opinion: SecondOpinion | None = None,
 ) -> dict[str, bytes]:
     """Execute research epochs; newly acquired neutral evidence invalidates downstream analysis."""
     from stock_research_llm_orchestrator.research.baseline import validate_baseline
@@ -306,14 +319,17 @@ def _execute(
         raise ValueError("acquisition_stable_evidence_epoch_invalid")
     if batch_common_updates_from_epoch is not None and batch_common_updates_from_epoch < 1:
         raise ValueError("acquisition_batch_common_epoch_invalid")
-    profiles = tuple(f"parallel_incremental_v{version}" for version in range(1, 6))
+    profiles = tuple(f"parallel_incremental_v{version}" for version in range(1, 8))
     if execution_profile is not None and execution_profile not in profiles:
         raise ValueError("acquisition_execution_profile_invalid")
     optimized = execution_profile in profiles
     delta_enabled = execution_profile in profiles[1:]
     summaries_enabled = execution_profile in profiles[2:]
     selective = execution_profile in profiles[3:]
-    markdown_only = execution_profile == profiles[4]
+    markdown_only = execution_profile in profiles[4:]
+    # v6: acquisitions stay with their role; only the integration agent sends work back, at most once.
+    directed = execution_profile in {DIRECTED_PROFILE, RECOVERY_PROFILE}
+    recovery_profile = execution_profile == RECOVERY_PROFILE
     validate_input(inputs)
     baseline_results = validate_baseline(baseline_files, inputs=inputs, config=config) if baseline_files else ()
     if json.loads(sources["instruction-set.json"]) != {
@@ -371,6 +387,34 @@ def _execute(
     pdf_readers: dict[str, Mapping[str, bytes]] = {}
     unavailable_pdf_ids: set[str] = set()
     selected_specialists: set[str] = set(SPECIALISTS)
+    shared = dict(acquired)
+    rerun_used = False
+    pending_rerun: RerunRequest | None = None
+    rerun_efforts: dict[str, str] = {}
+    active_rerun: dict[str, JsonValue] | None = None
+    second_opinion_reason: str | None = None
+
+    def send_back(rerun: RerunRequest, stage: str) -> None:
+        """Consume the single send-back: chosen specialists rerun with the chosen effort and evidence."""
+        nonlocal rerun_used, selected_specialists, rerun_efforts, active_rerun
+        rerun_used = True
+        selected_specialists = set(rerun.roles)
+        rerun_efforts = dict.fromkeys(rerun.roles, rerun.effort)
+        active_rerun = {**rerun.model_dump(mode="json"), "stage": stage}
+        for identity in rerun.shared_evidence_ids:
+            if identity in acquired:
+                _merge_evidence(shared, acquired[identity])
+        incremental_decisions.append({"epoch": epoch, "send_back": active_rerun})
+        distribution.append(
+            {
+                "epoch": epoch,
+                "recipients": list[JsonValue](sorted(selected_specialists)),
+                "evidence_ids": cast(list[JsonValue], sorted(shared)),
+                "invalidated_roles": [
+                    stage for stage in STAGES[:-1] if stage not in SPECIALISTS or stage in selected_specialists
+                ],
+            }
+        )
 
     def timestamp(key: str) -> str:
         nonlocal previous_time
@@ -527,7 +571,7 @@ def _execute(
 
     while stalled is None:
         epoch += 1
-        epoch_before = dict(acquired)
+        epoch_before = dict(shared) if directed else dict(acquired)
         batching_common = batch_common_updates_from_epoch is not None and epoch >= batch_common_updates_from_epoch
         artifacts = {}
         references = {}
@@ -558,7 +602,7 @@ def _execute(
             batching_common: bool,
         ) -> Generator[ResearchRequest, WebTurnResult]:
             """Yield provider requests while keeping every state transition on the coordinator."""
-            nonlocal previous_time, stalled, calculations, report_price
+            nonlocal previous_time, stalled, calculations, report_price, pending_rerun
             role_price = observed_price(excerpts)
             # The first four roles see the same epoch baseline, then their own additions only.
             visible = dict(epoch_before)
@@ -672,8 +716,29 @@ def _execute(
                 )
             elif optimized and reassessing and role in SPECIALISTS:
                 turn_model = OptimizedSpecialistTurn
+            if recovery_profile and role == "primary_reviewer":
+                instruction += (
+                    "\nFor every unresolved low or medium finding, include a nonempty "
+                    "unresolved_retention_reason explaining why it remains unresolved."
+                )
+            if recovery_profile and role == "orchestrator":
+                instruction += (
+                    "\nUse the standard market observation in observed_price for returns when available. "
+                    "Use a Web quote only as corroboration or as a fallback when the standard observation is absent."
+                )
+            if directed:
+                instruction += SHARED_EVIDENCE_INSTRUCTIONS
+                if role == "orchestrator" and not rerun_used and turn_model is AcquisitionMainTurn:
+                    turn_model = DirectedMainTurn
+                    instruction += MAIN_RERUN_INSTRUCTIONS
+                if role in rerun_efforts:
+                    data["integration_send_back"] = active_rerun
             alias = assignments[role]
             agent = config.agents[alias]
+            if role in rerun_efforts:
+                agent = agent.model_copy(
+                    update={"reasoning": agent.reasoning.model_copy(update={"effort": rerun_efforts[role]})}
+                )
             provider: Literal["codex", "claude"] = "codex" if agent.adapter == "codex_cli" else "claude"
             history: list[JsonValue] = []
             repeats: dict[str, int] = {}
@@ -723,6 +788,9 @@ def _execute(
                 role_native += native_web_calls(turn.trace)
                 parsed = turn_model.model_validate_json(turn.body)
                 body_data = parsed.model_dump(mode="json")
+                if isinstance(parsed, DirectedMainTurn) and parsed.kind == "final":
+                    pending_rerun = parsed.rerun_request
+                    body_data.pop("rerun_request")
                 history.append(body_data)
                 adopted = body_data["kind"] == "unchanged"
                 patched = body_data["kind"] == "delta"
@@ -935,6 +1003,7 @@ def _execute(
             if isinstance(body, (WebAggregateBody, WebMainBody)) and body.entry_exit_context.price_as_of is not None:
                 raise ValueError("configured_exact_price_time_unavailable")
             if isinstance(body, WebMainBody):
+                files.pop("price-source-discrepancy.json", None)
                 if body.web_observed_price is not None:
                     quote = body.web_observed_price
                     if (
@@ -949,7 +1018,7 @@ def _execute(
                         raise ValueError("web_price_future_observation")
                     if quote.price not in quote.quote_excerpt.replace(",", ""):
                         raise ValueError("web_price_excerpt_mismatch")
-                    role_price = {
+                    web_price: dict[str, JsonValue] = {
                         "price": quote.price,
                         "currency": quote.currency,
                         "on": quote.observed_on.isoformat(),
@@ -957,6 +1026,19 @@ def _execute(
                         "source_id": quote.source_id,
                         "provenance": "agent_reported_native_web_not_machine_verified",
                     }
+                    if (
+                        recovery_profile
+                        and role_price is not None
+                        and (role_price.get("provenance") == "machine_parsed_native_yfinance_observation")
+                    ):
+                        if Decimal(str(role_price["price"])) != Decimal(quote.price) or any(
+                            role_price.get(field) != web_price[field] for field in ("currency", "on", "per_share_basis")
+                        ):
+                            files["price-source-discrepancy.json"] = _json(
+                                {"used": role_price, "reported_web": web_price}
+                            )
+                    else:
+                        role_price = web_price
                 calculations = _check_main(body, cast(Mapping[str, WebAnalysisV1], artifacts), role_price)
                 report_price = role_price
             if isinstance(body, WebReviewBody):
@@ -1004,6 +1086,41 @@ def _execute(
                 "turns": calls[role],
             }
 
+        def review_response(epoch: int, artifacts: dict[str, AcquisitionAnalysisV1]) -> ReviewResponse:
+            """Ask the integration agent, at its configured effort, how to proceed after review."""
+            alias = assignments["orchestrator"]
+            agent = config.agents[alias]
+            provider: Literal["codex", "claude"] = "codex" if agent.adapter == "codex_cli" else "claude"
+            key = f"review-response-{epoch}"
+            request = ResearchRequest(
+                key,
+                provider,
+                REVIEW_RESPONSE_INSTRUCTIONS,
+                {
+                    "synthesis": artifacts["orchestrator"].payload.model_dump(mode="json"),
+                    "primary_review": artifacts["primary_reviewer"].payload.model_dump(mode="json"),
+                    "send_back_available": not rerun_used,
+                    "acquired_evidence_ids": cast(list[JsonValue], sorted(acquired)),
+                },
+                ReviewResponse,
+                agent,
+            )
+            files[f"requests/{key}.json"] = _reference_body(request, alias)
+            turn = invoke(request)
+            response = ReviewResponse.model_validate_json(turn.body)
+            retain_origin(turn, request, key)
+            files[f"responses/{key}.json"] = turn.body
+            files[f"provider-traces/{key}.jsonl"] = turn.trace
+            incremental_decisions.append(
+                {
+                    "epoch": epoch,
+                    "review_response": response.decision,
+                    "reason": response.reason,
+                    "send_back_ignored": response.decision == "rerun" and rerun_used,
+                }
+            )
+            return response
+
         groups = (
             [SPECIALISTS, AGGREGATORS, ("orchestrator",), ("primary_reviewer",)]
             if optimized
@@ -1033,6 +1150,27 @@ def _execute(
             if stalled is not None:
                 break
             role = group[-1]
+            if directed:
+                if role == "orchestrator" and pending_rerun is not None and not rerun_used:
+                    send_back(pending_rerun, "synthesis")
+                    pending_rerun = None
+                    restart = True
+                    break
+                final_review = (
+                    cast(WebReviewBody, artifacts["primary_reviewer"].payload) if role == "primary_reviewer" else None
+                )
+                if final_review is not None and final_review.review_passed and not final_review.findings:
+                    # A passing review without findings leaves nothing for the integration agent to decide.
+                    incremental_decisions.append({"epoch": epoch, "review_response": "skipped_review_passed"})
+                elif final_review is not None:
+                    response = review_response(epoch, artifacts)
+                    if response.decision == "rerun" and response.rerun_request is not None and not rerun_used:
+                        send_back(response.rerun_request, "review")
+                        restart = True
+                        break
+                    if response.decision == "second_opinion":
+                        second_opinion_reason = response.reason
+                continue
             # Commit all independent roles before distributing neutral evidence.
             common_changed = (
                 _common_evidence_changed(epoch_before, acquired)
@@ -1100,6 +1238,20 @@ def _execute(
             continue
         for role, artifact in artifacts.items():
             files[f"{role}.json"] = serialize(artifact)
+        if second_opinion_reason is not None:
+            prompt = second_opinion_prompt(
+                second_opinion_reason,
+                artifacts["orchestrator"].payload.model_dump(mode="json"),
+                artifacts["primary_reviewer"].payload.model_dump(mode="json"),
+                {key: artifacts[key].payload.model_dump(mode="json", exclude={"research"}) for key in AGGREGATORS},
+            )
+            files["second-opinion/request.md"] = prompt.encode()
+            try:
+                files["second-opinion/response.md"] = second_opinion(prompt) if second_opinion else b""
+            except OSError, RuntimeError, ValueError:
+                files.pop("second-opinion/response.md", None)
+            status = "completed" if files.get("second-opinion/response.md") else "unavailable"
+            files["second-opinion/status.json"] = _json({"status": status, "reason": second_opinion_reason})
         alias = assignments["translation"]
         agent = config.agents[alias]
         provider: Literal["codex", "claude"] = "codex" if agent.adapter == "codex_cli" else "claude"
@@ -1116,16 +1268,28 @@ def _execute(
         files["responses/translation.json"] = translated.body
         files["provider-traces/translation.jsonl"] = translated.trace
         translation = ReportTranslation.model_validate_json(translated.body)
-        renderer = render_report if optimized else _report
-        files["report.md"] = renderer(
+        report_args = (
             cast(Mapping[str, WebAnalysisV1], artifacts),
             translation,
             config,
             calculations,
             mode,
             f"{task['security']['security_code']} ({task['security']['mic']})",
-            **({"price": report_price} if optimized else {}),
         )
+        files["report.md"] = (
+            render_report(*report_args, price=report_price, preserve_inline_links=recovery_profile)
+            if optimized
+            else _report(*report_args)
+        )
+        if second_opinion_reason is not None:
+            opinion = files.get("second-opinion/response.md", b"").decode().strip() or (
+                "未取得（Antigravity の実行に失敗しました）。"
+            )
+            files["report.md"] += (
+                "\n## セカンドオピニオン（Antigravity・参考意見）\n\n"
+                f"統合担当が一次レビューの指摘に合意しなかったため取得しました。理由: {second_opinion_reason}\n\n"
+                f"{opinion}\n"
+            ).encode()
         if not optimized and report_price is not None:
             route = (
                 "標準経路の原本表から機械抽出した条件付き観測値。取引日網羅性・JPX一覧の鮮度は検証保留"
@@ -1209,6 +1373,7 @@ def run_workflow(
     batch_common_updates_from_epoch: int | None = None,
     execution_profile: str | None = None,
     build_pdf_reader: PdfReaderBuilder | None = None,
+    second_opinion: SecondOpinion | None = None,
 ) -> dict[str, bytes]:
     """Run format 5 with role-directed acquisition; stalled runs retain evidence without a report."""
     sources = {name: (instructions / name).read_bytes() for name in (*INSTRUCTION_NAMES, "instruction-set.json")}
@@ -1226,6 +1391,7 @@ def run_workflow(
         batch_common_updates_from_epoch=batch_common_updates_from_epoch,
         execution_profile=execution_profile,
         build_pdf_reader=build_pdf_reader,
+        second_opinion=second_opinion,
     )
     validate_bundle(files)
     return files
@@ -1240,7 +1406,7 @@ def _reconstruct(original: Mapping[str, bytes], mode: Literal["live", "replay"])
     acquisition_index = 0
 
     def invoke(request: ResearchRequest) -> WebTurnResult:
-        if request.stage.startswith(("document_summary-", "reassessment-selection-")):
+        if request.stage.startswith(("document_summary-", "reassessment-selection-", "review-response-")):
             key = request.stage
         else:
             index = positions[request.stage]
@@ -1273,6 +1439,11 @@ def _reconstruct(original: Mapping[str, bytes], mode: Literal["live", "replay"])
         validate_acquisition(request, result, raw)
         return result, raw
 
+    def saved_second_opinion(_prompt: str) -> bytes:
+        if "second-opinion/response.md" not in original:
+            raise RuntimeError("second_opinion_unavailable")
+        return original["second-opinion/response.md"]
+
     def saved_pdf_reader(item: AcquiredEvidence, raw: bytes) -> dict[str, bytes]:
         prefix = f"pdf-readers/{item.raw_reference.sha256}/"
         return {name.removeprefix(prefix): body for name, body in original.items() if name.startswith(prefix)}
@@ -1291,6 +1462,7 @@ def _reconstruct(original: Mapping[str, bytes], mode: Literal["live", "replay"])
         batch_common_updates_from_epoch=json.loads(original["manifest.json"]).get("batch_common_updates_from_epoch"),
         execution_profile=json.loads(original["manifest.json"]).get("execution_profile"),
         build_pdf_reader=saved_pdf_reader,
+        second_opinion=saved_second_opinion,
     )
 
 

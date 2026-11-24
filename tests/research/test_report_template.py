@@ -158,6 +158,31 @@ def test_numeric_zero_safe_markdown_and_web_price_provenance(
     assert "原本との機械照合は未実施" in result and "100 JPY／株" in result
 
 
+def test_inline_source_links_in_narrative_stay_clickable(
+    report_data: tuple[dict[str, ReportArtifact], dict[str, JsonValue]],
+) -> None:
+    """Agent-written http(s) links render as links while surrounding text stays escaped."""
+    artifacts, calculations = report_data
+    translated = _translations(artifacts).model_dump(mode="json")
+    entries = cast(list[dict[str, str]], translated["translations"])
+    entries[0]["text"] = (
+        "株価(終値) [JPXの休場日](https://www.jpx.co.jp/calendar/) "
+        "[Wiki](https://en.wikipedia.org/wiki/Advantest_(company)) [bad](javascript:x)"
+    )
+    result = render_report(
+        artifacts,
+        ReportTranslation.model_validate(translated),
+        load_agent_configuration(PROFILE),
+        calculations,
+        "live",
+        "1234",
+    ).decode()
+    assert "株価\\(終値\\) [JPXの休場日](<https://www.jpx.co.jp/calendar/>)" in result
+    assert "[Wiki](<https://en.wikipedia.org/wiki/Advantest_(company)>)" in result
+    assert "\\[bad\\]\\(javascript:x\\)" in result
+    assert "\\]\\(http" not in result
+
+
 def test_report_sources_are_linked_with_original_retrieval_status() -> None:
     """Reported sources are shown without upgrading search results to page verification."""
     from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.web_analysis import WebAnalysisV1

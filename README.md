@@ -245,6 +245,7 @@ stderrへ出力し、設定内容の不正は終了code 3、pathまたはfileの
 | `docs/design/` | システム全体像、構想、アーキテクチャ、一次スクリーニング設計、判定ルール要求 | 5文書あり |
 | `docs/system-requirements/` | 詳細解析MVPの承認済みシステム要件 | P0要件6文書とP1契約基盤文書を承認済み |
 | `docs/agent-reports/` | Coding Agentが生成する開発用の調査、計画、構成確認レポート | 追跡対象外のローカル生成物 |
+| `reports/JP/<銘柄コード>/<run_id>/` | 銘柄別の調査実行バンドル | 追跡対象外のローカル生成物 |
 | `reports/agent-reports/` | 銘柄調査・レビュー・監査の中間レポート | 形式は今後確定。旧開発用報告をローカルに退避 |
 | `reports/finalized-reports/` | 人間向けに確定した個別株調査・スクリーニングレポート | 空。形式は今後確定 |
 | `docker/` | 標準開発環境のDockerfile、Compose設定、実行ラッパー | 構成あり |
@@ -282,8 +283,7 @@ stock-research config validate --config-dir config
 stock-research research run \
   --agents config/agent-configurations/gpt-only/v1.yaml \
   --task runs/my-market-preparation/task.json --prior runs/my-research-draft \
-  --runtime runtime --runs runs --destination my-gpt-only-research
-stock-research research validate --bundle runs/my-gpt-only-research
+  --runtime runtime
 ```
 
 設定例は`config/agent-configurations/gpt-only/v1.yaml`と`cross-family/v1.yaml`です。
@@ -297,7 +297,7 @@ stock-research research validate --bundle runs/my-gpt-only-research
 effortはCodexでは`minimal/low/medium/high/xhigh/max/ultra`、Claudeでは`low/medium/high/max`を
 明示して渡します。CLI・モデルごとの利用可否は利用環境で確認してください。未対応値を代替せず、
 実行失敗時は停止します。要求値と確認できた実適用値を区別し、実適用値が取得できない場合は未確認と記録します。
-同梱のGPT単独・複数系統設定は全役割を`medium`にしています。モデルと担当構成はそのままです。
+同梱のGPT単独・複数系統設定は全役割を`low`にしています。モデルと担当構成はそのままです。
 独自設定の`low`や`high`も明示した値を使用します。旧実行の再開には、変更後のサンプルではなく
 その実行に保存されたAgent設定を指定してください。異なるeffortで完了応答を完全一致再利用はできません。
 
@@ -311,15 +311,35 @@ Ollamaや他社APIの実行は未対応で、今後Adapterを追加して接続�
 `--prior`がIR資料だけでも、別途市場bundleを手作業で準備する必要はありません。
 初期取得に不足が残っても調査を開始します。
 
-新規実行は`parallel_incremental_v5`方式です。初回は4専門担当を別々のコンテキストで並列実行し、
+新規実行は`parallel_incremental_v7`方式です。初回は4専門担当を別々のコンテキストで並列実行し、
 続く2統合担当も並列実行します。標準取得・共有資料・成果物の確定は実行側が順序を管理します。
+一次レビュー応答の未解決指摘に保持理由が欠けている場合は、元の応答と検証理由を実行記録に残し、同じ担当に一度だけ訂正を依頼します。
+収益率には利用可能な標準株価を優先します。Web報告と差がある場合は`price-source-discrepancy.json`に両方の観測値を保存します。
 各担当に他担当の途中分析は渡しません。並列化によるToken増加は許容し、
 実行予算・調査回数による新しい打ち切り条件は設けていません。
 
 各調査担当は独立したWeb検索・ページ閲覧に加え、構造化した追加取得要求で同じ標準取得処理を
-呼び出せます。取得結果を受け取って再分析し、検証済みの中立資料が増えた場合は、統合担当が
-変更資料の目録と前回分析を確認し、追加調査が必要な専門担当だけを選びます。
-対象なしも選べます。他の専門分析は引き継ぎ、整理・統合・レビューは最新の資料で更新します。
+呼び出せます。取得した資料はその担当自身の分析に使い、他の担当への自動配布や全体のやり直しは行いません。
+
+統合担当は、統合時と一次レビューの後に、専門担当の差し戻しを判断します。差し戻しは1回までです。
+統合担当は、対象の専門担当、effort（基本は`low`、必要なら`medium`、本当に困った場合だけ`high`）、
+共有する取得資料を指定します。指定されなかった専門分析は引き継ぎ、整理・統合・一次レビューをやり直します。
+一次レビューの重要な指摘に統合担当が合意しない場合に限り、Antigravityでセカンドオピニオンを取得します。
+結果は`second-opinion/`に保存し、レポートの末尾に参考意見として掲載します。失敗しても調査は失敗扱いにせず、
+「未取得」と記録します。判断の記録は`incremental-decisions.json`に保存します。
+v5以前の保存済みバンドルは、従来の方式のまま検証・再生できます。
+
+長時間の実行は、`scripts/research-run-bg.sh`でバックグラウンド起動できます。完了は`scripts/research-wait.sh`で待ちます。
+
+```bash
+job=$(scripts/research-run-bg.sh --on-exit 'echo done' -- \
+  --agents config/agent-configurations/cross-family/v1.yaml \
+  --task runs/my-market-preparation/task.json --prior runs/my-research-draft --runtime runtime)
+scripts/research-wait.sh "$job" --timeout 540   # 0=成功、1=失敗、124=実行中（最新の段階を表示）
+```
+
+`runtime/research-jobs/<job>/status.json`に、状態・終了コード・`bundle`・セカンドオピニオンの有無に加え、再開用の`execution_record`と判明した`failed_stage`を書き込みます。
+`--on-exit`のコマンドは、終了時に`RESEARCH_JOB_DIR`を受け取って1回実行されます。
 公開資料は原本・抽出全文を保存し、モデルには出典・全文hash・行数の索引を渡します。
 担当は`search_evidence`で該当行を検索し、`read_evidence`で必要な行範囲を読めます。
 選択した行と原文の対応も保存・再検証し、全文を黙って切り捨てる方式にはしません。
@@ -330,7 +350,7 @@ Ollamaや他社APIの実行は未対応で、今後Adapterを追加して接続�
 検索ツール記録は`provider-traces/`、標準取得は`baseline/`と`acquisitions/`へ保存します。
 実行途中の応答と原本は`runtime/research-executions/`にも保持し、中断を完了として扱いません。
 初期取得が完了した実行記録は、同じ`--task`・`--prior`・`--agents`に
-`--resume-from runtime/research-executions/<実行記録>`を追加し、新しい`--destination`で再開できます。
+`--resume-from runtime/research-executions/<実行記録>`を追加すると、新しい `run_id` で再開できます。
 保存した入力・設定・原本の照合後に初期資料を再利用し、各調査役割は新規実行します。
 同じ実行記録に保存された追加取得の原本も、出典と取得時刻を保持して再利用できます。
 失敗した応答を採用したり、提供者の会話セッションを復元した扱いにはしません。
@@ -429,13 +449,14 @@ Codexによる統合結論、別の新規Claude実行による一次レビュー
 専門担当は個別の新規CLI実行として起動します。既定は形式2で、分析から翻訳まで9回実行します。
 リポジトリのルートから実行し、両CLIのインストールと認証を済ませてください。
 分析開始前に両CLIの認証状態を確認し、未認証の場合は資料を送信せず停止します。
-`--runs`は既存の非公開ディレクトリ、`--destination`は未使用の保存名を指定します。
+`research run` は既定で `reports/JP/<銘柄コード>/<run_id>/` に `report.md` と検証用ファイル一式を保存します。
+`run_id` は、たとえば `20261123T010203123456Z-1a2b3c4d5e6f` のように UTC の実行開始時刻と衝突回避用の接尾辞で構成します。
+保存先は実行終了時の `bundle=` に表示されます。そのパスを `research validate --bundle` に渡してください。
+`--runs` で保存ルートを変更でき、`--destination` を明示すると保存ルート直下に指定名で保存します。
 
 ```bash
 stock-research research run \
-  --task runs/my-market-preparation/task.json --prior runs/my-research-draft \
-  --runs runs --destination my-reviewed-research
-stock-research research validate --bundle runs/my-reviewed-research
+  --task runs/my-market-preparation/task.json --prior runs/my-research-draft
 ```
 
 4つの専門担当へは同じ出典付き抜粋を渡し、他担当の分析や以前の暫定結論を渡しません。

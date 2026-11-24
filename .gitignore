@@ -68,6 +68,7 @@ models/
 outputs/
 logs/
 runs/
+/reports/JP/
 reports/agent-reports/
 reports/finalized-reports/
 

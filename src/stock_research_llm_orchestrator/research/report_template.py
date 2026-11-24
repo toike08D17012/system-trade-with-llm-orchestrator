@@ -32,6 +32,9 @@ _CONTEXT_LISTS = (
     "upcoming_event_risks",
     "missing_information",
 )
+# Agents cite sources inline as Markdown links; only http(s) destinations without whitespace or angle brackets
+# survive, with one level of balanced parentheses so URLs such as Wikipedia titles stay intact.
+_INLINE_LINK = re.compile(r"\[([^\[\]\n]+)\]\((https?://(?:[^\s<>()]|\([^\s<>()]*\))+)\)")
 
 
 def report_texts(artifacts: Mapping[str, ReportArtifact]) -> dict[str, str]:
@@ -78,6 +81,18 @@ def report_texts(artifacts: Mapping[str, ReportArtifact]) -> dict[str, str]:
     return texts
 
 
+def _display_linked(text: str) -> str:
+    """Escape narrative text while keeping inline http(s) source links clickable."""
+    parts: list[str] = []
+    position = 0
+    for match in _INLINE_LINK.finditer(text):
+        parts.append(_display(text[position : match.start()]))
+        parts.append(f"[{_display(match[1])}](<{match[2]}>)")
+        position = match.end()
+    parts.append(_display(text[position:]))
+    return "".join(parts)
+
+
 def render_report(
     artifacts: Mapping[str, ReportArtifact],
     translated: ReportTranslation,
@@ -86,6 +101,8 @@ def render_report(
     mode: str,
     security_label: str,
     price: dict[str, JsonValue] | None = None,
+    *,
+    preserve_inline_links: bool = True,
 ) -> bytes:
     """Render recorded analysis and calculations using the approved section order."""
     originals = report_texts(artifacts)
@@ -99,8 +116,10 @@ def render_report(
     main = cast(ConfiguredMainBody, artifacts["orchestrator"].payload)
     review = cast(ConfiguredReviewBody, artifacts["primary_reviewer"].payload)
 
+    display = _display_linked if preserve_inline_links else _display
+
     def text(key: str) -> str:
-        return _display(translations[key])
+        return display(translations[key])
 
     def items(prefix: str, values: tuple[str, ...]) -> list[str]:
         return ["- " + text(f"{prefix}/{index}") for index in range(len(values))] or ["- 記載なし。"]
