@@ -10,7 +10,8 @@ Usage:
 
 Description:
   Runs the app development service with the host user's UID/GID.
-  Pulls the image first and builds locally if the pull fails.
+  Uses the local image when present; otherwise pulls it and builds
+  locally if the pull fails.
   Mounts the EDINET API key read-only from
   $HOME/.config/system-trade-with-llm-orchestrator/edinet-api-key.
   Set HOST_EDINET_API_KEY_FILE to override the host path.
@@ -68,7 +69,12 @@ main() {
 
     local -a docker_compose_cmd=(docker compose -f docker-compose.yml)
 
-    if ! "${docker_compose_cmd[@]}" pull; then
+    local image_name
+    image_name="$("${docker_compose_cmd[@]}" config --images "${service_name}")"
+
+    if docker image inspect "${image_name}" >/dev/null 2>&1; then
+        echo "Using local image ${image_name}."
+    elif ! "${docker_compose_cmd[@]}" pull; then
         echo "Remote image pull failed; building locally." >&2
         ./build-docker.sh
     fi

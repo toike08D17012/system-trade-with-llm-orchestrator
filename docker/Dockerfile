@@ -155,7 +155,12 @@ COPY --chown=${USER_UID}:${USER_GID} \
 
 RUN --mount=type=cache,target=${HOME}/.cache/uv,uid=${USER_UID},gid=${USER_GID},mode=0755 \
     uv python install ${PYTHON_VERSION} \
-    && uv sync --frozen --extra pdf --no-install-project
+    && uv sync --frozen --extra pdf --no-install-project \
+    # The aarch64 nvidia-cusparselt-cu13 wheel declares the non-standard
+    # "manylinux2014_sbsa" tag in its WHEEL file, so uv treats the installed
+    # copy as a platform mismatch and reinstalls it on every sync.
+    && sed -i 's/manylinux2014_sbsa/manylinux2014_aarch64/' \
+        "${UV_PROJECT_ENVIRONMENT}"/lib/python*/site-packages/nvidia_cusparselt_cu13-*.dist-info/WHEEL
 
 CMD ["/bin/bash"]
 
