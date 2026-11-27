@@ -6,26 +6,56 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from pydantic import JsonValue
+from pydantic import JsonValue, ValidationError
 
 from stock_research_llm_orchestrator import cli
 from stock_research_llm_orchestrator.agents.configuration import load_agent_configuration
 from stock_research_llm_orchestrator.agents.research_provider import ProviderResponseValidationError, WebTurnResult
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.acquisition_analysis import (
+    AcquisitionAnalysisV1,
     AcquisitionRequest,
     AcquisitionResult,
     AcquisitionSpecialistTurn,
 )
 from stock_research_llm_orchestrator.preparation import research_acquisition
 from stock_research_llm_orchestrator.research import acquisition, baseline, resume
+from stock_research_llm_orchestrator.research.cli import _recover_overlapping_delta
+from stock_research_llm_orchestrator.research.delta import DeltaAggregateTurn
+from stock_research_llm_orchestrator.research.directed import DirectedMainTurn
 from stock_research_llm_orchestrator.research.resume import RetainedTurn
 from stock_research_llm_orchestrator.research.workflow import ResearchRequest
 
 from .test_acquisition import RESEARCH_ROLES, _acquire, _acquisition_turn, _final
 from .test_baseline import _discovery
 from .test_configured import PROFILE
+from .test_delta import _delta
+from .test_delta import previous_artifacts as previous_artifacts
 from .test_document_navigation import _summary
 from .test_workflow import _inputs, _source
+
+
+def _overlap_error(base_sha256: str) -> ProviderResponseValidationError:
+    body = json.dumps(
+        {
+            "kind": "delta",
+            "requests": [],
+            "state": "Revise research sources.",
+            "payload": None,
+            "base_artifact_sha256": base_sha256,
+            "patches": [
+                {"json_pointer": "/research/sources/0/supporting_excerpt", "value_json": '"New excerpt"'},
+                {"json_pointer": "/research/sources", "value_json": "[]"},
+            ],
+        }
+    ).encode()
+    with pytest.raises(ValidationError) as caught:
+        DeltaAggregateTurn.model_validate_json(body)
+    error = ProviderResponseValidationError(
+        body, [dict(item) for item in caught.value.errors(include_input=False, include_context=False)]
+    )
+    assert error.problems[0]["type"] == "delta_patch_paths_overlap"
+    error.trace = b"failed provider trace"
+    return error
 
 
 def test_public_live_default_prepares_baseline_and_supports_all_role_acquisitions_then_replays_offline(
@@ -46,6 +76,7 @@ def test_public_live_default_prepares_baseline_and_supports_all_role_acquisition
     asked: set[str] = set()
     original_prepare = baseline.prepare_baseline
     corrected_reviews: list[ResearchRequest] = []
+    overlap_retries: list[ResearchRequest] = []
 
     def executor_factory(**kwargs: Any) -> object:
         assert kwargs["runtime"] == tmp_path / "runtime"
@@ -82,6 +113,23 @@ def test_public_live_default_prepares_baseline_and_supports_all_role_acquisition
             return _acquisition_turn(request.stage)
         if request.data.get("own_previous_turns"):
             assert request.data["last_acquisition_results"]
+        if request.response_model is DirectedMainTurn:
+            turn = _final(request)
+            body = json.loads(turn.body)
+            body["rerun_request"] = {
+                "roles": ["track_a_capital"],
+                "effort": "low",
+                "shared_evidence_ids": [],
+                "reason": "Revisit the capital scenario.",
+            }
+            return WebTurnResult(json.dumps(body).encode(), turn.trace)
+        if request.stage == "track_a_aggregator" and request.response_model is DeltaAggregateTurn:
+            base = request.data["own_previous_artifact_sha256"]
+            assert isinstance(base, str)
+            if "kind=final" in request.instructions and "First rejected response" in request.instructions:
+                overlap_retries.append(request)
+                return _final(request)
+            raise _overlap_error(base)
         if request.stage == "primary_reviewer":
             if "Correct the previous review below" not in request.instructions:
                 raise ProviderResponseValidationError(
@@ -128,6 +176,7 @@ def test_public_live_default_prepares_baseline_and_supports_all_role_acquisition
     assert (live / "report.md").is_file()
     assert len(summary_calls) == 1
     assert len(corrected_reviews) == 1
+    assert len(overlap_retries) == 1
     (invalid_review,) = (tmp_path / "runtime").glob(
         "research-executions/*/*-primary_reviewer/validation-retry/response.json"
     )
@@ -175,6 +224,64 @@ def test_public_live_default_prepares_baseline_and_supports_all_role_acquisition
     replay = tmp_path / "offline"
     assert (replay / "orchestrator.json").read_bytes() == (live / "orchestrator.json").read_bytes()
     assert json.loads((replay / "manifest.json").read_bytes())["mode"] == "replay"
+
+
+@pytest.mark.parametrize("correction_outcome", ["success", "fallback", "unapplicable", "exhausted"])
+def test_overlapping_delta_recovery_is_bounded_and_preserves_diagnostics(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    correction_outcome: str,
+    previous_artifacts: dict[str, AcquisitionAnalysisV1],
+) -> None:
+    """Exercise the real overlap validator with the OXIDE failure paths."""
+    parent = "/research/sources"
+    child = "/research/sources/0/supporting_excerpt"
+    role = "track_a_aggregator"
+    previous = previous_artifacts[role]
+    pointer = "/research/sources/99/supporting_excerpt" if correction_outcome == "unapplicable" else child
+    delta = _delta(previous, [(pointer, "New excerpt")])
+    base = delta["base_artifact_sha256"]
+    assert isinstance(base, str)
+    error = _overlap_error(base)
+    request = ResearchRequest(
+        role,
+        "codex",
+        "Original instructions",
+        {"own_previous_analysis": previous.model_dump(mode="json")},
+        DeltaAggregateTurn,
+    )
+    calls: list[ResearchRequest] = []
+    corrected = WebTurnResult(DeltaAggregateTurn.model_validate(delta).model_dump_json().encode(), b"corrected")
+
+    def invoke(retry: ResearchRequest) -> WebTurnResult:
+        calls.append(retry)
+        assert retry.instructions.startswith(request.instructions)
+        assert parent in retry.instructions and child in retry.instructions
+        if len(calls) == 1:
+            assert "Correct the overlapping delta" in retry.instructions
+            if correction_outcome in {"success", "unapplicable"}:
+                return corrected
+            raise error
+        assert len(calls) == 2 and "kind=final" in retry.instructions
+        if correction_outcome == "exhausted":
+            return corrected
+        result = _final(retry)
+        assert DeltaAggregateTurn.model_validate_json(result.body).kind == "final"
+        return result
+
+    monkeypatch.setattr("stock_research_llm_orchestrator.research.cli.invoke_web_research", invoke)
+    if correction_outcome == "exhausted":
+        with pytest.raises(ProviderResponseValidationError) as failure:
+            _recover_overlapping_delta(request, tmp_path, error)
+        assert failure.value.problems == [{"msg": "delta_fallback_requires_final"}]
+    else:
+        result = _recover_overlapping_delta(request, tmp_path, error)
+        expected_kind = "delta" if correction_outcome == "success" else "final"
+        assert DeltaAggregateTurn.model_validate_json(result.body).kind == expected_kind
+    assert len(calls) == (1 if correction_outcome == "success" else 2)
+    assert (tmp_path / "validation-retry/response.json").read_bytes() == error.body
+    assert (tmp_path / "validation-retry/trace.jsonl").read_bytes() == error.trace
+    assert (tmp_path / "validation-fallback").exists() == (correction_outcome != "success")
 
 
 @pytest.mark.parametrize(

@@ -6,6 +6,7 @@ from hashlib import sha256
 from typing import Literal, cast
 
 from pydantic import Field, JsonValue, model_validator
+from pydantic_core import PydanticCustomError
 
 from stock_research_llm_orchestrator.contracts.base import Sha256Hex, StrictContractModel
 from stock_research_llm_orchestrator.contracts.detailed_analysis.v1.acquisition_analysis import (
@@ -92,12 +93,17 @@ class _DeltaTurn(StrictContractModel):
             return self
         if self.base_artifact_sha256 is None or not self.patches:
             raise ValueError("delta_replacements_required")
-        paths: list[tuple[str, ...]] = []
+        paths: dict[tuple[str, ...], str] = {}
         for patch in self.patches:
             parts = _pointer_parts(patch.json_pointer)
-            if any(parts[: len(other)] == other or other[: len(parts)] == parts for other in paths):
-                raise ValueError("delta_patch_paths_overlap")
-            paths.append(parts)
+            for other, previous_pointer in paths.items():
+                if parts[: len(other)] == other or other[: len(parts)] == parts:
+                    raise PydanticCustomError(
+                        "delta_patch_paths_overlap",
+                        "delta_patch_paths_overlap: {first} overlaps {second}",
+                        {"first": previous_pointer, "second": patch.json_pointer},
+                    )
+            paths[parts] = patch.json_pointer
         return self
 
 
